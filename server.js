@@ -1359,30 +1359,30 @@ const server = http.createServer((req, res) => {
             
             // DYNAMIC SCALING - PROFESSIONAL STYLING
             notification.style.cssText = \`
-                position: absolute;
-                top: calc(var(--spacing-unit) * 2 * var(--scale-factor));
-                right: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                position: fixed;
+                top: calc(var(--spacing-unit) * 12 * var(--scale-factor));
+                right: calc(var(--spacing-unit) * 4 * var(--scale-factor));
                 background: #000000;
                 color: #f57315;
                 border: calc(2px * var(--scale-factor)) solid #f57315;
                 border-radius: 0;
                 padding: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)) calc(var(--spacing-unit) * 2 * var(--scale-factor));
                 font-family: 'JetBrains Mono', monospace;
-                font-size: calc(10px * var(--scale-factor));
+                font-size: calc(11px * var(--scale-factor));
                 font-weight: 500;
                 z-index: 1000;
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                min-width: calc(120px * var(--scale-factor));
-                max-width: calc(280px * var(--scale-factor));
+                min-width: calc(160px * var(--scale-factor));
+                max-width: calc(320px * var(--scale-factor));
                 text-align: center;
-                box-shadow: 0 calc(4px * var(--scale-factor)) calc(12px * var(--scale-factor)) rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(8px);
+                box-shadow: 0 calc(6px * var(--scale-factor)) calc(16px * var(--scale-factor)) rgba(0, 0, 0, 0.4);
+                backdrop-filter: blur(10px);
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                line-height: var(--mobile-line-height);
+                line-height: 1.4;
                 opacity: 0;
-                transform: translateY(calc(-10px * var(--scale-factor)));
+                transform: translateX(calc(20px * var(--scale-factor))) translateY(calc(-10px * var(--scale-factor)));
             \`;
             
             // MOBILE RESPONSIVE POSITIONING
@@ -1424,7 +1424,7 @@ const server = http.createServer((req, res) => {
                 if (isMobile) {
                     notification.style.transform = 'translateX(-50%) translateY(0)';
                 } else {
-                    notification.style.transform = 'translateY(0)';
+                    notification.style.transform = 'translateX(0) translateY(0)';
                 }
                 notification.style.opacity = '1';
             });
@@ -1435,7 +1435,7 @@ const server = http.createServer((req, res) => {
                 if (isMobile) {
                     notification.style.transform = 'translateX(-50%) translateY(calc(-10px * var(--scale-factor)))';
                 } else {
-                    notification.style.transform = 'translateY(calc(-10px * var(--scale-factor)))';
+                    notification.style.transform = 'translateX(calc(20px * var(--scale-factor))) translateY(calc(-10px * var(--scale-factor)))';
                 }
                 setTimeout(() => {
                     if (notification.parentNode) {
