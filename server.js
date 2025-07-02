@@ -234,6 +234,12 @@ const server = http.createServer((req, res) => {
         }
 
         /* Navigation - DYNAMIC SCALING */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
+        }
+        
         .nav-link {
             color: var(--text-dim);
             font-weight: 400;
@@ -426,6 +432,154 @@ const server = http.createServer((req, res) => {
 
         .token-site-subtitle:hover {
             color: var(--text-primary);
+        }
+
+        /* THEME TOGGLE - MATCHES 12/24 WORD SELECTOR STYLE */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: calc(var(--spacing-unit) * var(--scale-factor));
+            margin-right: calc(var(--spacing-unit) * 1.5 * var(--scale-factor));
+            min-height: calc(var(--touch-target-min) * 0.8 * var(--scale-factor));
+        }
+        
+        .theme-toggle-button {
+            width: calc(12px * var(--scale-factor));
+            height: calc(12px * var(--scale-factor));
+            border: calc(1px * var(--scale-factor)) solid #333333;
+            border-radius: 50%;
+            margin-right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .theme-toggle-button:hover {
+            border-color: var(--text-primary);
+        }
+        
+        .theme-toggle-inner {
+            width: calc(6px * var(--scale-factor));
+            height: calc(6px * var(--scale-factor));
+            border-radius: 50%;
+            background: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        
+        .theme-toggle-icon {
+            font-size: calc(8px * var(--scale-factor));
+            margin-left: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
+            color: var(--text-dim);
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        
+        /* MOOSH MODE - GREEN & BLACK THEME */
+        .theme-spark {
+            --text-primary: #69fd97bd !important;
+            --text-secondary: #9bffac !important;
+            --text-accent: #6fedbfc2 !important;
+            --text-string: #9bffac !important;
+            --text-keyword: #6fedbfc2 !important;
+            --text-comment: #c8fff2 !important;
+            --text-dim: #71767b !important;
+            --bg-primary: #000000 !important;
+            --bg-secondary: #000000 !important;
+            --bg-tertiary: #000000 !important;
+            --bg-hover: #0a1a0f !important;
+            --border-color: #69fd97bd !important;
+            --border-active: #6fedbfc2 !important;
+        }
+        
+        .theme-spark .theme-toggle-inner {
+            background: #69fd97bd !important;
+        }
+        
+        .theme-spark .theme-toggle-button {
+            border-color: #69fd97bd !important;
+        }
+        
+        .theme-spark .theme-toggle-button:hover {
+            border-color: #6fedbfc2 !important;
+        }
+        
+        .theme-spark .moosh-flash {
+            color: #69fd97bd !important;
+            text-shadow: 0 0 10px rgba(105, 253, 151, 0.3) !important;
+        }
+        
+        .theme-spark .gradient-text {
+            color: #6fedbfc2 !important;
+        }
+        
+        .theme-spark .text-primary {
+            color: #69fd97bd !important;
+        }
+        
+        .theme-spark .text-secondary {
+            color: #9bffac !important;
+        }
+        
+        .theme-spark .text-accent {
+            color: #6fedbfc2 !important;
+        }
+        
+        .theme-spark .text-string {
+            color: #9bffac !important;
+        }
+        
+        .theme-spark .text-keyword {
+            color: #6fedbfc2 !important;
+        }
+        
+        .theme-spark .text-comment {
+            color: #c8fff2 !important;
+        }
+        
+        .theme-spark .text-dim {
+            color: #71767b !important;
+        }
+        
+        .theme-spark .nav-link:hover {
+            color: #69fd97bd !important;
+        }
+        
+        .theme-spark .input-field {
+            border-color: #69fd97bd !important;
+            color: #9bffac !important;
+        }
+        
+        .theme-spark .terminal-box {
+            border-color: #69fd97bd !important;
+        }
+        
+        .theme-spark .toggle-switch {
+            border-color: #69fd97bd !important;
+        }
+        
+        .theme-spark .toggle-slider {
+            color: #69fd97bd !important;
+        }
+        
+        .theme-spark .network-label {
+            color: #69fd97bd !important;
+        }
+        
+        .theme-spark .password-text-hover:hover,
+        .theme-spark label.text-dim:hover {
+            color: #6fedbfc2 !important;
+        }
+        
+        .theme-spark .address-type:hover {
+            color: #6fedbfc2 !important;
+        }
+        
+        .theme-spark .theme-toggle-icon {
+            color: #69fd97bd !important;
         }
 
         /* Network Toggle Switch - DYNAMIC SCALING */
@@ -1194,6 +1348,14 @@ const server = http.createServer((req, res) => {
             </div>
             
             <nav class="nav-links">
+                <!-- Theme Toggle Button -->
+                <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <div id="themeToggle" class="theme-toggle-button">
+                        <div class="theme-toggle-inner"></div>
+                    </div>
+                    <span id="themeIcon" class="theme-toggle-icon">🔥</span>
+                </div>
+                
                 <a href="#" onclick="openTokenSite()" class="nav-link">
                     <span class="text-dim">&lt;</span>Moosh.money<span class="text-dim"> /&gt;</span>
                 </a>
@@ -1398,16 +1560,27 @@ const server = http.createServer((req, res) => {
                 \`;
             }
             
-            // TYPE-SPECIFIC STYLING - ALL ORANGE AND BLACK
-            if (type === 'network') {
+            // TYPE-SPECIFIC STYLING - THEME AWARE
+            const isCurrentlyMooshTheme = document.body.classList.contains('theme-spark');
+            const primaryColor = isCurrentlyMooshTheme ? '#69fd97bd' : '#f57315';
+            
+            if (type === 'moosh') {
+                notification.style.borderColor = '#69fd97bd';
+                notification.style.color = '#69fd97bd';
+                notification.style.boxShadow = '0 calc(6px * var(--scale-factor)) calc(16px * var(--scale-factor)) rgba(105, 253, 151, 0.3)';
+            } else if (type === 'original') {
                 notification.style.borderColor = '#f57315';
                 notification.style.color = '#f57315';
+                notification.style.boxShadow = '0 calc(6px * var(--scale-factor)) calc(16px * var(--scale-factor)) rgba(245, 115, 21, 0.3)';
+            } else if (type === 'network') {
+                notification.style.borderColor = primaryColor;
+                notification.style.color = primaryColor;
             } else if (type === 'success') {
-                notification.style.borderColor = '#f57315';
-                notification.style.color = '#f57315';
+                notification.style.borderColor = primaryColor;
+                notification.style.color = primaryColor;
             } else if (type === 'error') {
-                notification.style.borderColor = '#f57315';
-                notification.style.color = '#f57315';
+                notification.style.borderColor = primaryColor;
+                notification.style.color = primaryColor;
             }
             
             notification.textContent = message;
@@ -1496,6 +1669,52 @@ const server = http.createServer((req, res) => {
             showNotification(selectedMnemonic + ' Word Mnemonic selected', 'success');
             console.log('🔧 Mnemonic length:', selectedMnemonic, 'words');
         }
+        
+        // Theme management
+        let isSparkTheme = false;
+        
+        function toggleTheme() {
+            const body = document.body;
+            const themeButton = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            
+            isSparkTheme = !isSparkTheme;
+            
+            if (isSparkTheme) {
+                // Switch to MOOSH theme (green & black)
+                body.classList.add('theme-spark');
+                themeIcon.textContent = '🚀';
+                showNotification('MOOSH Mode ON', 'moosh');
+                console.log('🚀 Switched to MOOSH Mode (@buildonspark/spark-sdk)');
+            } else {
+                // Switch back to original theme
+                body.classList.remove('theme-spark');
+                themeIcon.textContent = '🔥';
+                showNotification('Original Mode ON', 'original');
+                console.log('🎨 Switched to Original Mode');
+            }
+            
+            // Save theme preference
+            localStorage.setItem('mooshTheme', isSparkTheme ? 'moosh' : 'original');
+        }
+        
+        // Load theme preference on page load
+        function loadThemePreference() {
+            const savedTheme = localStorage.getItem('mooshTheme');
+            const themeIcon = document.getElementById('themeIcon');
+            if (savedTheme === 'moosh') {
+                isSparkTheme = true;
+                document.body.classList.add('theme-spark');
+                if (themeIcon) themeIcon.textContent = '🚀';
+            } else {
+                if (themeIcon) themeIcon.textContent = '🔥';
+            }
+        }
+        
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadThemePreference();
+        });
 
         function createWallet() {
             const password = document.getElementById('createPasswordInput').value;
