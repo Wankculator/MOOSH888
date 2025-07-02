@@ -1,0 +1,327 @@
+# 🛡️ MOOSH WALLET - PROFESSIONAL .GITIGNORE
+# Enhanced Build Rules v4.0 - Security First
+
+# === SECURITY - NEVER COMMIT ===
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+config/secrets.*
+secrets/
+private/
+confidential/
+temp/
+tmp/
+
+# === SENSITIVE DATA ===
+*password*
+*secret*
+*token*
+*credential*
+*.wallet
+*.seed
+wallet-backup.*
+mnemonic.*
+
+# === NODE.JS ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm
+.yarn-integrity
+.node_repl_history
+
+# === DEVELOPMENT ===
+.vscode/settings.json
+.vscode/launch.json
+*.log
+debug.log
+error.log
+.DS_Store
+Thumbs.db
+
+# === BUILD OUTPUT ===
+dist/
+build/
+out/
+coverage/
+*.tgz
+*.tar.gz
+
+# === BACKUP & TEMP FILES ===
+backups/
+BACKUP*/
+checkpoint*/
+*-backup.*
+*-old.*
+*-temp.*
+*.bak
+*.swp
+*.swo
+*~
+
+# === MESSY HTML VERSIONS ===
+index-*.html
+*-live.html
+*-clean.html
+*-backup.html
+extracted-html-versions/
+old-versions/
+
+# === DEPLOYMENT CONFIGS ===
+hostinger/
+deployment/private/
+*.sh
+*.bat
+*.ps1
+upload-*
+deploy-*
+connect-*
+
+# === ANALYSIS & SCRAPING ===
+sparksat_*
+analyze_*
+scrape_*
+fetch_*
+create_moosh_*
+*.py
+*.findings
+*.json
+
+# === LEGACY & DUPLICATES ===
+MOOSH-WALLET-*/
+MOOSH-BITCOIN-*/
+moosh\ wallet/
+static-website/
+extracted-html-versions/
+
+# === UNICODE & ENCODING FIXES ===
+fix-*
+inject-*
+restart-*
+*unicode*
+
+# === SERVER VARIANTS ===
+*-server-*.js
+*-server.py
+*-wallet-*.js
+wallet-server.*
+spark-wallet-server.*
+simple-server.*
+
+# === DOCUMENTATION CLEANUP ===
+*FIX_SUMMARY*
+*BUILD_COMPLETE*
+*SETUP_QUICK*
+*ENCODING_FIXED*
+SERVER_STATUS.md
+
+# === KEEP ONLY ESSENTIAL ===
+# ✅ server.js (main)
+# ✅ index.html (main)
+# ✅ package.json
+# ✅ README.md
+# ✅ Essential documentation
+# ✅ src/ directory
+# ✅ assets/ (logos only)
+
+# === ADDITIONAL CONFIGS ===
+
+# === BUILD OUTPUT ===
+*.tsbuildinfo
+
+# === ENVIRONMENT FILES ===
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# === IDE FILES ===
+*.swp
+*.swo
+
+# === OS FILES ===
+.DS_Store
+Thumbs.db
+
+# === LOGS ===
+logs/
+*.log
+
+# === RUNTIME DATA ===
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# === COVERAGE DIRECTORY ===
+*.lcov
+
+# === NYC TEST COVERAGE ===
+.nyc_output
+
+# === DEPENDENCY DIRECTORIES ===
+jspm_packages/
+
+# === OPTIONAL CACHE DIRECTORIES ===
+.eslintcache
+
+# === MICROBUNDLE CACHE ===
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# === TEMPORARY FOLDERS ===
+tmp/
+temp/
+
+# === SECURITY - Never commit private keys or sensitive data ===
+wallet-backup.json
+private-keys/
+seeds/
+
+# === TEST FILES ===
+test-wallet.json
+test-seeds.txt
+
+# === GRUNT INTERMEDIATE STORAGE ===
+.grunt
+
+# === BOWER DEPENDENCY DIRECTORY ===
+bower_components
+
+# === NODE-WAF CONFIGURATION ===
+.lock-wscript
+
+# === COMPILED BINARY ADDONS ===
+build/Release
+
+# === TYPESCRIPT V1 DECLARATION FILES ===
+typings/
+
+# === NEXT.JS BUILD OUTPUT ===
+.next
+
+# === NUXT.JS BUILD / GENERATE OUTPUT ===
+.nuxt
+
+# === GATSBY FILES ===
+# Comment in the public line in if your project uses Gatsby and *not* Next.js
+# https://nextjs.org/blog/next-9-1#public-directory-support
+# public
+
+# === VUEPRESS BUILD OUTPUT ===
+.vuepress/dist
+
+# === SERVERLESS DIRECTORIES ===
+.serverless/
+
+# === FUSEBOX CACHE ===
+.fusebox/
+
+# === DYNAMODB LOCAL FILES ===
+.dynamodb/
+
+# === TERNJS PORT FILE ===
+.tern-port
+
+# === YARN V2 ===
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# === OS GENERATED FILES ===
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# === TEMPORARY FILES ===
+*.tmp
+*.temp
+
+# === LARGE BACKUP FILES ===
+*.zip
+*.tar.gz
+
+# === LOGS ===
+*.log
+
+# === OS GENERATED FILES ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# === CONFIDENTIAL FILES ===
+**/private/
+**/confidential/
+**/*secret*
+**/*private*
+**/*key*
+**/*token*
+
+# === DEVELOPMENT FILES ===
+moosh-wallet-8080.js
+wallet-server-*.js
+*.bat
+*.ps1
+
+# === LARGE DIRECTORIES WE DON'T NEED IN GIT ===
+MOOSH-BITCOIN-WALLET/
+MOOSH-BITCOIN-WALLET-PRO/
+MOOSH-WALLET-*/
+backend/
+frontend/
+node_modules/
+extracted-html-versions/
+static-website/
+
+# === DOCUMENTATION THAT'S TOO DETAILED FOR PUBLIC ===
+*GUIDE*.md
+*SETUP*.md
+*CHECKLIST*.md
+*STATUS*.md
+ENHANCED_BUILD_RULES.md
+
+# === DEPLOYMENT SCRIPTS ===
+deploy-*.sh
+upload-*.bat
+connect-*.bat
+setup-*.sh
+
+# === PYTHON FILES ===
+*.py
+*.pyc
+
+# === NEW FILES ===
+*.dat
+wallet.dat
+mnemonics/
+
+# === PROFESSIONAL EXCLUSIONS ===
+messy-versions/
+old-versions/
+duplicate-folders/
+BACKUP*/
+*BACKUP*/
+*-BACKUP/
+
+# === SECURITY SCAN RESULTS ===
+.snyk
+security-report.*
+
+# Windows system files
+desktop.ini 

@@ -1,1 +1,37 @@
-const http = require("http"); const server = http.createServer((req, res) => { res.writeHead(200, {"Content-Type": "text/html"}); res.end(`<!DOCTYPE html><html><head><title>MOOSH Wallet</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen flex items-center justify-center"><div class="text-center"><h1 class="text-6xl font-bold mb-6"><span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">MOOSH</span><span class="text-white"> Wallet</span></h1><p class="text-xl text-gray-300 mb-8">AI-Powered Bitcoin Wallet - Development Server</p><div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 max-w-md mx-auto"><h2 class="text-2xl font-semibold text-white mb-4">🎉 Server is Running!</h2><p class="text-gray-300 mb-6">Ready for professional development</p><button onclick="alert(\"Create Wallet functionality coming next!\")" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-lg mb-4">Create Wallet</button><button onclick="alert(\"Import Wallet functionality coming next!\")" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 px-6 rounded-lg">Import Wallet</button></div></div></body></html>`); }); server.listen(3001, () => { console.log("🚀 MOOSH Wallet Server running on http://localhost:3001"); });
+const http = require("http");
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, {"Content-Type": "text/html"});
+  res.end(`<!DOCTYPE html>
+<html>
+<head>
+  <title>MOOSH Wallet</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen flex items-center justify-center">
+  <div class="text-center">
+    <h1 class="text-6xl font-bold mb-6">
+      <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">MOOSH</span>
+      <span class="text-white"> Wallet</span>
+    </h1>
+    <p class="text-xl text-gray-300 mb-8">AI-Powered Bitcoin Wallet - Development Server</p>
+    <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 max-w-md mx-auto">
+      <h2 class="text-2xl font-semibold text-white mb-4">🎉 Server is Running!</h2>
+      <p class="text-gray-300 mb-6">Ready for professional development</p>
+      <button onclick="alert('Create Wallet functionality coming next!')" 
+              class="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-lg mb-4">
+        Create Wallet
+      </button>
+      <button onclick="alert('Import Wallet functionality coming next!')" 
+              class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 px-6 rounded-lg">
+        Import Wallet
+      </button>
+    </div>
+  </div>
+</body>
+</html>`);
+});
+
+server.listen(8080, () => {
+  console.log("🚀 MOOSH Wallet Server running on http://localhost:8080");
+});
