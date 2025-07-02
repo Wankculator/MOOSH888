@@ -8,7 +8,8 @@
 4. **PROFESSIONAL_ONLY**: Follow established folder structure
 5. **SECURITY_FIRST**: Client-side only, never expose private keys
 6. **MOBILE_FIRST**: Every feature must be mobile-optimized before desktop
-7. **PERFORMANCE_OBSESSED**: <3s load, <100ms interactions, 60fps animations
+7. **DYNAMIC_SCALING**: Use calc(size * var(--scale-factor)) for ALL sizing
+8. **PERFORMANCE_OBSESSED**: <3s load, <100ms interactions, 60fps animations
 
 ## 🛑 NEVER DO - ABSOLUTE PROHIBITIONS
 - ❌ Delete or move files without explicit permission
@@ -24,8 +25,10 @@
 - ✅ Follow professional folder structure
 - ✅ Build step-by-step from current foundation
 - ✅ Use Enhanced Build Rules v5.0 standards
+- ✅ Follow Dynamic Scaling Plan v5.0 (05_DOCUMENTATION/)
 - ✅ Maintain security-first approach
-- ✅ Test before implementing
+- ✅ Test mobile-first on all devices
+- ✅ Use calc(size * var(--scale-factor)) for ALL sizing
 - ✅ Document all changes
 
 ## 📁 PROFESSIONAL FOLDER STRUCTURE

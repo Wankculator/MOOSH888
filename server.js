@@ -375,6 +375,7 @@ const server = http.createServer((req, res) => {
             margin: 0 auto;
             width: 100%;
             box-sizing: border-box;
+            position: relative;
         }
 
         /* Terminal Box */
@@ -427,23 +428,30 @@ const server = http.createServer((req, res) => {
             color: var(--text-primary);
         }
 
-        /* Network Toggle Switch */
+        /* Network Toggle Switch - DYNAMIC SCALING */
         .network-toggle {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: calc(var(--spacing-unit) * var(--scale-factor));
             margin-left: 0;
         }
 
         .toggle-switch {
             position: relative;
-            width: 40px;
-            height: 16px;
+            width: calc(44px * var(--scale-factor));
+            height: calc(22px * var(--scale-factor));
             background: #000000;
-            border: 1px solid var(--text-primary);
+            border: calc(1px * var(--scale-factor)) solid var(--text-primary);
             border-radius: 0;
             cursor: pointer;
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* ASPECT RATIO PRESERVATION */
+            aspect-ratio: 2 / 1;
+            min-width: calc(44px * var(--scale-factor));
+            min-height: calc(22px * var(--scale-factor));
         }
 
         .toggle-switch:hover {
@@ -452,31 +460,34 @@ const server = http.createServer((req, res) => {
 
         .toggle-slider {
             position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 12px;
-            height: 12px;
+            top: calc(3px * var(--scale-factor));
+            left: calc(3px * var(--scale-factor));
+            width: calc(16px * var(--scale-factor));
+            height: calc(16px * var(--scale-factor));
             background: transparent;
             transition: transform 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: calc(12px * var(--scale-factor));
             color: var(--text-primary);
             font-weight: 600;
             line-height: 1;
+            /* MAINTAIN SQUARE ASPECT FOR SLIDER */
+            aspect-ratio: 1 / 1;
         }
 
         .toggle-switch.testnet .toggle-slider {
-            transform: translateX(22px);
+            transform: translateX(calc(22px * var(--scale-factor)));
         }
 
         .network-label {
-            font-size: 9px;
+            font-size: calc(12px * var(--scale-factor));
             font-weight: 500;
             color: var(--text-primary);
-            min-width: 45px;
+            min-width: calc(60px * var(--scale-factor));
             text-align: left;
+            line-height: var(--mobile-line-height);
         }
 
         .toggle-switch.testnet + .network-label {
@@ -824,189 +835,291 @@ const server = http.createServer((req, res) => {
             color: var(--text-dim);
         }
 
-        /* ENHANCED MOBILE OPTIMIZATION - Build Rules v4.0 */
-        @media (max-width: 768px) {
+        /* ==========================================
+           ENHANCED MOBILE OPTIMIZATION v5.0
+           DYNAMIC SCALING SYSTEM - PROFESSIONAL GRADE
+           ========================================== */
+        
+        /* MOBILE SCALING RULES - MANDATORY FOR ALL COMPONENTS */
+        @media (max-width: 480px) {
+            :root {
+                --scale-factor: 0.8;
+                --font-base: 13px;
+                --container-padding: 14px;
+                --spacing-unit: 6px;
+                --touch-target-min: 44px;
+                --mobile-line-height: 1.4;
+            }
+            
+            /* EXTRA SMALL MOBILE - RESPONSIVE FIXES */
+            .terminal-radio-section {
+                padding: calc(var(--spacing-unit) * var(--scale-factor)) !important;
+            }
+            
+            .terminal-radio-section > div:first-child {
+                font-size: calc(9px * var(--scale-factor)) !important;
+            }
+            
+            .terminal-radio-section span {
+                font-size: calc(9px * var(--scale-factor)) !important;
+            }
+        }
+        
+        @media (min-width: 481px) and (max-width: 768px) {
             :root {
                 --scale-factor: 0.85;
                 --font-base: 14px;
                 --container-padding: 16px;
-                --spacing-unit: 6px;
+                --spacing-unit: 7px;
+                --touch-target-min: 44px;
+                --mobile-line-height: 1.35;
             }
-            
+        }
+        
+        @media (max-width: 768px) {
+            /* CORE LAYOUT - DYNAMIC SCALING */
             .cursor-content {
-                padding: calc(16px * var(--scale-factor)) calc(12px * var(--scale-factor)) calc(12px * var(--scale-factor)) calc(12px * var(--scale-factor));
+                padding: calc(var(--container-padding) * var(--scale-factor)) calc(var(--container-padding) * var(--scale-factor) * 0.75);
             }
             
-            /* HORIZONTAL LAYOUT - PROFESSIONAL MOBILE */
+            /* TITLE SECTION - PROFESSIONAL MOBILE */
             h1 {
                 flex-direction: row !important;
-                gap: calc(6px * var(--scale-factor)) !important;
+                gap: calc(var(--spacing-unit) * var(--scale-factor)) !important;
                 align-items: center !important;
                 justify-content: center !important;
                 flex-wrap: nowrap !important;
-                font-size: calc(24px * var(--scale-factor)) !important;
+                font-size: calc(28px * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
             .moosh-flash, .text-dim {
-                font-size: calc(18px * var(--scale-factor)) !important;
+                font-size: calc(20px * var(--scale-factor)) !important;
                 white-space: nowrap;
+                line-height: var(--mobile-line-height) !important;
             }
             
-            /* OPTIMIZED LOGO SIZING */
+            /* LOGO SCALING - DYNAMIC */
             .moosh-logo, h1 img {
-                width: calc(28px * var(--scale-factor)) !important;
-                height: calc(28px * var(--scale-factor)) !important;
+                width: calc(32px * var(--scale-factor)) !important;
+                height: calc(32px * var(--scale-factor)) !important;
                 flex-shrink: 0;
             }
             
-            /* COMPACT SUBTITLE */
+            /* SUBTITLE - RESPONSIVE */
             .token-site-subtitle {
-                font-size: calc(12px * var(--scale-factor)) !important;
-                margin-bottom: calc(20px * var(--scale-factor)) !important;
+                font-size: calc(14px * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
-            /* MOBILE ADDRESS TYPES */
+            /* ADDRESS TYPES - ENHANCED MOBILE */
             .address-types-list {
-                font-size: calc(7px * var(--scale-factor)) !important;
-                margin-bottom: calc(16px * var(--scale-factor)) !important;
-                line-height: 1.2 !important;
+                font-size: calc(9px * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * 2.5 * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
+                padding: calc(var(--spacing-unit) * var(--scale-factor)) !important;
             }
             
-            /* Fix Token Site button on mobile */
+            /* NAVIGATION - TOUCH OPTIMIZED */
             .nav-link {
-                font-size: calc(var(--font-base) * var(--scale-factor) * 0.75) !important;
-                padding: calc(6px * var(--scale-factor)) calc(8px * var(--scale-factor)) !important;
+                font-size: calc(var(--font-base) * var(--scale-factor) * 0.85) !important;
+                padding: calc(var(--spacing-unit) * var(--scale-factor)) calc(var(--spacing-unit) * 1.5 * var(--scale-factor)) !important;
                 border-radius: calc(6px * var(--scale-factor)) !important;
+                min-height: calc(var(--touch-target-min) * var(--scale-factor)) !important;
+                display: flex !important;
+                align-items: center !important;
             }
             
             .cursor-header {
-                height: calc(48px * var(--scale-factor)) !important;
-                padding: 0 calc(12px * var(--scale-factor)) !important;
+                height: calc(var(--touch-target-min) * 1.2 * var(--scale-factor)) !important;
+                padding: 0 calc(var(--container-padding) * var(--scale-factor)) !important;
             }
             
+            /* NETWORK TOGGLE - MOBILE OPTIMIZED */
             .network-toggle {
-                margin-left: 8px;
-                gap: 6px;
+                margin-left: calc(var(--spacing-unit) * var(--scale-factor));
+                gap: calc(var(--spacing-unit) * var(--scale-factor));
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .toggle-switch {
-                width: 36px;
-                height: 14px;
+                width: calc(44px * var(--scale-factor)) !important;
+                height: calc(22px * var(--scale-factor)) !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                position: relative !important;
+                padding: calc(2px * var(--scale-factor)) !important;
+                /* PRESERVE RECTANGULAR ASPECT RATIO ON MOBILE */
+                aspect-ratio: 2 / 1 !important;
+                min-width: calc(44px * var(--scale-factor)) !important;
+                min-height: calc(22px * var(--scale-factor)) !important;
             }
             
             .toggle-slider {
-                width: 10px;
-                height: 10px;
-                top: 2px;
-                left: 2px;
-                font-size: 8px;
+                width: calc(16px * var(--scale-factor)) !important;
+                height: calc(16px * var(--scale-factor)) !important;
+                position: absolute !important;
+                top: calc(3px * var(--scale-factor)) !important;
+                left: calc(3px * var(--scale-factor)) !important;
+                font-size: calc(12px * var(--scale-factor)) !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                transition: transform 0.2s ease !important;
+                /* MAINTAIN SQUARE SLIDER ON MOBILE */
+                aspect-ratio: 1 / 1 !important;
             }
             
             .toggle-switch.testnet .toggle-slider {
-                transform: translateX(18px);
+                transform: translateX(calc(22px * var(--scale-factor))) !important;
             }
             
             .network-label {
-                font-size: 8px;
-                min-width: 40px;
+                font-size: calc(12px * var(--scale-factor));
+                min-width: calc(60px * var(--scale-factor));
+                font-weight: 500;
+                line-height: var(--mobile-line-height);
             }
             
-            /* ENHANCED MOBILE FORMS & BUTTONS */
+            /* FORM ELEMENTS - TOUCH OPTIMIZED */
             .input-field {
-                font-size: calc(12px * var(--scale-factor)) !important;
-                padding: calc(10px * var(--scale-factor)) calc(12px * var(--scale-factor)) !important;
-                height: calc(42px * var(--scale-factor)) !important;
-                border-width: 1px !important;
+                font-size: calc(var(--font-base) * var(--scale-factor)) !important;
+                padding: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)) calc(var(--spacing-unit) * 2 * var(--scale-factor)) !important;
+                height: calc(var(--touch-target-min) * var(--scale-factor)) !important;
+                border-width: calc(1px * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
-            /* MOBILE PASSWORD SECTION FIXES */
+            /* PASSWORD SECTION - DYNAMIC SCALING */
             label.text-dim {
-                font-size: calc(7px * var(--scale-factor)) !important;
+                font-size: calc(10px * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
             #passwordError, #passwordSuccess {
-                font-size: calc(10px * var(--scale-factor)) !important;
-                margin-top: calc(6px * var(--scale-factor)) !important;
+                font-size: calc(11px * var(--scale-factor)) !important;
+                margin-top: calc(var(--spacing-unit) * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
-            /* MOBILE SECURITY SECTION */
             .password-security-section {
-                padding: calc(16px * var(--scale-factor)) !important;
-                margin-bottom: calc(12px * var(--scale-factor)) !important;
+                padding: calc(var(--spacing-unit) * 2.5 * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor)) !important;
             }
             
             .password-security-title {
-                font-size: calc(14px * var(--scale-factor)) !important;
-                margin-bottom: calc(10px * var(--scale-factor)) !important;
+                font-size: calc(16px * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
             .password-security-subtitle {
-                font-size: calc(7px * var(--scale-factor)) !important;
-                margin-bottom: calc(12px * var(--scale-factor)) !important;
+                font-size: calc(9px * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
+            /* BUTTONS - TOUCH OPTIMIZED */
             .wallet-actions button {
-                font-size: calc(14px * var(--scale-factor)) !important;
-                padding: calc(12px * var(--scale-factor)) calc(20px * var(--scale-factor)) !important;
-                height: calc(48px * var(--scale-factor)) !important;
-                border-width: 1px !important;
+                font-size: calc(15px * var(--scale-factor)) !important;
+                padding: calc(var(--spacing-unit) * 2 * var(--scale-factor)) calc(var(--spacing-unit) * 3 * var(--scale-factor)) !important;
+                height: calc(var(--touch-target-min) * 1.2 * var(--scale-factor)) !important;
+                border-width: calc(2px * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
+                min-height: calc(var(--touch-target-min) * var(--scale-factor)) !important;
             }
             
+            /* CARDS - RESPONSIVE */
             .card {
-                padding: calc(16px * var(--scale-factor)) !important;
-                margin-bottom: 0 !important;
+                padding: calc(var(--spacing-unit) * 2.5 * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * var(--scale-factor)) !important;
             }
             
+            /* TERMINAL - ENHANCED MOBILE */
             .terminal-box {
-                padding: calc(8px * var(--scale-factor)) !important;
-                margin-bottom: calc(12px * var(--scale-factor)) !important;
+                padding: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor)) !important;
             }
             
             .terminal-header {
-                font-size: calc(8px * var(--scale-factor)) !important;
-                margin-bottom: calc(6px * var(--scale-factor)) !important;
-                padding-bottom: calc(3px * var(--scale-factor)) !important;
+                font-size: calc(9px * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * var(--scale-factor)) !important;
+                padding-bottom: calc(var(--spacing-unit) * 0.5 * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
             .terminal-content {
-                font-size: calc(8px * var(--scale-factor)) !important;
-                line-height: 1.3 !important;
+                font-size: calc(9px * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
+            }
+            
+            /* RADIO BUTTONS - MOBILE OPTIMIZED */
+            .custom-radio {
+                width: calc(12px * var(--scale-factor)) !important;
+                height: calc(12px * var(--scale-factor)) !important;
+                border-width: calc(1px * var(--scale-factor)) !important;
+                margin-right: calc(var(--spacing-unit) * var(--scale-factor)) !important;
+                min-width: calc(var(--touch-target-min) * 0.3 * var(--scale-factor)) !important;
+                min-height: calc(var(--touch-target-min) * 0.3 * var(--scale-factor)) !important;
+            }
+            
+            .radio-inner {
+                width: calc(6px * var(--scale-factor)) !important;
+                height: calc(6px * var(--scale-factor)) !important;
+            }
+            
+            /* TERMINAL RADIO SECTION - MOBILE OPTIMIZED */
+            .terminal-radio-section {
+                background: rgba(245, 115, 21, 0.05) !important;
+                border: calc(1px * var(--scale-factor)) solid var(--border-color) !important;
+                border-radius: 0 !important;
+                padding: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor)) !important;
+            }
+             
+            /* TERMINAL CONTENT - CLEAN LAYOUT */
+            .terminal-content {
+                padding: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)) !important;
+                min-height: calc(60px * var(--scale-factor)) !important;
             }
             
             /* MOBILE TOUCH OPTIMIZATION */
-            button, .toggle-switch, .nav-link {
+            button, .toggle-switch, .nav-link, .custom-radio {
                 touch-action: manipulation;
                 -webkit-tap-highlight-color: transparent;
                 cursor: pointer;
             }
             
-            /* RESPONSIVE SPACING */
+            /* SPACING - DYNAMIC */
             .wallet-actions {
-                gap: calc(12px * var(--scale-factor)) !important;
-                margin: calc(16px * var(--scale-factor)) 0 0 0 !important;
+                gap: calc(var(--spacing-unit) * 2 * var(--scale-factor)) !important;
+                margin: calc(var(--spacing-unit) * 3 * var(--scale-factor)) 0 0 0 !important;
             }
             
-            /* MOBILE FOOTER OPTIMIZATION */
+            /* FOOTER - MOBILE OPTIMIZED */
             footer {
-                padding: calc(12px * var(--scale-factor)) 0 !important;
-                margin-top: calc(16px * var(--scale-factor)) !important;
+                padding: calc(var(--spacing-unit) * 2 * var(--scale-factor)) 0 !important;
+                margin-top: calc(var(--spacing-unit) * 3 * var(--scale-factor)) !important;
             }
             
             footer div:first-child {
-                font-size: calc(9px * var(--scale-factor)) !important;
-                margin-bottom: calc(4px * var(--scale-factor)) !important;
+                font-size: calc(10px * var(--scale-factor)) !important;
+                margin-bottom: calc(var(--spacing-unit) * 0.5 * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
             footer div:last-child {
-                font-size: calc(8px * var(--scale-factor)) !important;
-                margin-top: calc(2px * var(--scale-factor)) !important;
+                font-size: calc(9px * var(--scale-factor)) !important;
+                margin-top: calc(var(--spacing-unit) * 0.5 * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
             }
             
-            /* MOBILE PASSWORD HOVER EFFECTS */
-            .password-security-subtitle:hover {
-                color: var(--text-primary) !important;
-            }
-            
+            /* HOVER EFFECTS - MOBILE OPTIMIZED */
+            .password-security-subtitle:hover,
             label.text-dim:hover {
                 color: var(--text-primary) !important;
             }
@@ -1014,6 +1127,52 @@ const server = http.createServer((req, res) => {
             .input-field:hover {
                 border-color: var(--text-primary) !important;
                 color: var(--text-primary) !important;
+            }
+            
+            /* BRACKET AND SYMBOL SCALING - MOBILE ONLY */
+            .text-dim {
+                font-size: 9px !important;
+            }
+            
+            /* NAVIGATION BRACKETS - MOBILE ONLY */
+            .nav-link .text-dim {
+                font-size: 8px !important;
+            }
+            
+            /* ADDRESS TYPES LIST - MOBILE ONLY */
+            .address-types-list {
+                font-size: 8px !important;
+                line-height: var(--mobile-line-height) !important;
+                padding: 0 calc(var(--spacing-unit) * 0.5 * var(--scale-factor)) !important;
+            }
+            
+            .address-types-list .text-dim,
+            .address-types-list .address-type {
+                font-size: 8px !important;
+            }
+            
+            /* PASSWORD SECTION BRACKETS - MOBILE ONLY */
+            .password-text-hover,
+            .typing-text .text-dim {
+                font-size: 10px !important;
+                line-height: var(--mobile-line-height) !important;
+            }
+            
+            /* RADIO SECTION BRACKETS - MOBILE ONLY */
+            .terminal-radio-section .text-dim {
+                font-size: 8px !important;
+            }
+            
+            /* BUTTON BRACKETS - MOBILE ONLY */
+            button {
+                font-size: calc(12px * var(--scale-factor)) !important;
+                line-height: var(--mobile-line-height) !important;
+            }
+            
+            /* ACCESSIBILITY - MOBILE */
+            *:focus {
+                outline: calc(2px * var(--scale-factor)) solid var(--text-primary) !important;
+                outline-offset: calc(2px * var(--scale-factor)) !important;
             }
         }
     </style>
@@ -1030,12 +1189,13 @@ const server = http.createServer((req, res) => {
                     <span class="text-dim">/</span>
                     <span class="text-primary">wallet</span>
                     <span class="text-dim">.ts</span>
+                    <span style="font-size: calc(8px * var(--scale-factor)); color: var(--text-primary); font-weight: 600; margin-left: calc(6px * var(--scale-factor)); text-transform: uppercase; letter-spacing: 0.05em;">BETA</span>
                 </div>
             </div>
             
             <nav class="nav-links">
                 <a href="#" onclick="openTokenSite()" class="nav-link">
-                    <span class="text-dim">&lt;</span>Token Site<span class="text-dim"> /&gt;</span>
+                    <span class="text-dim">&lt;</span>Moosh.money<span class="text-dim"> /&gt;</span>
                 </a>
             </nav>
         </header>
@@ -1052,12 +1212,12 @@ const server = http.createServer((req, res) => {
                 </p>
                 
                 <!-- Address Types List -->
-                <div class="address-types-list" style="text-align: center; margin-bottom: calc(24px * var(--scale-factor)); font-size: calc(9px * var(--scale-factor)); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: color 0.3s ease;">
+                <div class="address-types-list" style="text-align: center; margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); line-height: var(--mobile-line-height); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: color 0.3s ease; padding: 0 calc(var(--spacing-unit) * var(--scale-factor));">
                     <span class="text-dim">&lt;</span> <span class="address-type">Spark Protocol</span> • <span class="address-type">Taproot</span> • <span class="address-type">Native SegWit</span> • <span class="address-type">Nested SegWit</span> • <span class="address-type">Legacy</span> <span class="text-dim">/&gt;</span>
                 </div>
                 
                 <!-- Network Toggle Switch - Above Terminal Box -->
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: calc(var(--spacing-unit) * var(--scale-factor));">
                     <div class="network-toggle">
                         <div id="networkToggle" class="toggle-switch" onclick="toggleNetwork()">
                             <div class="toggle-slider">+</div>
@@ -1069,41 +1229,43 @@ const server = http.createServer((req, res) => {
                 <div class="terminal-box">
                     <div class="terminal-header">
                         <span>~/moosh/spark-wallet $</span>
-                        <span class="text-keyword">spark-ready <span class="blink" style="font-size: 8px;">●</span></span>
+                        <span class="text-keyword">spark-ready <span class="blink" style="font-size: calc(8px * var(--scale-factor));">●</span></span>
                     </div>
-                    <div class="terminal-content" style="position: relative;">
-                        <!-- Mnemonic Radio Buttons - Higher placement -->
-                        <div style="position: absolute; top: 4px; right: 8px; font-family: 'JetBrains Mono', monospace;">
-                            <!-- Header Label with brackets -->
-                            <div style="margin-bottom: 6px; font-size: 9px; font-weight: 600; text-align: right;">
-                                <span style="color: var(--text-dim);">&lt;</span><span style="color: var(--text-dim);"> Select Security Seed </span><span style="color: var(--text-dim);">/&gt;</span>
-                            </div>
-                            
-                            <!-- Radio Options Container -->
-                            <div style="display: flex; flex-direction: column; gap: 3px; align-items: flex-end;">
-                                <!-- 12 Word Option -->
-                                <div style="display: flex; align-items: center; cursor: pointer; padding: 2px 0;" onclick="selectMnemonic(12)">
-                                    <div id="radio12" class="custom-radio" style="width: 10px; height: 10px; border: 1px solid #333333; border-radius: 50%; margin-right: 6px; display: flex; align-items: center; justify-content: center; background: #000000; transition: all 0.2s ease;">
-                                        <div class="radio-inner" style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-primary); transition: all 0.2s ease;"></div>
-                                    </div>
-                                    <span style="font-size: 9px; font-weight: 500; user-select: none; color: var(--text-primary);">12 Word Mnemonic</span>
-                                </div>
-                                
-                                <!-- 24 Word Option -->
-                                <div style="display: flex; align-items: center; cursor: pointer; padding: 2px 0;" onclick="selectMnemonic(24)">
-                                    <div id="radio24" class="custom-radio" style="width: 10px; height: 10px; border: 1px solid #333333; border-radius: 50%; margin-right: 6px; display: flex; align-items: center; justify-content: center; background: #000000; transition: all 0.2s ease;">
-                                        <div class="radio-inner" style="width: 4px; height: 4px; border-radius: 50%; background: transparent; transition: all 0.2s ease;"></div>
-                                    </div>
-                                    <span style="font-size: 9px; font-weight: 500; user-select: none; color: var(--text-primary);">24 Word Mnemonic</span>
-                                </div>
-                            </div>
+                    
+                    <!-- Radio Buttons Section - MOBILE FIRST -->
+                    <div class="terminal-radio-section" style="margin-bottom: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)); padding: calc(var(--spacing-unit) * var(--scale-factor)); background: rgba(245, 115, 21, 0.05); border: calc(1px * var(--scale-factor)) solid var(--border-color); border-radius: 0;">
+                        <!-- Header Label -->
+                        <div style="margin-bottom: calc(var(--spacing-unit) * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); font-weight: 600; text-align: center; line-height: var(--mobile-line-height);">
+                            <span style="color: var(--text-dim);">&lt;</span><span style="color: var(--text-dim);"> Select Security Seed </span><span style="color: var(--text-dim);">/&gt;</span>
                         </div>
                         
-                        <span style="color: var(--text-dim);"># MOOSH Spark Protocol Wallet</span><br>
-                        <span class="text-keyword">import</span> <span class="text-primary">{</span> <span class="text-variable">SparkWallet</span> <span class="text-primary">}</span> <span class="text-keyword">from</span> <span class="text-keyword">"@buildonspark/spark-sdk"</span><span class="text-primary">;</span><br>
-                        <span class="text-keyword">const</span> <span class="text-variable">wallet</span> <span class="text-primary">=</span> <span class="text-keyword">await</span> <span class="text-variable">SparkWallet</span><span class="text-primary">.</span><span class="text-variable">initialize</span><span class="text-primary">();</span><br>
-                        <span style="color: var(--text-dim);"># Real sp1... addresses + Bitcoin Layer 2</span><br>
-                        <span style="color: var(--text-keyword);"># Development Server: Bitcoin Blockchain</span>
+                        <!-- Radio Options - RESPONSIVE LAYOUT -->
+                        <div style="display: flex; flex-direction: row; gap: calc(var(--spacing-unit) * 2 * var(--scale-factor)); justify-content: center; align-items: center; flex-wrap: wrap;">
+                            <!-- 12 Word Option -->
+                            <div style="display: flex; align-items: center; cursor: pointer; padding: calc(var(--spacing-unit) * var(--scale-factor)); min-height: calc(var(--touch-target-min) * 0.8 * var(--scale-factor));" onclick="selectMnemonic(12)">
+                                <div id="radio12" class="custom-radio" style="width: calc(12px * var(--scale-factor)); height: calc(12px * var(--scale-factor)); border: calc(1px * var(--scale-factor)) solid #333333; border-radius: 50%; margin-right: calc(var(--spacing-unit) * var(--scale-factor)); display: flex; align-items: center; justify-content: center; background: #000000; transition: all 0.2s ease; flex-shrink: 0;">
+                                    <div class="radio-inner" style="width: calc(6px * var(--scale-factor)); height: calc(6px * var(--scale-factor)); border-radius: 50%; background: var(--text-primary); transition: all 0.2s ease;"></div>
+                                </div>
+                                <span style="font-size: calc(10px * var(--scale-factor)); font-weight: 500; user-select: none; color: var(--text-primary); line-height: var(--mobile-line-height);">12 Word</span>
+                            </div>
+                            
+                            <!-- 24 Word Option -->
+                            <div style="display: flex; align-items: center; cursor: pointer; padding: calc(var(--spacing-unit) * var(--scale-factor)); min-height: calc(var(--touch-target-min) * 0.8 * var(--scale-factor));" onclick="selectMnemonic(24)">
+                                <div id="radio24" class="custom-radio" style="width: calc(12px * var(--scale-factor)); height: calc(12px * var(--scale-factor)); border: calc(1px * var(--scale-factor)) solid #333333; border-radius: 50%; margin-right: calc(var(--spacing-unit) * var(--scale-factor)); display: flex; align-items: center; justify-content: center; background: #000000; transition: all 0.2s ease; flex-shrink: 0;">
+                                    <div class="radio-inner" style="width: calc(6px * var(--scale-factor)); height: calc(6px * var(--scale-factor)); border-radius: 50%; background: transparent; transition: all 0.2s ease;"></div>
+                                </div>
+                                <span style="font-size: calc(10px * var(--scale-factor)); font-weight: 500; user-select: none; color: var(--text-primary); line-height: var(--mobile-line-height);">24 Word</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Terminal Content - CLEAN LAYOUT -->
+                    <div class="terminal-content">
+                        <span style="color: var(--text-dim); font-size: calc(9px * var(--scale-factor)); line-height: var(--mobile-line-height);"># MOOSH Spark Protocol Wallet</span><br>
+                        <span class="text-keyword" style="font-size: calc(9px * var(--scale-factor)); line-height: var(--mobile-line-height);">import</span> <span class="text-primary" style="font-size: calc(9px * var(--scale-factor));">{</span> <span class="text-variable" style="font-size: calc(9px * var(--scale-factor));">SparkWallet</span> <span class="text-primary" style="font-size: calc(9px * var(--scale-factor));">}</span> <span class="text-keyword" style="font-size: calc(9px * var(--scale-factor));">from</span> <span class="text-keyword" style="font-size: calc(9px * var(--scale-factor));">"@buildonspark/spark-sdk"</span><span class="text-primary" style="font-size: calc(9px * var(--scale-factor));">;</span><br>
+                        <span class="text-keyword" style="font-size: calc(9px * var(--scale-factor)); line-height: var(--mobile-line-height);">const</span> <span class="text-variable" style="font-size: calc(9px * var(--scale-factor));">wallet</span> <span class="text-primary" style="font-size: calc(9px * var(--scale-factor));">=</span> <span class="text-keyword" style="font-size: calc(9px * var(--scale-factor));">await</span> <span class="text-variable" style="font-size: calc(9px * var(--scale-factor));">SparkWallet</span><span class="text-primary" style="font-size: calc(9px * var(--scale-factor));">.</span><span class="text-variable" style="font-size: calc(9px * var(--scale-factor));">initialize</span><span class="text-primary" style="font-size: calc(9px * var(--scale-factor));">();</span><br>
+                        <span style="color: var(--text-dim); font-size: calc(9px * var(--scale-factor)); line-height: var(--mobile-line-height);"># Real sp1... addresses + Bitcoin Layer 2</span><br>
+                        <span style="color: var(--text-keyword); font-size: calc(9px * var(--scale-factor)); line-height: var(--mobile-line-height);"># Development Server: Bitcoin Blockchain</span>
                     </div>
                 </div>
 
@@ -1190,34 +1352,51 @@ const server = http.createServer((req, res) => {
         }
         
         function showNotification(message, type = 'info') {
-            // Enhanced Build Rules v4.0 - Centralized Notification System
+            // Enhanced Build Rules v5.0 - Mobile-First Notification System
             const notification = document.createElement('div');
             const isMobile = window.innerWidth <= 768;
+            const container = document.querySelector('.cursor-content');
             
-            // PROFESSIONAL STYLING - ORANGE AND BLACK
+            // DYNAMIC SCALING - PROFESSIONAL STYLING
             notification.style.cssText = \`
-                position: fixed;
-                top: \${isMobile ? '70px' : '80px'};
-                right: \${isMobile ? '12px' : '20px'};
+                position: absolute;
+                top: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                right: calc(var(--spacing-unit) * 2 * var(--scale-factor));
                 background: #000000;
                 color: #f57315;
-                border: 2px solid #f57315;
+                border: calc(2px * var(--scale-factor)) solid #f57315;
                 border-radius: 0;
-                padding: \${isMobile ? '6px 10px' : '8px 12px'};
+                padding: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)) calc(var(--spacing-unit) * 2 * var(--scale-factor));
                 font-family: 'JetBrains Mono', monospace;
-                font-size: \${isMobile ? '9px' : '10px'};
+                font-size: calc(10px * var(--scale-factor));
                 font-weight: 500;
-                z-index: 10000;
+                z-index: 1000;
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                min-width: \${isMobile ? '100px' : '120px'};
-                max-width: \${isMobile ? '200px' : '250px'};
+                min-width: calc(120px * var(--scale-factor));
+                max-width: calc(280px * var(--scale-factor));
                 text-align: center;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 calc(4px * var(--scale-factor)) calc(12px * var(--scale-factor)) rgba(0, 0, 0, 0.3);
                 backdrop-filter: blur(8px);
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                line-height: var(--mobile-line-height);
+                opacity: 0;
+                transform: translateY(calc(-10px * var(--scale-factor)));
             \`;
+            
+            // MOBILE RESPONSIVE POSITIONING
+            if (isMobile) {
+                notification.style.cssText += \`
+                    position: fixed;
+                    top: calc(var(--spacing-unit) * 8 * var(--scale-factor));
+                    left: 50%;
+                    right: auto;
+                    transform: translateX(-50%) translateY(calc(-10px * var(--scale-factor)));
+                    max-width: calc(90vw);
+                    min-width: calc(200px * var(--scale-factor));
+                \`;
+            }
             
             // TYPE-SPECIFIC STYLING - ALL ORANGE AND BLACK
             if (type === 'network') {
@@ -1232,18 +1411,32 @@ const server = http.createServer((req, res) => {
             }
             
             notification.textContent = message;
-            document.body.appendChild(notification);
+            
+            // APPEND TO CONTAINER FOR PROPER POSITIONING
+            if (container) {
+                container.appendChild(notification);
+            } else {
+                document.body.appendChild(notification);
+            }
             
             // PROFESSIONAL ANIMATION SEQUENCE
             requestAnimationFrame(() => {
-                notification.style.transform = 'translateX(0)';
+                if (isMobile) {
+                    notification.style.transform = 'translateX(-50%) translateY(0)';
+                } else {
+                    notification.style.transform = 'translateY(0)';
+                }
                 notification.style.opacity = '1';
             });
             
             // AUTO-DISMISS WITH FADE OUT
             setTimeout(() => {
                 notification.style.opacity = '0';
-                notification.style.transform = 'translateX(20px)';
+                if (isMobile) {
+                    notification.style.transform = 'translateX(-50%) translateY(calc(-10px * var(--scale-factor)))';
+                } else {
+                    notification.style.transform = 'translateY(calc(-10px * var(--scale-factor)))';
+                }
                 setTimeout(() => {
                     if (notification.parentNode) {
                         notification.remove();
@@ -1253,7 +1446,11 @@ const server = http.createServer((req, res) => {
         }
 
         function openTokenSite() {
-            alert('🔗 Opening MOOSH token site...\\n\\nThis will redirect to the main token website.');
+            // Redirect to official MOOSH website
+            showNotification('Opening MOOSH.money...', 'success');
+            setTimeout(() => {
+                window.open('https://www.moosh.money/', '_blank');
+            }, 500);
         }
         
         // Mnemonic selection
@@ -1384,7 +1581,7 @@ const server = http.createServer((req, res) => {
   `);
 });
 
-const PORT = 8080;
+const PORT = 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 MOOSH Wallet Server running on http://localhost:${PORT}`);
   console.log(`🌐 Also accessible at http://0.0.0.0:${PORT}`);
