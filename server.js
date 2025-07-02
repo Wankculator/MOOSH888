@@ -463,8 +463,8 @@ const server = http.createServer((req, res) => {
         }
         
         .theme-toggle-inner {
-            width: calc(6px * var(--scale-factor));
-            height: calc(6px * var(--scale-factor));
+            width: calc(4px * var(--scale-factor));
+            height: calc(4px * var(--scale-factor));
             border-radius: 50%;
             background: var(--text-primary);
             transition: all 0.2s ease;
@@ -472,10 +472,12 @@ const server = http.createServer((req, res) => {
         
         .theme-toggle-icon {
             font-size: calc(8px * var(--scale-factor));
-            margin-left: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
+            margin-right: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
             color: var(--text-dim);
             transition: all 0.2s ease;
             user-select: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
         }
         
         /* MOOSH MODE - GREEN & BLACK THEME */
@@ -579,6 +581,15 @@ const server = http.createServer((req, res) => {
         }
         
         .theme-spark .theme-toggle-icon {
+            color: #69fd97bd !important;
+        }
+        
+        /* Security Seed Header Hover Effect */
+        .security-seed-header:hover span {
+            color: var(--text-primary) !important;
+        }
+        
+        .theme-spark .security-seed-header:hover span {
             color: #69fd97bd !important;
         }
 
@@ -1350,10 +1361,10 @@ const server = http.createServer((req, res) => {
             <nav class="nav-links">
                 <!-- Theme Toggle Button -->
                 <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <span id="themeIcon" class="theme-toggle-icon">.theme</span>
                     <div id="themeToggle" class="theme-toggle-button">
                         <div class="theme-toggle-inner"></div>
                     </div>
-                    <span id="themeIcon" class="theme-toggle-icon">🔥</span>
                 </div>
                 
                 <a href="#" onclick="openTokenSite()" class="nav-link">
@@ -1370,7 +1381,7 @@ const server = http.createServer((req, res) => {
                     <span class="moosh-flash">MOOSH</span> <span class="text-dim">WALLET</span>
                 </h1>
                 <p class="token-site-subtitle" style="text-align: center; margin-bottom: calc(16px * var(--scale-factor));">
-                    Moosh.money Spark Bitcoin wallet
+                    Moosh.money Native Bitcoin wallet
                 </p>
                 
                 <!-- Address Types List -->
@@ -1397,7 +1408,7 @@ const server = http.createServer((req, res) => {
                     <!-- Radio Buttons Section - MOBILE FIRST -->
                     <div class="terminal-radio-section" style="margin-bottom: calc(var(--spacing-unit) * 1.5 * var(--scale-factor)); padding: calc(var(--spacing-unit) * var(--scale-factor)); background: rgba(245, 115, 21, 0.05); border: calc(1px * var(--scale-factor)) solid var(--border-color); border-radius: 0;">
                         <!-- Header Label -->
-                        <div style="margin-bottom: calc(var(--spacing-unit) * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); font-weight: 600; text-align: center; line-height: var(--mobile-line-height);">
+                        <div class="security-seed-header" style="margin-bottom: calc(var(--spacing-unit) * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); font-weight: 600; text-align: center; line-height: var(--mobile-line-height); cursor: pointer; transition: color 0.3s ease;">
                             <span style="color: var(--text-dim);">&lt;</span><span style="color: var(--text-dim);"> Select Security Seed </span><span style="color: var(--text-dim);">/&gt;</span>
                         </div>
                         
@@ -1406,7 +1417,7 @@ const server = http.createServer((req, res) => {
                             <!-- 12 Word Option -->
                             <div style="display: flex; align-items: center; cursor: pointer; padding: calc(var(--spacing-unit) * var(--scale-factor)); min-height: calc(var(--touch-target-min) * 0.8 * var(--scale-factor));" onclick="selectMnemonic(12)">
                                 <div id="radio12" class="custom-radio" style="width: calc(12px * var(--scale-factor)); height: calc(12px * var(--scale-factor)); border: calc(1px * var(--scale-factor)) solid #333333; border-radius: 50%; margin-right: calc(var(--spacing-unit) * var(--scale-factor)); display: flex; align-items: center; justify-content: center; background: #000000; transition: all 0.2s ease; flex-shrink: 0;">
-                                    <div class="radio-inner" style="width: calc(6px * var(--scale-factor)); height: calc(6px * var(--scale-factor)); border-radius: 50%; background: var(--text-primary); transition: all 0.2s ease;"></div>
+                                    <div class="radio-inner" style="width: calc(4px * var(--scale-factor)); height: calc(4px * var(--scale-factor)); border-radius: 50%; background: var(--text-primary); transition: all 0.2s ease;"></div>
                                 </div>
                                 <span style="font-size: calc(10px * var(--scale-factor)); font-weight: 500; user-select: none; color: var(--text-primary); line-height: var(--mobile-line-height);">12 Word</span>
                             </div>
@@ -1414,7 +1425,7 @@ const server = http.createServer((req, res) => {
                             <!-- 24 Word Option -->
                             <div style="display: flex; align-items: center; cursor: pointer; padding: calc(var(--spacing-unit) * var(--scale-factor)); min-height: calc(var(--touch-target-min) * 0.8 * var(--scale-factor));" onclick="selectMnemonic(24)">
                                 <div id="radio24" class="custom-radio" style="width: calc(12px * var(--scale-factor)); height: calc(12px * var(--scale-factor)); border: calc(1px * var(--scale-factor)) solid #333333; border-radius: 50%; margin-right: calc(var(--spacing-unit) * var(--scale-factor)); display: flex; align-items: center; justify-content: center; background: #000000; transition: all 0.2s ease; flex-shrink: 0;">
-                                    <div class="radio-inner" style="width: calc(6px * var(--scale-factor)); height: calc(6px * var(--scale-factor)); border-radius: 50%; background: transparent; transition: all 0.2s ease;"></div>
+                                    <div class="radio-inner" style="width: calc(4px * var(--scale-factor)); height: calc(4px * var(--scale-factor)); border-radius: 50%; background: transparent; transition: all 0.2s ease;"></div>
                                 </div>
                                 <span style="font-size: calc(10px * var(--scale-factor)); font-weight: 500; user-select: none; color: var(--text-primary); line-height: var(--mobile-line-height);">24 Word</span>
                             </div>
@@ -1567,7 +1578,6 @@ const server = http.createServer((req, res) => {
             if (type === 'moosh') {
                 notification.style.borderColor = '#69fd97bd';
                 notification.style.color = '#69fd97bd';
-                notification.style.boxShadow = '0 calc(6px * var(--scale-factor)) calc(16px * var(--scale-factor)) rgba(105, 253, 151, 0.3)';
             } else if (type === 'original') {
                 notification.style.borderColor = '#f57315';
                 notification.style.color = '#f57315';
@@ -1683,13 +1693,11 @@ const server = http.createServer((req, res) => {
             if (isSparkTheme) {
                 // Switch to MOOSH theme (green & black)
                 body.classList.add('theme-spark');
-                themeIcon.textContent = '🚀';
                 showNotification('MOOSH Mode ON', 'moosh');
                 console.log('🚀 Switched to MOOSH Mode (@buildonspark/spark-sdk)');
             } else {
                 // Switch back to original theme
                 body.classList.remove('theme-spark');
-                themeIcon.textContent = '🔥';
                 showNotification('Original Mode ON', 'original');
                 console.log('🎨 Switched to Original Mode');
             }
@@ -1705,9 +1713,6 @@ const server = http.createServer((req, res) => {
             if (savedTheme === 'moosh') {
                 isSparkTheme = true;
                 document.body.classList.add('theme-spark');
-                if (themeIcon) themeIcon.textContent = '🚀';
-            } else {
-                if (themeIcon) themeIcon.textContent = '🔥';
             }
         }
         
