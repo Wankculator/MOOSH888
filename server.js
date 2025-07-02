@@ -503,6 +503,327 @@ const server = http.createServer((req, res) => {
             color: var(--text-primary);
         }
 
+        /* Custom Dropdown Styling */
+        #mnemonicSelector {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background: #000000 !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--text-primary) !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background-color: #000000 !important;
+            padding-right: 16px !important;
+            background-image: linear-gradient(45deg, transparent 50%, var(--text-primary) 50%), linear-gradient(135deg, var(--text-primary) 50%, transparent 50%) !important;
+            background-position: calc(100% - 8px) calc(1em - 2px), calc(100% - 4px) calc(1em - 2px) !important;
+            background-size: 4px 4px, 4px 4px !important;
+            background-repeat: no-repeat !important;
+        }
+        
+        #mnemonicSelector:focus {
+            outline: none !important;
+            border: 1px solid var(--text-primary) !important;
+            background: #000000 !important;
+            box-shadow: none !important;
+            background-color: #000000 !important;
+            background-image: linear-gradient(45deg, transparent 50%, var(--text-primary) 50%), linear-gradient(135deg, var(--text-primary) 50%, transparent 50%) !important;
+            background-position: calc(100% - 8px) calc(1em - 2px), calc(100% - 4px) calc(1em - 2px) !important;
+            background-size: 4px 4px, 4px 4px !important;
+            background-repeat: no-repeat !important;
+        }
+        
+        #mnemonicSelector option {
+            background: #000000 !important;
+            background-color: #000000 !important;
+            background-image: none !important;
+            color: var(--text-primary) !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            padding: 2px 4px !important;
+            margin: 0 !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+        
+        #mnemonicSelector option:checked {
+            background: #000000 !important;
+            background-color: #000000 !important;
+            color: var(--text-primary) !important;
+            box-shadow: none !important;
+            border: none !important;
+            outline: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+        
+        #mnemonicSelector option:hover {
+            background: #000000 !important;
+            background-color: #000000 !important;
+            color: var(--text-primary) !important;
+            box-shadow: none !important;
+            border: none !important;
+            outline: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+        
+        #mnemonicSelector option:focus {
+            background: #000000 !important;
+            background-color: #000000 !important;
+            color: var(--text-primary) !important;
+            box-shadow: none !important;
+            border: none !important;
+            outline: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+        
+        /* Remove any white frames/outlines */
+        #mnemonicSelector::-ms-expand {
+            display: none;
+        }
+        
+        #mnemonicSelector:focus::-ms-value {
+            background: #000000 !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Additional dropdown styling fixes */
+        #mnemonicSelector::-webkit-scrollbar {
+            width: 8px;
+            background: #000000;
+        }
+        
+        #mnemonicSelector::-webkit-scrollbar-thumb {
+            background: var(--text-primary);
+            border-radius: 0;
+        }
+        
+        #mnemonicSelector::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        
+        /* Complete browser override for dropdown list */
+        #mnemonicSelector::-webkit-list-button {
+            display: none;
+        }
+        
+        #mnemonicSelector::-webkit-inner-spin-button {
+            display: none;
+        }
+        
+        #mnemonicSelector::-webkit-outer-spin-button {
+            display: none;
+        }
+        
+        /* Force black background on dropdown popup */
+        #mnemonicSelector optgroup {
+            background: #000000 !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Override dropdown list container */
+        #mnemonicSelector::-webkit-dropdown-list {
+            background: #000000 !important;
+            background-color: #000000 !important;
+        }
+        
+        /* Force black on all states */
+        #mnemonicSelector option:active,
+        #mnemonicSelector option:focus,
+        #mnemonicSelector option:hover:focus,
+        #mnemonicSelector option:checked:focus {
+            background: #000000 !important;
+            background-color: #000000 !important;
+            color: var(--text-primary) !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        
+        /* Firefox dropdown styling */
+        @-moz-document url-prefix() {
+            #mnemonicSelector {
+                background: #000000 !important;
+                color: var(--text-primary) !important;
+            }
+            #mnemonicSelector option {
+                background: #000000 !important;
+                color: var(--text-primary) !important;
+            }
+        }
+        
+        /* ELIMINATE ALL GREY LINES ON CLICK */
+        #mnemonicSelector:focus,
+        #mnemonicSelector:active,
+        #mnemonicSelector:focus-visible,
+        #mnemonicSelector:focus-within,
+        #mnemonicSelector:-moz-focusring {
+            outline: none !important;
+            outline-width: 0 !important;
+            outline-offset: 0 !important;
+            outline-style: none !important;
+            outline-color: transparent !important;
+            box-shadow: none !important;
+            -webkit-box-shadow: none !important;
+            -moz-box-shadow: none !important;
+            border: 1px solid var(--text-primary) !important;
+            background: #000000 !important;
+            background-color: #000000 !important;
+            background-image: linear-gradient(45deg, transparent 50%, var(--text-primary) 50%), linear-gradient(135deg, var(--text-primary) 50%, transparent 50%) !important;
+            background-position: calc(100% - 8px) calc(1em - 2px), calc(100% - 4px) calc(1em - 2px) !important;
+            background-size: 4px 4px, 4px 4px !important;
+            background-repeat: no-repeat !important;
+        }
+        
+        /* FORCE BLACK DROPDOWN LIST */
+        #mnemonicSelector::-webkit-list-button,
+        #mnemonicSelector::-webkit-calendar-picker-indicator {
+            display: none !important;
+            -webkit-appearance: none !important;
+        }
+        
+        /* NUCLEAR OPTION - OVERRIDE ALL SYSTEM STYLING */
+        select#mnemonicSelector,
+        select#mnemonicSelector:focus,
+        select#mnemonicSelector:active,
+        select#mnemonicSelector:hover,
+        select#mnemonicSelector:visited,
+        select#mnemonicSelector:link {
+            color-scheme: dark !important;
+            background: #000000 !important;
+            background-color: #000000 !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--text-primary) !important;
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+        
+        /* FORCE BLACK ON ALL OPTION STATES */
+        #mnemonicSelector option,
+        #mnemonicSelector option:checked,
+        #mnemonicSelector option:hover,
+        #mnemonicSelector option:focus,
+        #mnemonicSelector option:active,
+        #mnemonicSelector option:selected,
+        #mnemonicSelector option:visited,
+        #mnemonicSelector option:link,
+        #mnemonicSelector option:target,
+        #mnemonicSelector option:default {
+            background: #000000 !important;
+            background-color: #000000 !important;
+            color: var(--text-primary) !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+        
+        /* WEBKIT SPECIFIC OVERRIDES */
+        #mnemonicSelector::-webkit-list-button,
+        #mnemonicSelector::-webkit-calendar-picker-indicator,
+        #mnemonicSelector::-webkit-inner-spin-button,
+        #mnemonicSelector::-webkit-outer-spin-button,
+        #mnemonicSelector::-webkit-clear-button,
+        #mnemonicSelector::-webkit-search-cancel-button {
+            display: none !important;
+            -webkit-appearance: none !important;
+            background: transparent !important;
+        }
+        
+        /* FIREFOX SPECIFIC OVERRIDES */
+        #mnemonicSelector::-moz-list-button,
+        #mnemonicSelector::-moz-focus-inner,
+        #mnemonicSelector::-moz-focus-outer {
+            display: none !important;
+            border: none !important;
+            background: transparent !important;
+        }
+        
+        /* EDGE/IE SPECIFIC OVERRIDES */
+        #mnemonicSelector::-ms-expand,
+        #mnemonicSelector::-ms-value {
+            display: none !important;
+            background: #000000 !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Remove focus ring in Firefox */
+        #mnemonicSelector::-moz-focus-inner {
+            border: 0 !important;
+            padding: 0 !important;
+            outline: 0 !important;
+        }
+        
+        #mnemonicSelector:-moz-focusring {
+            color: transparent !important;
+            text-shadow: 0 0 0 var(--text-primary) !important;
+            outline: none !important;
+        }
+        
+        /* Remove any system focus indicators */
+        #mnemonicSelector:focus:not(:focus-visible) {
+            outline: none !important;
+        }
+        
+        /* Additional overrides for all browsers */
+        #mnemonicSelector {
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+        }
+        
+        /* Remove highlight on option selection */
+        #mnemonicSelector option::-moz-selection,
+        #mnemonicSelector option::selection {
+            background: transparent !important;
+        }
+        
+        /* Ensure black background in all states */
+        #mnemonicSelector:-webkit-autofill,
+        #mnemonicSelector:-webkit-autofill:hover,
+        #mnemonicSelector:-webkit-autofill:focus,
+        #mnemonicSelector:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #000000 inset !important;
+            -webkit-text-fill-color: var(--text-primary) !important;
+            caret-color: var(--text-primary) !important;
+        }
+
+        /* Address Types Styling */
+        .address-types-list {
+            transition: all 0.3s ease;
+        }
+        
+        .address-types-list:hover {
+            color: var(--text-dim) !important;
+        }
+        
+        .address-types-list:hover .address-type {
+            color: var(--text-dim) !important;
+        }
+        
+        .address-type {
+            color: var(--text-primary);
+            transition: color 0.3s ease;
+        }
+        
+        .address-type:hover {
+            color: var(--text-dim);
+        }
+
         /* ENHANCED MOBILE OPTIMIZATION - Build Rules v4.0 */
         @media (max-width: 768px) {
             :root {
@@ -542,6 +863,13 @@ const server = http.createServer((req, res) => {
             .token-site-subtitle {
                 font-size: calc(12px * var(--scale-factor)) !important;
                 margin-bottom: calc(20px * var(--scale-factor)) !important;
+            }
+            
+            /* MOBILE ADDRESS TYPES */
+            .address-types-list {
+                font-size: calc(7px * var(--scale-factor)) !important;
+                margin-bottom: calc(16px * var(--scale-factor)) !important;
+                line-height: 1.2 !important;
             }
             
             /* Fix Token Site button on mobile */
@@ -719,9 +1047,14 @@ const server = http.createServer((req, res) => {
                     <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" alt="MOOSH" style="width: calc(48px * var(--scale-factor)); height: calc(48px * var(--scale-factor)); object-fit: contain;" onerror="this.style.display='none'">
                     <span class="moosh-flash">MOOSH</span> <span class="text-dim">WALLET</span>
                 </h1>
-                <p class="token-site-subtitle" style="text-align: center; margin-bottom: calc(32px * var(--scale-factor));">
+                <p class="token-site-subtitle" style="text-align: center; margin-bottom: calc(16px * var(--scale-factor));">
                     Moosh.money Spark Bitcoin wallet
                 </p>
+                
+                <!-- Address Types List -->
+                <div class="address-types-list" style="text-align: center; margin-bottom: calc(24px * var(--scale-factor)); font-size: calc(9px * var(--scale-factor)); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: color 0.3s ease;">
+                    <span class="text-dim">&lt;</span> <span class="address-type">Spark Protocol</span> • <span class="address-type">Taproot</span> • <span class="address-type">Native SegWit</span> • <span class="address-type">Nested SegWit</span> • <span class="address-type">Legacy</span> <span class="text-dim">/&gt;</span>
+                </div>
                 
                 <!-- Network Toggle Switch - Above Terminal Box -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
@@ -738,7 +1071,34 @@ const server = http.createServer((req, res) => {
                         <span>~/moosh/spark-wallet $</span>
                         <span class="text-keyword">spark-ready <span class="blink" style="font-size: 8px;">●</span></span>
                     </div>
-                    <div class="terminal-content">
+                    <div class="terminal-content" style="position: relative;">
+                        <!-- Mnemonic Radio Buttons - Higher placement -->
+                        <div style="position: absolute; top: 4px; right: 8px; font-family: 'JetBrains Mono', monospace;">
+                            <!-- Header Label with brackets -->
+                            <div style="margin-bottom: 6px; font-size: 9px; font-weight: 600; text-align: right;">
+                                <span style="color: var(--text-dim);">&lt;</span><span style="color: var(--text-dim);"> Select Security Seed </span><span style="color: var(--text-dim);">/&gt;</span>
+                            </div>
+                            
+                            <!-- Radio Options Container -->
+                            <div style="display: flex; flex-direction: column; gap: 3px; align-items: flex-end;">
+                                <!-- 12 Word Option -->
+                                <div style="display: flex; align-items: center; cursor: pointer; padding: 2px 0;" onclick="selectMnemonic(12)">
+                                    <div id="radio12" class="custom-radio" style="width: 10px; height: 10px; border: 1px solid #333333; border-radius: 50%; margin-right: 6px; display: flex; align-items: center; justify-content: center; background: #000000; transition: all 0.2s ease;">
+                                        <div class="radio-inner" style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-primary); transition: all 0.2s ease;"></div>
+                                    </div>
+                                    <span style="font-size: 9px; font-weight: 500; user-select: none; color: var(--text-primary);">12 Word Mnemonic</span>
+                                </div>
+                                
+                                <!-- 24 Word Option -->
+                                <div style="display: flex; align-items: center; cursor: pointer; padding: 2px 0;" onclick="selectMnemonic(24)">
+                                    <div id="radio24" class="custom-radio" style="width: 10px; height: 10px; border: 1px solid #333333; border-radius: 50%; margin-right: 6px; display: flex; align-items: center; justify-content: center; background: #000000; transition: all 0.2s ease;">
+                                        <div class="radio-inner" style="width: 4px; height: 4px; border-radius: 50%; background: transparent; transition: all 0.2s ease;"></div>
+                                    </div>
+                                    <span style="font-size: 9px; font-weight: 500; user-select: none; color: var(--text-primary);">24 Word Mnemonic</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <span style="color: var(--text-dim);"># MOOSH Spark Protocol Wallet</span><br>
                         <span class="text-keyword">import</span> <span class="text-primary">{</span> <span class="text-variable">SparkWallet</span> <span class="text-primary">}</span> <span class="text-keyword">from</span> <span class="text-keyword">"@buildonspark/spark-sdk"</span><span class="text-primary">;</span><br>
                         <span class="text-keyword">const</span> <span class="text-variable">wallet</span> <span class="text-primary">=</span> <span class="text-keyword">await</span> <span class="text-variable">SparkWallet</span><span class="text-primary">.</span><span class="text-variable">initialize</span><span class="text-primary">();</span><br>
@@ -834,14 +1194,14 @@ const server = http.createServer((req, res) => {
             const notification = document.createElement('div');
             const isMobile = window.innerWidth <= 768;
             
-            // PROFESSIONAL STYLING - OWASP COMPLIANT
+            // PROFESSIONAL STYLING - ORANGE AND BLACK
             notification.style.cssText = \`
                 position: fixed;
                 top: \${isMobile ? '70px' : '80px'};
                 right: \${isMobile ? '12px' : '20px'};
                 background: #000000;
-                color: var(--text-primary);
-                border: 2px solid var(--text-primary);
+                color: #f57315;
+                border: 2px solid #f57315;
                 border-radius: 0;
                 padding: \${isMobile ? '6px 10px' : '8px 12px'};
                 font-family: 'JetBrains Mono', monospace;
@@ -859,15 +1219,16 @@ const server = http.createServer((req, res) => {
                 text-overflow: ellipsis;
             \`;
             
-            // TYPE-SPECIFIC STYLING
+            // TYPE-SPECIFIC STYLING - ALL ORANGE AND BLACK
             if (type === 'network') {
-                notification.style.borderColor = 'var(--text-primary)';
+                notification.style.borderColor = '#f57315';
+                notification.style.color = '#f57315';
             } else if (type === 'success') {
-                notification.style.borderColor = 'var(--text-accent)';
-                notification.style.color = 'var(--text-accent)';
+                notification.style.borderColor = '#f57315';
+                notification.style.color = '#f57315';
             } else if (type === 'error') {
-                notification.style.borderColor = '#ff4444';
-                notification.style.color = '#ff4444';
+                notification.style.borderColor = '#f57315';
+                notification.style.color = '#f57315';
             }
             
             notification.textContent = message;
@@ -893,6 +1254,50 @@ const server = http.createServer((req, res) => {
 
         function openTokenSite() {
             alert('🔗 Opening MOOSH token site...\\n\\nThis will redirect to the main token website.');
+        }
+        
+        // Mnemonic selection
+        let selectedMnemonic = 12;
+        
+        function selectMnemonic(words) {
+            selectedMnemonic = words;
+            
+            // Update radio button appearance
+            const radio12 = document.getElementById('radio12');
+            const radio24 = document.getElementById('radio24');
+            const inner12 = radio12.querySelector('.radio-inner');
+            const inner24 = radio24.querySelector('.radio-inner');
+            
+            if (words === 12) {
+                // Select 12 - DARKER GREY border, black background, orange dot inside
+                inner12.style.background = 'var(--text-primary)';
+                inner12.style.transform = 'scale(1)';
+                radio12.style.background = '#000000';
+                radio12.style.borderColor = '#333333';
+                radio12.style.borderWidth = '1px';
+                // Deselect 24 - darker grey border, black background, no dot
+                inner24.style.background = 'transparent';
+                inner24.style.transform = 'scale(0.8)';
+                radio24.style.background = '#000000';
+                radio24.style.borderColor = '#333333';
+                radio24.style.borderWidth = '1px';
+            } else {
+                // Select 24 - DARKER GREY border, black background, orange dot inside
+                inner24.style.background = 'var(--text-primary)';
+                inner24.style.transform = 'scale(1)';
+                radio24.style.background = '#000000';
+                radio24.style.borderColor = '#333333';
+                radio24.style.borderWidth = '1px';
+                // Deselect 12 - darker grey border, black background, no dot
+                inner12.style.background = 'transparent';
+                inner12.style.transform = 'scale(0.8)';
+                radio12.style.background = '#000000';
+                radio12.style.borderColor = '#333333';
+                radio12.style.borderWidth = '1px';
+            }
+            
+            showNotification(selectedMnemonic + ' Word Mnemonic selected', 'success');
+            console.log('🔧 Mnemonic length:', selectedMnemonic, 'words');
         }
 
         function createWallet() {
