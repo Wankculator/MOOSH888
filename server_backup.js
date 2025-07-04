@@ -1453,7 +1453,7 @@ const server = http.createServer((req, res) => {
                         <label class="text-dim" style="display: block; margin-bottom: calc(8px * var(--scale-factor)); font-weight: 500;">Create Password</label>
                         <div style="position: relative; display: flex; align-items: center;">
                             <input id="createPasswordInput" class="input-field" type="password" placeholder="Enter secure password..." style="width: 100%; padding-right: calc(40px * var(--scale-factor));">
-                            <button id="toggleCreatePassword" type="button" onclick="togglePasswordVisibility('createPasswordInput', 'toggleCreatePassword')" style="position: absolute; right: calc(12px * var(--scale-factor)); background: none; border: none; color: var(--text-dim); cursor: pointer; padding: calc(4px * var(--scale-factor)); transition: color 0.2s ease; width: calc(20px * var(--scale-factor)); height: calc(20px * var(--scale-factor)); display: flex; align-items: center; justify-content: center;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-dim)'" title="Show password">
+                            <button id="toggleCreatePassword" type="button" onclick="togglePasswordVisibility('createPasswordInput', 'toggleCreatePassword')" style="position: absolute; right: calc(12px * var(--scale-factor)); background: none; border: none; color: var(--text-dim); cursor: pointer; padding: calc(4px * var(--scale-factor)); transition: color 0.2s ease; width: calc(20px * var(--scale-factor)); height: calc(20px * var(--scale-factor)); display: flex; align-items: center; justify-content:" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-dim)'" title="Show password">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -1466,7 +1466,7 @@ const server = http.createServer((req, res) => {
                         <label class="text-dim" style="display: block; margin-bottom: calc(8px * var(--scale-factor)); font-weight: 500;">Re-enter Password</label>
                         <div style="position: relative; display: flex; align-items: center;">
                             <input id="confirmPasswordInput" class="input-field" type="password" placeholder="Confirm password..." style="width: 100%; padding-right: calc(40px * var(--scale-factor));">
-                            <button id="toggleConfirmPassword" type="button" onclick="togglePasswordVisibility('confirmPasswordInput', 'toggleConfirmPassword')" style="position: absolute; right: calc(12px * var(--scale-factor)); background: none; border: none; color: var(--text-dim); cursor: pointer; padding: calc(4px * var(--scale-factor)); transition: color 0.2s ease; width: calc(20px * var(--scale-factor)); height: calc(20px * var(--scale-factor)); display: flex; align-items: center; justify-content: center;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-dim)'" title="Show password">
+                            <button id="toggleConfirmPassword" type="button" onclick="togglePasswordVisibility('confirmPasswordInput', 'toggleConfirmPassword')" style="position: absolute; right: calc(12px * var(--scale-factor)); background: none; border: none; color: var(--text-dim); cursor: pointer; padding: calc(4px * var(--scale-factor)); transition: color 0.2s ease; width: calc(20px * var(--scale-factor)); height: calc(20px * var(--scale-factor)); display: flex; align-items: center; justify-content:" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-dim)'" title="Show password">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -2582,473 +2582,1145 @@ const server = http.createServer((req, res) => {
         }
 
         function openWalletDashboard() {
-            showNotification('Opening wallet dashboard...', 'success');
+            // Simple Dashboard Implementation
+            document.body.innerHTML = `
+                <div style="
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background: var(--bg-primary);
+                    color: var(--text-primary);
+                    font-family: 'JetBrains Mono', monospace;
+                    min-height: 100vh;
+                ">
+                    <div style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 20px 0;
+                        border-bottom: 2px solid var(--text-primary);
+                        margin-bottom: 30px;
+                    ">
+                        <h1 style="
+                            font-size: 24px;
+                            font-weight: 600;
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                        ">
+                            <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" 
+                                 alt="MOOSH" 
+                                 style="width: 32px; height: 32px; object-fit: contain;" 
+                                 onerror="this.style.display='none'">
+                            <span class="moosh-flash">MOOSH</span>
+                            <span class="text-dim">WALLET</span>
+                        </h1>
+                        
+                        <div style="display: flex; gap: 15px;">
+                            <button onclick="showNotification('Refresh coming soon', 'info')" style="
+                                background: transparent;
+                                border: 1px solid var(--border-color);
+                                color: var(--text-dim);
+                                padding: 8px 16px;
+                                cursor: pointer;
+                                font-family: inherit;
+                            ">↻ Refresh</button>
+                            
+                            <button onclick="showNotification('Settings coming soon', 'info')" style="
+                                background: transparent;
+                                border: 1px solid var(--border-color);
+                                color: var(--text-dim);
+                                padding: 8px 16px;
+                                cursor: pointer;
+                                font-family: inherit;
+                            ">⚙ Settings</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Balance Section -->
+                    <div style="margin-bottom: 40px;">
+                        <div style="
+                            background: rgba(245, 115, 21, 0.05);
+                            border: 2px solid var(--text-primary);
+                            padding: 30px;
+                            margin-bottom: 20px;
+                        ">
+                            <h3 style="
+                                font-size: 14px;
+                                color: var(--text-dim);
+                                margin: 0 0 10px 0;
+                            ">BITCOIN BALANCE</h3>
+                            <div style="
+                                font-size: 36px;
+                                font-weight: 700;
+                                color: var(--text-primary);
+                                margin-bottom: 10px;
+                            ">0.00000000 BTC</div>
+                            <div style="
+                                font-size: 16px;
+                                color: var(--text-dim);
+                            ">≈ $0.00 USD</div>
+                        </div>
+                        
+                        <div style="
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                            gap: 20px;
+                        ">
+                            <div style="
+                                background: var(--bg-primary);
+                                border: 1px solid var(--border-color);
+                                padding: 20px;
+                            ">
+                                <div style="margin-bottom: 10px;">⚡ LIGHTNING</div>
+                                <div style="font-size: 20px; font-weight: 600;">0.00</div>
+                            </div>
+                            
+                            <div style="
+                                background: var(--bg-primary);
+                                border: 1px solid var(--border-color);
+                                padding: 20px;
+                            ">
+                                <div style="margin-bottom: 10px;">💵 STABLECOINS</div>
+                                <div style="font-size: 20px; font-weight: 600;">$0.00</div>
+                            </div>
+                            
+                            <div style="
+                                background: var(--bg-primary);
+                                border: 1px solid var(--border-color);
+                                padding: 20px;
+                            ">
+                                <div style="margin-bottom: 10px;">🎨 ORDINALS</div>
+                                <div style="font-size: 20px; font-weight: 600;">0</div>
+                            </div>
+                            
+                            <div style="
+                                background: var(--bg-primary);
+                                border: 1px solid var(--border-color);
+                                padding: 20px;
+                            ">
+                                <div style="margin-bottom: 10px;">🌐 SPARK</div>
+                                <div style="font-size: 20px; font-weight: 600;">1,000</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div style="margin-bottom: 40px;">
+                        <h3 style="
+                            font-size: 16px;
+                            color: var(--text-primary);
+                            margin-bottom: 20px;
+                        ">QUICK ACTIONS</h3>
+                        
+                        <div style="
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                            gap: 20px;
+                        ">
+                            <button onclick="showNotification('Send feature coming soon', 'info')" style="
+                                background: var(--bg-primary);
+                                border: 2px solid var(--text-primary);
+                                color: var(--text-primary);
+                                padding: 30px;
+                                cursor: pointer;
+                                font-family: inherit;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                gap: 10px;
+                            ">
+                                <span style="font-size: 24px;">↑</span>
+                                <span style="font-size: 14px; font-weight: 600;">SEND</span>
+                            </button>
+                            
+                            <button onclick="showNotification('Receive feature coming soon', 'info')" style="
+                                background: var(--bg-primary);
+                                border: 2px solid var(--text-primary);
+                                color: var(--text-primary);
+                                padding: 30px;
+                                cursor: pointer;
+                                font-family: inherit;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                gap: 10px;
+                            ">
+                                <span style="font-size: 24px;">↓</span>
+                                <span style="font-size: 14px; font-weight: 600;">RECEIVE</span>
+                            </button>
+                            
+                            <button onclick="showNotification('Swap feature coming soon', 'info')" style="
+                                background: var(--bg-primary);
+                                border: 2px solid var(--text-primary);
+                                color: var(--text-primary);
+                                padding: 30px;
+                                cursor: pointer;
+                                font-family: inherit;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                gap: 10px;
+                            ">
+                                <span style="font-size: 24px;">⇄</span>
+                                <span style="font-size: 14px; font-weight: 600;">SWAP</span>
+                            </button>
+                            
+                            <button onclick="showNotification('Buy feature coming soon', 'info')" style="
+                                background: var(--bg-primary);
+                                border: 2px solid var(--text-primary);
+                                color: var(--text-primary);
+                                padding: 30px;
+                                cursor: pointer;
+                                font-family: inherit;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                gap: 10px;
+                            ">
+                                <span style="font-size: 24px;">💳</span>
+                                <span style="font-size: 14px; font-weight: 600;">BUY</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Transaction History -->
+                    <div style="
+                        background: var(--bg-primary);
+                        border: 1px solid var(--border-color);
+                        padding: 30px;
+                    ">
+                        <div style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 20px;
+                        ">
+                            <h3 style="
+                                font-size: 16px;
+                                color: var(--text-primary);
+                                margin: 0;
+                            ">RECENT TRANSACTIONS</h3>
+                            <button style="
+                                background: transparent;
+                                border: 1px solid var(--border-color);
+                                color: var(--text-dim);
+                                padding: 5px 15px;
+                                cursor: pointer;
+                                font-family: inherit;
+                            ">Filter</button>
+                        </div>
+                        
+                        <div style="
+                            text-align: center;
+                            padding: 40px;
+                            color: var(--text-dim);
+                        ">
+                            <p>No transactions yet</p>
+                            <p style="font-size: 12px; margin-top: 10px;">
+                                Your transaction history will appear here
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
             
-            // Clear the current page
-            setTimeout(() => {
-                // Get the cursor content div
-                const cursorContent = document.querySelector('.cursor-content');
-                if (!cursorContent) {
-                    console.error('Cursor content not found');
-                    return;
-                }
-                
-                // Clear the content
-                cursorContent.innerHTML = '';
-                
-                // Create dashboard container
-                const dashboardContainer = document.createElement('div');
-                dashboardContainer.style.cssText = 'padding: 0; max-width: 100%; margin: 0;';
-                
-                // Create dashboard header
-                const header = createDashboardHeader();
-                dashboardContainer.appendChild(header);
-                
-                // Create main content area
-                const mainContent = document.createElement('div');
-                mainContent.style.cssText = 'padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));';
-                
-                // Create balance section
-                const balanceSection = createBalanceSection();
-                mainContent.appendChild(balanceSection);
-                
-                // Create quick actions section
-                const quickActions = createQuickActions();
-                mainContent.appendChild(quickActions);
-                
-                // Create transaction history section
-                const transactionHistory = createTransactionHistory();
-                mainContent.appendChild(transactionHistory);
-                
-                dashboardContainer.appendChild(mainContent);
-                cursorContent.appendChild(dashboardContainer);
-                
-                showNotification('Wallet dashboard loaded', 'success');
-            }, 1000);
+            showNotification('Wallet dashboard loaded', 'success');
         }
         
-        // Dashboard Header Component
-        function createDashboardHeader() {
-            const header = document.createElement('div');
-            header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: calc(var(--spacing-unit) * 2 * var(--scale-factor)); border-bottom: 2px solid var(--text-primary); background: var(--bg-primary);';
-            
-            // Left side - Logo and title
-            const leftSection = document.createElement('div');
-            leftSection.style.cssText = 'display: flex; align-items: center; gap: calc(var(--spacing-unit) * 1.5 * var(--scale-factor));';
-            
-            const logo = document.createElement('img');
-            logo.src = '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png';
-            logo.alt = 'MOOSH';
-            logo.style.cssText = 'width: calc(40px * var(--scale-factor)); height: calc(40px * var(--scale-factor)); object-fit: contain;';
-            logo.onerror = function() { this.style.display = 'none'; };
-            
-            const title = document.createElement('h1');
-            title.style.cssText = 'font-size: calc(24px * var(--scale-factor)); margin: 0; display: flex; align-items: center; gap: calc(var(--spacing-unit) * var(--scale-factor));';
-            
-            const mooshSpan = document.createElement('span');
-            mooshSpan.className = 'moosh-flash';
-            mooshSpan.textContent = 'MOOSH';
-            
-            const walletSpan = document.createElement('span');
-            walletSpan.className = 'text-dim';
-            walletSpan.textContent = 'WALLET';
-            
-            title.appendChild(mooshSpan);
-            title.appendChild(walletSpan);
-            
-            leftSection.appendChild(logo);
-            leftSection.appendChild(title);
-            
-            // Right side - Action buttons
-            const rightSection = document.createElement('div');
-            rightSection.style.cssText = 'display: flex; gap: calc(var(--spacing-unit) * 2 * var(--scale-factor)); align-items: center;';
-            
-            // Refresh button
-            const refreshBtn = createHeaderButton('↻', 'Refresh', () => {
-                showNotification('Refreshing wallet data...', 'info');
-                // Simulate refresh
-                setTimeout(() => {
-                    updateBalanceDisplay();
-                    showNotification('Wallet data refreshed', 'success');
-                }, 1000);
-            });
-            
-            // Privacy toggle button
-            const privacyBtn = createHeaderButton('👁', 'Privacy', () => {
-                togglePrivacyMode();
-            });
-            
-            // Settings button
-            const settingsBtn = createHeaderButton('⚙', 'Settings', () => {
-                showNotification('Settings coming soon', 'info');
-            });
-            
-            rightSection.appendChild(refreshBtn);
-            rightSection.appendChild(privacyBtn);
-            rightSection.appendChild(settingsBtn);
-            
-            header.appendChild(leftSection);
-            header.appendChild(rightSection);
-            
-            return header;
+        // ... existing code ...
+            return `
+                <style>
+                    /* Enhanced CSS Variables for Dashboard */
+                    :root {
+                        /* Add missing dashboard variables */
+                        --touch-target-min: 44px;
+                        --mobile-line-height: 1.5;
+                    }
+                    
+                    /* MOOSH Dashboard Foundation Styles */
+                    .wallet-dashboard-container {
+                        max-width: calc(1200px * var(--scale-factor));
+                        margin: 0 auto;
+                        padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                        background: var(--bg-primary);
+                        color: var(--text-primary);
+                        font-family: 'JetBrains Mono', monospace;
+                        line-height: var(--mobile-line-height);
+                        min-height: 100vh;
+                    }
+                    
+                    .dashboard-content {
+                        margin-top: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                    }
+                    
+                    /* Dashboard Header Styles */
+                    .dashboard-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: calc(var(--spacing-unit) * 2 * var(--scale-factor)) 0;
+                        border-bottom: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                        margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                    }
+                    
+                    .dashboard-title {
+                        font-size: calc(24px * var(--scale-factor));
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        gap: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                    }
+                    
+                    .header-actions {
+                        display: flex;
+                        gap: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                        align-items: center;
+                    }
+                    
+                    .header-button {
+                        background: transparent;
+                        border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                        color: var(--text-dim);
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: calc(12px * var(--scale-factor));
+                        padding: calc(var(--spacing-unit) * 1 * var(--scale-factor)) calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        min-height: calc(var(--touch-target-min) * 0.8 * var(--scale-factor));
+                        display: flex;
+                        align-items: center;
+                        gap: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
+                    }
+                    
+                    .header-button:hover {
+                        border-color: var(--text-primary);
+                        color: var(--text-primary);
+                    }
+                    
+                    /* Cursor blink animation */
+                    .cursor-blink {
+                        animation: blink 1s infinite;
+                    }
+                    
+                    @keyframes blink {
+                        0%, 50% { opacity: 1; }
+                        51%, 100% { opacity: 0; }
+                    }
+                    
+                    /* Responsive Design */
+                    @media (max-width: 768px) {
+                        .wallet-dashboard-container {
+                            padding: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                        }
+                        
+                        .dashboard-header {
+                            flex-direction: column;
+                            gap: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                            align-items: flex-start;
+                        }
+                        
+                        .header-actions {
+                            width: 100%;
+                            justify-content: space-between;
+                        }
+                    }
+                    
+                    /* Loading Animation */
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                    }
+                    
+                    .loading-pulse {
+                        animation: pulse 2s infinite;
+                    }
+                </style>
+            `;
         }
         
-        // Helper function to create header buttons
-        function createHeaderButton(icon, text, onClick) {
-            const button = document.createElement('button');
-            button.className = 'btn-secondary';
-            button.style.cssText = 'display: flex; align-items: center; gap: calc(var(--spacing-unit) * 0.5 * var(--scale-factor)); padding: calc(var(--spacing-unit) * var(--scale-factor)) calc(var(--spacing-unit) * 2 * var(--scale-factor));';
-            button.onclick = onClick;
-            
-            const iconSpan = document.createElement('span');
-            iconSpan.style.cssText = 'font-size: calc(16px * var(--scale-factor));';
-            iconSpan.textContent = icon;
-            
-            const textSpan = document.createElement('span');
-            textSpan.style.cssText = 'font-size: calc(12px * var(--scale-factor));';
-            textSpan.textContent = text;
-            
-            button.appendChild(iconSpan);
-            button.appendChild(textSpan);
-            
-            return button;
+        // DASHBOARD HEADER - Phase 1 Foundation
+        function renderDashboardHeader() {
+            return `
+                <div class="dashboard-header">
+                    <h1 class="dashboard-title">
+                        <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" 
+                             alt="MOOSH" 
+                             style="width: calc(32px * var(--scale-factor)); height: calc(32px * var(--scale-factor)); object-fit: contain;" 
+                             onerror="this.style.display='none'">
+                        <span class="moosh-flash">MOOSH</span>
+                        <span class="text-dim">WALLET</span>
+                        <span class="cursor-blink" style="color: var(--text-primary);">_</span>
+                    </h1>
+                    
+                    <div class="header-actions">
+                        <button class="header-button" onclick="handleRefreshData()" title="Refresh">
+                            <span style="font-size: calc(16px * var(--scale-factor));">↻</span>
+                            <span>Refresh</span>
+                        </button>
+                        
+                        <button class="header-button" onclick="handlePrivacyToggle()" title="Privacy">
+                            <span style="font-size: calc(16px * var(--scale-factor));">👁</span>
+                            <span>Privacy</span>
+                        </button>
+                        
+                        <button class="header-button" onclick="handleSettings()" title="Settings">
+                            <span style="font-size: calc(16px * var(--scale-factor));">⚙</span>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+                </div>
+            `;
         }
         
-        // Balance Section Component
-        function createBalanceSection() {
-            const section = document.createElement('div');
-            section.style.cssText = 'margin-bottom: calc(var(--spacing-unit) * 4 * var(--scale-factor));';
-            
-            // Main Bitcoin balance card
-            const mainCard = document.createElement('div');
-            mainCard.style.cssText = 'background: rgba(245, 115, 21, 0.05); border: 2px solid var(--text-primary); padding: calc(var(--spacing-unit) * 3 * var(--scale-factor)); margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor)); position: relative;';
-            
-            const balanceContainer = document.createElement('div');
-            balanceContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: flex-start;';
-            
-            // Balance info
-            const balanceInfo = document.createElement('div');
-            
-            const balanceLabel = document.createElement('h3');
-            balanceLabel.style.cssText = 'font-size: calc(14px * var(--scale-factor)); color: var(--text-dim); margin: 0 0 calc(var(--spacing-unit) * var(--scale-factor)) 0; font-weight: 500;';
-            balanceLabel.textContent = 'BITCOIN BALANCE';
-            
-            const balanceAmount = document.createElement('div');
-            balanceAmount.style.cssText = 'display: flex; align-items: baseline; gap: calc(var(--spacing-unit) * 2 * var(--scale-factor));';
-            
-            const btcAmount = document.createElement('span');
-            btcAmount.id = 'btc-balance';
-            btcAmount.style.cssText = 'font-size: calc(36px * var(--scale-factor)); font-weight: 700; color: var(--text-primary);';
-            btcAmount.textContent = '0.00000000';
-            btcAmount.setAttribute('data-value', '0.00000000');
-            
-            const btcUnit = document.createElement('span');
-            btcUnit.style.cssText = 'font-size: calc(18px * var(--scale-factor)); color: var(--text-primary); font-weight: 600;';
-            btcUnit.textContent = 'BTC';
-            
-            balanceAmount.appendChild(btcAmount);
-            balanceAmount.appendChild(btcUnit);
-            
-            const usdValue = document.createElement('div');
-            usdValue.style.cssText = 'font-size: calc(16px * var(--scale-factor)); color: var(--text-dim); margin-top: calc(var(--spacing-unit) * var(--scale-factor));';
-            usdValue.innerHTML = '≈ $<span id="usd-balance" data-value="0.00">0.00</span> USD';
-            
-            balanceInfo.appendChild(balanceLabel);
-            balanceInfo.appendChild(balanceAmount);
-            balanceInfo.appendChild(usdValue);
-            
-            // Status indicator
-            const statusIndicator = document.createElement('div');
-            statusIndicator.style.cssText = 'display: flex; gap: calc(var(--spacing-unit) * var(--scale-factor)); align-items: center;';
-            
-            const statusDot = document.createElement('span');
-            statusDot.style.cssText = 'display: inline-block; width: calc(8px * var(--scale-factor)); height: calc(8px * var(--scale-factor)); background: #69fd97bd; border-radius: 50%; animation: pulse 2s infinite;';
-            
-            const statusText = document.createElement('span');
-            statusText.style.cssText = 'font-size: calc(12px * var(--scale-factor)); color: #69fd97bd;';
-            statusText.textContent = 'LIVE';
-            
-            statusIndicator.appendChild(statusDot);
-            statusIndicator.appendChild(statusText);
-            
-            balanceContainer.appendChild(balanceInfo);
-            balanceContainer.appendChild(statusIndicator);
-            mainCard.appendChild(balanceContainer);
-            
-            // Secondary balance cards
-            const secondaryCards = createSecondaryBalanceCards();
-            
-            section.appendChild(mainCard);
-            section.appendChild(secondaryCards);
-            
-            return section;
-        }
-        
-        // Secondary Balance Cards
-        function createSecondaryBalanceCards() {
-            const container = document.createElement('div');
-            container.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(200px * var(--scale-factor)), 1fr)); gap: calc(var(--spacing-unit) * 2 * var(--scale-factor));';
-            
-            const cards = [
-                { icon: '⚡', title: 'LIGHTNING', amount: '0.00', subtitle: '≈ $0.00', id: 'lightning-balance' },
-                { icon: '💵', title: 'STABLECOINS', amount: '$0.00', subtitle: 'USDT + USDC', id: 'stable-balance' },
-                { icon: '🎨', title: 'ORDINALS', amount: '0', subtitle: 'Inscriptions', id: 'ordinals-balance' },
-                { icon: '🌐', title: 'SPARK', amount: '1,000', subtitle: 'MOOSH Tokens', id: 'spark-balance' }
-            ];
-            
-            cards.forEach(cardData => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.style.cssText = 'padding: calc(var(--spacing-unit) * 2 * var(--scale-factor)); cursor: pointer; transition: all 0.2s ease;';
-                
-                card.addEventListener('mouseenter', function() {
-                    this.style.borderColor = 'var(--text-primary)';
-                    this.style.transform = 'translateY(-2px)';
-                });
-                
-                card.addEventListener('mouseleave', function() {
-                    this.style.borderColor = 'var(--border-color)';
-                    this.style.transform = 'translateY(0)';
-                });
-                
-                const header = document.createElement('div');
-                header.style.cssText = 'display: flex; align-items: center; gap: calc(var(--spacing-unit) * var(--scale-factor)); margin-bottom: calc(var(--spacing-unit) * var(--scale-factor));';
-                
-                const icon = document.createElement('span');
-                icon.style.cssText = 'font-size: calc(20px * var(--scale-factor));';
-                icon.textContent = cardData.icon;
-                
-                const title = document.createElement('span');
-                title.style.cssText = 'font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);';
-                title.textContent = cardData.title;
-                
-                header.appendChild(icon);
-                header.appendChild(title);
-                
-                const amount = document.createElement('div');
-                amount.id = cardData.id;
-                amount.style.cssText = 'font-size: calc(20px * var(--scale-factor)); font-weight: 600; color: var(--text-primary);';
-                amount.textContent = cardData.amount;
-                amount.setAttribute('data-value', cardData.amount);
-                
-                const subtitle = document.createElement('div');
-                subtitle.style.cssText = 'font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);';
-                subtitle.textContent = cardData.subtitle;
-                
-                card.appendChild(header);
-                card.appendChild(amount);
-                card.appendChild(subtitle);
-                
-                container.appendChild(card);
-            });
-            
-            return container;
-        }
-        
-        // Quick Actions Section
-        function createQuickActions() {
-            const section = document.createElement('div');
-            section.style.cssText = 'margin-bottom: calc(var(--spacing-unit) * 4 * var(--scale-factor));';
-            
-            const title = document.createElement('h3');
-            title.style.cssText = 'font-size: calc(16px * var(--scale-factor)); color: var(--text-primary); margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor)); font-weight: 600;';
-            
-            const ltSpan = document.createElement('span');
-            ltSpan.className = 'text-dim';
-            ltSpan.textContent = '<';
-            
-            const titleText = document.createTextNode(' QUICK ACTIONS ');
-            
-            const gtSpan = document.createElement('span');
-            gtSpan.className = 'text-dim';
-            gtSpan.textContent = '/>';
-            
-            title.appendChild(ltSpan);
-            title.appendChild(titleText);
-            title.appendChild(gtSpan);
-            
-            const actionsGrid = document.createElement('div');
-            actionsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(120px * var(--scale-factor)), 1fr)); gap: calc(var(--spacing-unit) * 2 * var(--scale-factor));';
-            
-            const actions = [
-                { icon: '↑', text: 'SEND', handler: () => showNotification('Send feature coming soon', 'info') },
-                { icon: '↓', text: 'RECEIVE', handler: () => showNotification('Receive feature coming soon', 'info') },
-                { icon: '⇄', text: 'SWAP', handler: () => showNotification('Swap feature coming soon', 'info') },
-                { icon: '💳', text: 'BUY', handler: () => showNotification('Buy feature coming soon', 'info') }
-            ];
-            
-            actions.forEach(action => {
-                const button = createActionButton(action.icon, action.text, action.handler);
-                actionsGrid.appendChild(button);
-            });
-            
-            section.appendChild(title);
-            section.appendChild(actionsGrid);
-            
-            return section;
-        }
-        
-        // Action Button Helper
-        function createActionButton(icon, text, handler) {
-            const button = document.createElement('button');
-            button.style.cssText = 'background: var(--bg-primary); border: 2px solid var(--text-primary); color: var(--text-primary); padding: calc(var(--spacing-unit) * 3 * var(--scale-factor)); cursor: pointer; font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: calc(var(--spacing-unit) * var(--scale-factor)); transition: all 0.2s ease; min-height: calc(var(--touch-target-min) * var(--scale-factor));';
-            
-            const iconSpan = document.createElement('span');
-            iconSpan.style.cssText = 'font-size: calc(24px * var(--scale-factor));';
-            iconSpan.textContent = icon;
-            
-            const textSpan = document.createElement('span');
-            textSpan.style.cssText = 'font-size: calc(14px * var(--scale-factor)); font-weight: 600;';
-            textSpan.textContent = text;
-            
-            button.appendChild(iconSpan);
-            button.appendChild(textSpan);
-            
-            button.onclick = handler;
-            
-            button.addEventListener('mouseenter', function() {
-                this.style.background = 'var(--text-primary)';
-                this.style.color = 'var(--bg-primary)';
-            });
-            
-            button.addEventListener('mouseleave', function() {
-                this.style.background = 'var(--bg-primary)';
-                this.style.color = 'var(--text-primary)';
-            });
-            
-            return button;
-        }
-        
-        // Transaction History Section
-        function createTransactionHistory() {
-            const section = document.createElement('div');
-            section.className = 'card';
-            section.style.cssText = 'padding: calc(var(--spacing-unit) * 3 * var(--scale-factor));';
-            
-            const header = document.createElement('div');
-            header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor));';
-            
-            const title = document.createElement('h3');
-            title.style.cssText = 'font-size: calc(16px * var(--scale-factor)); color: var(--text-primary); margin: 0;';
-            
-            const ltSpan = document.createElement('span');
-            ltSpan.className = 'text-dim';
-            ltSpan.textContent = '<';
-            
-            const titleText = document.createTextNode(' RECENT TRANSACTIONS ');
-            
-            const gtSpan = document.createElement('span');
-            gtSpan.className = 'text-dim';
-            gtSpan.textContent = '/>';
-            
-            title.appendChild(ltSpan);
-            title.appendChild(titleText);
-            title.appendChild(gtSpan);
-            
-            const filterBtn = document.createElement('button');
-            filterBtn.className = 'btn-secondary';
-            filterBtn.textContent = 'Filter';
-            filterBtn.style.cssText = 'padding: calc(var(--spacing-unit) * 0.5 * var(--scale-factor)) calc(var(--spacing-unit) * 1.5 * var(--scale-factor));';
-            filterBtn.onclick = () => showNotification('Filter coming soon', 'info');
-            
-            header.appendChild(title);
-            header.appendChild(filterBtn);
-            
-            const emptyState = document.createElement('div');
-            emptyState.style.cssText = 'text-align: center; padding: calc(var(--spacing-unit) * 4 * var(--scale-factor)); color: var(--text-dim);';
-            
-            const noTxText = document.createElement('p');
-            noTxText.textContent = 'No transactions yet';
-            
-            const helpText = document.createElement('p');
-            helpText.style.cssText = 'font-size: calc(12px * var(--scale-factor)); margin-top: calc(var(--spacing-unit) * var(--scale-factor));';
-            helpText.textContent = 'Your transaction history will appear here';
-            
-            emptyState.appendChild(noTxText);
-            emptyState.appendChild(helpText);
-            
-            section.appendChild(header);
-            section.appendChild(emptyState);
-            
-            return section;
-        }
-        
-        // Privacy Mode Toggle
-        let isPrivacyMode = false;
-        
-        function togglePrivacyMode() {
-            isPrivacyMode = !isPrivacyMode;
-            
-            const btcBalance = document.getElementById('btc-balance');
-            const usdBalance = document.getElementById('usd-balance');
-            const lightningBalance = document.getElementById('lightning-balance');
-            const stableBalance = document.getElementById('stable-balance');
-            const ordinalsBalance = document.getElementById('ordinals-balance');
-            const sparkBalance = document.getElementById('spark-balance');
-            
-            if (isPrivacyMode) {
-                // Hide balances
-                if (btcBalance) {
-                    btcBalance.textContent = '••••••••';
-                }
-                if (usdBalance) {
-                    usdBalance.textContent = '••••••';
-                }
-                if (lightningBalance) {
-                    lightningBalance.textContent = '••••';
-                }
-                if (stableBalance) {
-                    stableBalance.textContent = '••••';
-                }
-                if (ordinalsBalance) {
-                    ordinalsBalance.textContent = '••';
-                }
-                if (sparkBalance) {
-                    sparkBalance.textContent = '••••';
-                }
-                showNotification('Privacy mode enabled', 'success');
-            } else {
-                // Show balances
-                if (btcBalance) {
-                    btcBalance.textContent = btcBalance.getAttribute('data-value') || '0.00000000';
-                }
-                if (usdBalance) {
-                    usdBalance.textContent = usdBalance.getAttribute('data-value') || '0.00';
-                }
-                if (lightningBalance) {
-                    lightningBalance.textContent = lightningBalance.getAttribute('data-value') || '0.00';
-                }
-                if (stableBalance) {
-                    stableBalance.textContent = stableBalance.getAttribute('data-value') || '$0.00';
-                }
-                if (ordinalsBalance) {
-                    ordinalsBalance.textContent = ordinalsBalance.getAttribute('data-value') || '0';
-                }
-                if (sparkBalance) {
-                    sparkBalance.textContent = sparkBalance.getAttribute('data-value') || '1,000';
-                }
-                showNotification('Privacy mode disabled', 'success');
-            }
-        }
-        
-        // Update Balance Display (for refresh)
-        function updateBalanceDisplay() {
-            // Simulate balance update with random values
-            const btcBalance = document.getElementById('btc-balance');
-            const usdBalance = document.getElementById('usd-balance');
-            
-            if (btcBalance && !isPrivacyMode) {
-                const newBtc = (Math.random() * 0.1).toFixed(8);
-                const newUsd = (parseFloat(newBtc) * 45000).toFixed(2);
-                
-                btcBalance.textContent = newBtc;
-                btcBalance.setAttribute('data-value', newBtc);
-                
-                if (usdBalance) {
-                    usdBalance.textContent = newUsd;
-                    usdBalance.setAttribute('data-value', newUsd);
-                }
-            }
+        // DASHBOARD SCRIPTS - Phase 1 Foundation
+        function renderDashboardScripts() {
+            return `
+                <script>
+                    // Dashboard State Management - Phase 1
+                    const DASHBOARD_STATE = {
+                        wallet: {
+                            balance: 0.00000000,
+                            balanceUSD: 0.00,
+                            activeAccount: 'Main Wallet',
+                            isHidden: false
+                        },
+                        ui: {
+                            currentView: 'dashboard',
+                            isLoading: true
+                        },
+                        network: {
+                            connected: true,
+                            lastUpdate: new Date()
+                        }
+                    };
+                    
+                    // Dashboard Controller Class
+                    class WalletDashboard {
+                        constructor() {
+                            this.state = DASHBOARD_STATE;
+                            this.init();
+                        }
+                        
+                        init() {
+                            console.log('🚀 MOOSH Wallet Dashboard initialized');
+                            this.bindEventListeners();
+                            
+                            // Simulate loading completion
+                            setTimeout(() => {
+                                this.state.ui.isLoading = false;
+                                this.renderDashboard();
+                            }, 1500);
+                        }
+                        
+                        bindEventListeners() {
+                            // Global event listeners will be added here
+                        }
+                        
+                        renderDashboard() {
+                            const content = document.getElementById('dashboard-content');
+                            if (content) {
+                                content.innerHTML = `
+                                    <!-- Phase 2: Balance Display -->
+                                    <div class="balance-section" style="margin-bottom: calc(var(--spacing-unit) * 4 * var(--scale-factor));">
+                                        <!-- Main Balance Card -->
+                                        <div class="balance-card-main" style="
+                                            background: rgba(245, 115, 21, 0.05);
+                                            border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                            padding: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                            margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                            position: relative;
+                                        ">
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                                <div>
+                                                    <h3 style="
+                                                        font-size: calc(14px * var(--scale-factor));
+                                                        color: var(--text-dim);
+                                                        margin: 0 0 calc(var(--spacing-unit) * 1 * var(--scale-factor)) 0;
+                                                        font-weight: 500;
+                                                    ">BITCOIN BALANCE</h3>
+                                                    <div style="display: flex; align-items: baseline; gap: calc(var(--spacing-unit) * 2 * var(--scale-factor));">
+                                                        <span id="btc-balance" style="
+                                                            font-size: calc(36px * var(--scale-factor));
+                                                            font-weight: 700;
+                                                            color: var(--text-primary);
+                                                            font-family: 'JetBrains Mono', monospace;
+                                                        ">\$\{DASHBOARD_STATE.wallet.isHidden ? '••••••••' : DASHBOARD_STATE.wallet.balance.toFixed(8)\}</span>
+                                                        <span style="
+                                                            font-size: calc(18px * var(--scale-factor));
+                                                            color: var(--text-primary);
+                                                            font-weight: 600;
+                                                        ">BTC</span>
+                                                    </div>
+                                                    <div style="
+                                                        font-size: calc(16px * var(--scale-factor));
+                                                        color: var(--text-dim);
+                                                        margin-top: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                                    ">
+                                                        ≈ $<span id="usd-balance">\${DASHBOARD_STATE.wallet.isHidden ? '••••••' : DASHBOARD_STATE.wallet.balanceUSD.toFixed(2)}</span> USD
+                                                    </div>
+                                                </div>
+                                                <div style="display: flex; gap: calc(var(--spacing-unit) * 1 * var(--scale-factor));">
+                                                    <span style="
+                                                        display: inline-block;
+                                                        width: calc(8px * var(--scale-factor));
+                                                        height: calc(8px * var(--scale-factor));
+                                                        background: #69fd97bd;
+                                                        border-radius: 50%;
+                                                        animation: pulse 2s infinite;
+                                                    "></span>
+                                                    <span style="
+                                                        font-size: calc(12px * var(--scale-factor));
+                                                        color: #69fd97bd;
+                                                    ">LIVE</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Secondary Balance Cards Grid -->
+                                        <div style="
+                                            display: grid;
+                                            grid-template-columns: repeat(auto-fit, minmax(calc(200px * var(--scale-factor)), 1fr));
+                                            gap: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                        ">
+                                            <!-- Lightning Balance -->
+                                            <div class="balance-card" style="
+                                                background: var(--bg-primary);
+                                                border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                                padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                                transition: all 0.2s ease;
+                                            ">
+                                                <div style="display: flex; align-items: center; gap: calc(var(--spacing-unit) * 1 * var(--scale-factor)); margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));">
+                                                    <span style="font-size: calc(20px * var(--scale-factor));">⚡</span>
+                                                    <span style="font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);">LIGHTNING</span>
+                                                </div>
+                                                <div style="font-size: calc(20px * var(--scale-factor)); font-weight: 600; color: var(--text-primary);">
+                                                    \${DASHBOARD_STATE.wallet.isHidden ? '••••' : '0.00'}
+                                                </div>
+                                                <div style="font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);">
+                                                    ≈ $0.00
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Stablecoins Balance -->
+                                            <div class="balance-card" style="
+                                                background: var(--bg-primary);
+                                                border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                                padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                                transition: all 0.2s ease;
+                                            ">
+                                                <div style="display: flex; align-items: center; gap: calc(var(--spacing-unit) * 1 * var(--scale-factor)); margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));">
+                                                    <span style="font-size: calc(20px * var(--scale-factor));">💵</span>
+                                                    <span style="font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);">STABLECOINS</span>
+                                                </div>
+                                                <div style="font-size: calc(20px * var(--scale-factor)); font-weight: 600; color: var(--text-primary);">
+                                                    \${DASHBOARD_STATE.wallet.isHidden ? '••••' : '$0.00'}
+                                                </div>
+                                                <div style="font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);">
+                                                    USDT + USDC
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Ordinals Balance -->
+                                            <div class="balance-card" style="
+                                                background: var(--bg-primary);
+                                                border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                                padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                                transition: all 0.2s ease;
+                                            ">
+                                                <div style="display: flex; align-items: center; gap: calc(var(--spacing-unit) * 1 * var(--scale-factor)); margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));">
+                                                    <span style="font-size: calc(20px * var(--scale-factor));">🎨</span>
+                                                    <span style="font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);">ORDINALS</span>
+                                                </div>
+                                                <div style="font-size: calc(20px * var(--scale-factor)); font-weight: 600; color: var(--text-primary);">
+                                                    \${DASHBOARD_STATE.wallet.isHidden ? '••' : '0'}
+                                                </div>
+                                                <div style="font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);">
+                                                    Inscriptions
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Network Balance -->
+                                            <div class="balance-card" style="
+                                                background: var(--bg-primary);
+                                                border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                                padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                                transition: all 0.2s ease;
+                                            ">
+                                                <div style="display: flex; align-items: center; gap: calc(var(--spacing-unit) * 1 * var(--scale-factor)); margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));">
+                                                    <span style="font-size: calc(20px * var(--scale-factor));">🌐</span>
+                                                    <span style="font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);">SPARK</span>
+                                                </div>
+                                                <div style="font-size: calc(20px * var(--scale-factor)); font-weight: 600; color: var(--text-primary);">
+                                                    \${DASHBOARD_STATE.wallet.isHidden ? '••••' : '1,000'}
+                                                </div>
+                                                <div style="font-size: calc(12px * var(--scale-factor)); color: var(--text-dim);">
+                                                    MOOSH Tokens
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Phase 3: Quick Actions -->
+                                    <div class="quick-actions" style="margin-bottom: calc(var(--spacing-unit) * 4 * var(--scale-factor));">
+                                        <h3 style="
+                                            font-size: calc(16px * var(--scale-factor));
+                                            color: var(--text-primary);
+                                            margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                            font-weight: 600;
+                                        ">
+                                            <span class="text-dim">&lt;</span> QUICK ACTIONS <span class="text-dim">/&gt;</span>
+                                        </h3>
+                                        <div style="
+                                            display: grid;
+                                            grid-template-columns: repeat(auto-fit, minmax(calc(120px * var(--scale-factor)), 1fr));
+                                            gap: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                        ">
+                                            <button class="action-button" onclick="handleSend()" style="
+                                                background: var(--bg-primary);
+                                                border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                                color: var(--text-primary);
+                                                padding: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                                cursor: pointer;
+                                                transition: all 0.2s ease;
+                                                font-family: 'JetBrains Mono', monospace;
+                                                display: flex;
+                                                flex-direction: column;
+                                                align-items: center;
+                                                gap: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                                min-height: calc(var(--touch-target-min) * var(--scale-factor));
+                                            ">
+                                                <span style="font-size: calc(24px * var(--scale-factor));">↑</span>
+                                                <span style="font-size: calc(14px * var(--scale-factor)); font-weight: 600;">SEND</span>
+                                            </button>
+                                            
+                                            <button class="action-button" onclick="handleReceive()" style="
+                                                background: var(--bg-primary);
+                                                border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                                color: var(--text-primary);
+                                                padding: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                                cursor: pointer;
+                                                transition: all 0.2s ease;
+                                                font-family: 'JetBrains Mono', monospace;
+                                                display: flex;
+                                                flex-direction: column;
+                                                align-items: center;
+                                                gap: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                                min-height: calc(var(--touch-target-min) * var(--scale-factor));
+                                            ">
+                                                <span style="font-size: calc(24px * var(--scale-factor));">↓</span>
+                                                <span style="font-size: calc(14px * var(--scale-factor)); font-weight: 600;">RECEIVE</span>
+                                            </button>
+                                            
+                                            <button class="action-button" onclick="handleSwap()" style="
+                                                background: var(--bg-primary);
+                                                border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                                color: var(--text-primary);
+                                                padding: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                                cursor: pointer;
+                                                transition: all 0.2s ease;
+                                                font-family: 'JetBrains Mono', monospace;
+                                                display: flex;
+                                                flex-direction: column;
+                                                align-items: center;
+                                                gap: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                                min-height: calc(var(--touch-target-min) * var(--scale-factor));
+                                            ">
+                                                <span style="font-size: calc(24px * var(--scale-factor));">⇄</span>
+                                                <span style="font-size: calc(14px * var(--scale-factor)); font-weight: 600;">SWAP</span>
+                                            </button>
+                                            
+                                            <button class="action-button" onclick="handleBuy()" style="
+                                                background: var(--bg-primary);
+                                                border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                                color: var(--text-primary);
+                                                padding: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                                cursor: pointer;
+                                                transition: all 0.2s ease;
+                                                font-family: 'JetBrains Mono', monospace;
+                                                display: flex;
+                                                flex-direction: column;
+                                                align-items: center;
+                                                gap: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                                min-height: calc(var(--touch-target-min) * var(--scale-factor));
+                                            ">
+                                                <span style="font-size: calc(24px * var(--scale-factor));">💳</span>
+                                                <span style="font-size: calc(14px * var(--scale-factor)); font-weight: 600;">BUY</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Phase 4: Transaction History -->
+                                    <div class="transaction-history" style="
+                                        background: var(--bg-primary);
+                                        border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                        padding: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                    ">
+                                        <div style="
+                                            display: flex;
+                                            justify-content: space-between;
+                                            align-items: center;
+                                            margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                        ">
+                                            <h3 style="
+                                                font-size: calc(16px * var(--scale-factor));
+                                                color: var(--text-primary);
+                                                margin: 0;
+                                                font-weight: 600;
+                                            ">
+                                                <span class="text-dim">&lt;</span> RECENT TRANSACTIONS <span class="text-dim">/&gt;</span>
+                                            </h3>
+                                            <button style="
+                                                background: transparent;
+                                                border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                                color: var(--text-dim);
+                                                font-size: calc(12px * var(--scale-factor));
+                                                padding: calc(var(--spacing-unit) * 0.5 * var(--scale-factor)) calc(var(--spacing-unit) * 1.5 * var(--scale-factor));
+                                                cursor: pointer;
+                                                font-family: 'JetBrains Mono', monospace;
+                                            ">Filter</button>
+                                        </div>
+                                        
+                                        <div id="transaction-list" style="
+                                            text-align: center;
+                                            padding: calc(var(--spacing-unit) * 4 * var(--scale-factor));
+                                            color: var(--text-dim);
+                                        ">
+                                            <p style="font-size: calc(14px * var(--scale-factor));">No transactions yet</p>
+                                            <p style="font-size: calc(12px * var(--scale-factor)); margin-top: calc(var(--spacing-unit) * 1 * var(--scale-factor));">
+                                                Your transaction history will appear here
+                                            </p>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                // Add hover effects to balance cards
+                                document.querySelectorAll('.balance-card').forEach(card => {
+                                    card.addEventListener('mouseenter', function() {
+                                        this.style.borderColor = 'var(--text-primary)';
+                                        this.style.transform = 'translateY(-2px)';
+                                    });
+                                    card.addEventListener('mouseleave', function() {
+                                        this.style.borderColor = 'var(--border-color)';
+                                        this.style.transform = 'translateY(0)';
+                                    });
+                                });
+                                
+                                // Add hover effects to action buttons
+                                document.querySelectorAll('.action-button').forEach(button => {
+                                    button.addEventListener('mouseenter', function() {
+                                        this.style.background = 'var(--text-primary)';
+                                        this.style.color = 'var(--bg-primary)';
+                                    });
+                                    button.addEventListener('mouseleave', function() {
+                                        this.style.background = 'var(--bg-primary)';
+                                        this.style.color = 'var(--text-primary)';
+                                    });
+                                });
+                            }
+                        }
+                    }
+                    
+                    // Initialize dashboard
+                    const dashboard = new WalletDashboard();
+                    
+                    // Header button handlers
+                    function handleRefreshData() {
+                        showNotification('Refreshing wallet data...', 'success');
+                        // Simulate API call
+                        setTimeout(() => {
+                            // Update with random demo data
+                            DASHBOARD_STATE.wallet.balance = Math.random() * 0.1;
+                            DASHBOARD_STATE.wallet.balanceUSD = DASHBOARD_STATE.wallet.balance * 45000;
+                            dashboard.renderDashboard();
+                            showNotification('Wallet data refreshed', 'success');
+                        }, 1000);
+                    }
+                    
+                    function handlePrivacyToggle() {
+                        DASHBOARD_STATE.wallet.isHidden = !DASHBOARD_STATE.wallet.isHidden;
+                        showNotification(DASHBOARD_STATE.wallet.isHidden ? 'Privacy mode enabled' : 'Privacy mode disabled', 'success');
+                        // Re-render dashboard to update balance visibility
+                        dashboard.renderDashboard();
+                    }
+                    
+                    function handleSettings() {
+                        showNotification('Opening settings...', 'success');
+                        // Show settings modal
+                        showSettingsModal();
+                    }
+                    
+                    // Quick Action Handlers
+                    function handleSend() {
+                        showNotification('Opening send modal...', 'success');
+                        showSendModal();
+                    }
+                    
+                    function handleReceive() {
+                        showNotification('Opening receive modal...', 'success');
+                        showReceiveModal();
+                    }
+                    
+                    function handleSwap() {
+                        showNotification('Swap feature coming soon', 'info');
+                    }
+                    
+                    function handleBuy() {
+                        showNotification('Buy feature coming soon', 'info');
+                    }
+                    
+                    // Modal Functions
+                    function showSendModal() {
+                        const modal = document.createElement('div');
+                        modal.id = 'sendModal';
+                        modal.style.cssText = \`
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: rgba(0, 0, 0, 0.9);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 10000;
+                            padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                        \`;
+                        
+                        modal.innerHTML = \`
+                            <div style="
+                                background: var(--bg-primary);
+                                border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                padding: calc(var(--spacing-unit) * 4 * var(--scale-factor));
+                                max-width: calc(500px * var(--scale-factor));
+                                width: 100%;
+                                position: relative;
+                            ">
+                                <button onclick="closeModal('sendModal')" style="
+                                    position: absolute;
+                                    top: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    right: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    background: transparent;
+                                    border: none;
+                                    color: var(--text-primary);
+                                    font-size: calc(24px * var(--scale-factor));
+                                    cursor: pointer;
+                                    padding: 0;
+                                    width: calc(32px * var(--scale-factor));
+                                    height: calc(32px * var(--scale-factor));
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">×</button>
+                                
+                                <h2 style="
+                                    font-size: calc(24px * var(--scale-factor));
+                                    color: var(--text-primary);
+                                    margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                ">
+                                    <span class="text-dim">&lt;</span> SEND BITCOIN <span class="text-dim">/&gt;</span>
+                                </h2>
+                                
+                                <div style="margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));">
+                                    <label style="
+                                        display: block;
+                                        color: var(--text-dim);
+                                        font-size: calc(12px * var(--scale-factor));
+                                        margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                    ">Recipient Address</label>
+                                    <input type="text" placeholder="Enter Bitcoin address" style="
+                                        width: 100%;
+                                        background: var(--bg-primary);
+                                        border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                        color: var(--text-primary);
+                                        padding: calc(var(--spacing-unit) * 1.5 * var(--scale-factor));
+                                        font-family: 'JetBrains Mono', monospace;
+                                        font-size: calc(14px * var(--scale-factor));
+                                    ">
+                                </div>
+                                
+                                <div style="margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));">
+                                    <label style="
+                                        display: block;
+                                        color: var(--text-dim);
+                                        font-size: calc(12px * var(--scale-factor));
+                                        margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                    ">Amount (BTC)</label>
+                                    <input type="number" placeholder="0.00000000" step="0.00000001" style="
+                                        width: 100%;
+                                        background: var(--bg-primary);
+                                        border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                        color: var(--text-primary);
+                                        padding: calc(var(--spacing-unit) * 1.5 * var(--scale-factor));
+                                        font-family: 'JetBrains Mono', monospace;
+                                        font-size: calc(14px * var(--scale-factor));
+                                    ">
+                                </div>
+                                
+                                <button onclick="showNotification('Transaction feature coming soon', 'info'); closeModal('sendModal');" style="
+                                    width: 100%;
+                                    background: var(--bg-primary);
+                                    border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                    color: var(--text-primary);
+                                    padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    font-size: calc(16px * var(--scale-factor));
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    font-family: 'JetBrains Mono', monospace;
+                                    transition: all 0.2s ease;
+                                ">
+                                    SEND TRANSACTION
+                                </button>
+                            </div>
+                        \`;
+                        
+                        document.body.appendChild(modal);
+                    }
+                    
+                    function showReceiveModal() {
+                        const address = generateWalletAddress('spark');
+                        const modal = document.createElement('div');
+                        modal.id = 'receiveModal';
+                        modal.style.cssText = \`
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: rgba(0, 0, 0, 0.9);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 10000;
+                            padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                        \`;
+                        
+                        modal.innerHTML = \`
+                            <div style="
+                                background: var(--bg-primary);
+                                border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                padding: calc(var(--spacing-unit) * 4 * var(--scale-factor));
+                                max-width: calc(500px * var(--scale-factor));
+                                width: 100%;
+                                position: relative;
+                            ">
+                                <button onclick="closeModal('receiveModal')" style="
+                                    position: absolute;
+                                    top: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    right: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    background: transparent;
+                                    border: none;
+                                    color: var(--text-primary);
+                                    font-size: calc(24px * var(--scale-factor));
+                                    cursor: pointer;
+                                    padding: 0;
+                                    width: calc(32px * var(--scale-factor));
+                                    height: calc(32px * var(--scale-factor));
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">×</button>
+                                
+                                <h2 style="
+                                    font-size: calc(24px * var(--scale-factor));
+                                    color: var(--text-primary);
+                                    margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                ">
+                                    <span class="text-dim">&lt;</span> RECEIVE BITCOIN <span class="text-dim">/&gt;</span>
+                                </h2>
+                                
+                                <div style="
+                                    background: white;
+                                    padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">
+                                    <div style="
+                                        width: calc(200px * var(--scale-factor));
+                                        height: calc(200px * var(--scale-factor));
+                                        background: #f0f0f0;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        color: #666;
+                                        font-size: calc(14px * var(--scale-factor));
+                                    ">QR Code Placeholder</div>
+                                </div>
+                                
+                                <div style="
+                                    background: rgba(245, 115, 21, 0.1);
+                                    border: calc(1px * var(--scale-factor)) solid var(--text-primary);
+                                    padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    word-break: break-all;
+                                    font-family: 'JetBrains Mono', monospace;
+                                    font-size: calc(12px * var(--scale-factor));
+                                    color: var(--text-primary);
+                                ">\${address}</div>
+                                
+                                <button onclick="copyToClipboard('\${address}', 'Address copied!')" style="
+                                    width: 100%;
+                                    background: var(--bg-primary);
+                                    border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                    color: var(--text-primary);
+                                    padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    font-size: calc(16px * var(--scale-factor));
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    font-family: 'JetBrains Mono', monospace;
+                                    transition: all 0.2s ease;
+                                ">
+                                    COPY ADDRESS
+                                </button>
+                            </div>
+                        \`;
+                        
+                        document.body.appendChild(modal);
+                    }
+                    
+                    function showSettingsModal() {
+                        const modal = document.createElement('div');
+                        modal.id = 'settingsModal';
+                        modal.style.cssText = \`
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: rgba(0, 0, 0, 0.9);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 10000;
+                            padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                        \`;
+                        
+                        modal.innerHTML = \`
+                            <div style="
+                                background: var(--bg-primary);
+                                border: calc(2px * var(--scale-factor)) solid var(--text-primary);
+                                padding: calc(var(--spacing-unit) * 4 * var(--scale-factor));
+                                max-width: calc(600px * var(--scale-factor));
+                                width: 100%;
+                                position: relative;
+                                max-height: 80vh;
+                                overflow-y: auto;
+                            ">
+                                <button onclick="closeModal('settingsModal')" style="
+                                    position: absolute;
+                                    top: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    right: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    background: transparent;
+                                    border: none;
+                                    color: var(--text-primary);
+                                    font-size: calc(24px * var(--scale-factor));
+                                    cursor: pointer;
+                                    padding: 0;
+                                    width: calc(32px * var(--scale-factor));
+                                    height: calc(32px * var(--scale-factor));
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">×</button>
+                                
+                                <h2 style="
+                                    font-size: calc(24px * var(--scale-factor));
+                                    color: var(--text-primary);
+                                    margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));
+                                ">
+                                    <span class="text-dim">&lt;</span> WALLET SETTINGS <span class="text-dim">/&gt;</span>
+                                </h2>
+                                
+                                <div style="margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));">
+                                    <h3 style="
+                                        font-size: calc(16px * var(--scale-factor));
+                                        color: var(--text-primary);
+                                        margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    ">Security</h3>
+                                    
+                                    <button onclick="showNotification('Backup feature coming soon', 'info')" style="
+                                        width: 100%;
+                                        background: transparent;
+                                        border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                        color: var(--text-primary);
+                                        padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                        margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                        cursor: pointer;
+                                        font-family: 'JetBrains Mono', monospace;
+                                        text-align: left;
+                                        transition: all 0.2s ease;
+                                    ">
+                                        🔐 Backup Wallet
+                                    </button>
+                                    
+                                    <button onclick="showNotification('Password feature coming soon', 'info')" style="
+                                        width: 100%;
+                                        background: transparent;
+                                        border: calc(1px * var(--scale-factor)) solid var(--border-color);
+                                        color: var(--text-primary);
+                                        padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                        margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                        cursor: pointer;
+                                        font-family: 'JetBrains Mono', monospace;
+                                        text-align: left;
+                                        transition: all 0.2s ease;
+                                    ">
+                                        🔑 Change Password
+                                    </button>
+                                </div>
+                                
+                                <div style="margin-bottom: calc(var(--spacing-unit) * 3 * var(--scale-factor));">
+                                    <h3 style="
+                                        font-size: calc(16px * var(--scale-factor));
+                                        color: var(--text-primary);
+                                        margin-bottom: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    ">Network</h3>
+                                    
+                                    <div style="
+                                        padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                        background: rgba(245, 115, 21, 0.1);
+                                        border: calc(1px * var(--scale-factor)) solid var(--text-primary);
+                                        margin-bottom: calc(var(--spacing-unit) * 1 * var(--scale-factor));
+                                    ">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span>Network: </span>
+                                            <span style="color: var(--text-primary); font-weight: 600;">
+                                                \${isMainnet ? 'MAINNET' : 'TESTNET'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="showNotification('Logout feature coming soon', 'info'); closeModal('settingsModal');" style="
+                                    width: 100%;
+                                    background: transparent;
+                                    border: calc(2px * var(--scale-factor)) solid #ff4444;
+                                    color: #ff4444;
+                                    padding: calc(var(--spacing-unit) * 2 * var(--scale-factor));
+                                    font-size: calc(16px * var(--scale-factor));
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    font-family: 'JetBrains Mono', monospace;
+                                    transition: all 0.2s ease;
+                                ">
+                                    LOGOUT
+                                </button>
+                            </div>
+                        \`;
+                        
+                        document.body.appendChild(modal);
+                    }
+                    
+                    function closeModal(modalId) {
+                        const modal = document.getElementById(modalId);
+                        if (modal) {
+                            modal.remove();
+                        }
+                    }
+                </script>
+            `;
         }
     </script>
 </body>
