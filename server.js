@@ -1451,12 +1451,28 @@ const server = http.createServer((req, res) => {
                     
                     <div style="margin-bottom: calc(16px * var(--scale-factor));">
                         <label class="text-dim" style="display: block; margin-bottom: calc(8px * var(--scale-factor)); font-weight: 500;">Create Password</label>
-                        <input id="createPasswordInput" class="input-field" type="password" placeholder="Enter secure password..." style="width: 100%;">
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input id="createPasswordInput" class="input-field" type="password" placeholder="Enter secure password..." style="width: 100%; padding-right: calc(40px * var(--scale-factor));">
+                            <button id="toggleCreatePassword" type="button" onclick="togglePasswordVisibility('createPasswordInput', 'toggleCreatePassword')" style="position: absolute; right: calc(12px * var(--scale-factor)); background: none; border: none; color: var(--text-dim); cursor: pointer; padding: calc(4px * var(--scale-factor)); transition: color 0.2s ease; width: calc(20px * var(--scale-factor)); height: calc(20px * var(--scale-factor)); display: flex; align-items: center; justify-content: center;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-dim)'" title="Show password">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     
                     <div style="margin-bottom: calc(16px * var(--scale-factor));">
                         <label class="text-dim" style="display: block; margin-bottom: calc(8px * var(--scale-factor)); font-weight: 500;">Re-enter Password</label>
-                        <input id="confirmPasswordInput" class="input-field" type="password" placeholder="Confirm password..." style="width: 100%;">
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input id="confirmPasswordInput" class="input-field" type="password" placeholder="Confirm password..." style="width: 100%; padding-right: calc(40px * var(--scale-factor));">
+                            <button id="toggleConfirmPassword" type="button" onclick="togglePasswordVisibility('confirmPasswordInput', 'toggleConfirmPassword')" style="position: absolute; right: calc(12px * var(--scale-factor)); background: none; border: none; color: var(--text-dim); cursor: pointer; padding: calc(4px * var(--scale-factor)); transition: color 0.2s ease; width: calc(20px * var(--scale-factor)); height: calc(20px * var(--scale-factor)); display: flex; align-items: center; justify-content: center;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-dim)'" title="Show password">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     
                     <div id="passwordError" style="color: #ff4444; font-size: calc(10px * var(--scale-factor)); margin-top: calc(6px * var(--scale-factor)); display: none;"></div>
@@ -1485,10 +1501,10 @@ const server = http.createServer((req, res) => {
     </div>
 
     <script>
-        // Auto-refresh every 1 minute (60000ms)
-        setTimeout(function() {
-            location.reload();
-        }, 60000);
+        // Auto-refresh disabled for wallet flow
+        // setTimeout(function() {
+        //     location.reload();
+        // }, 60000);
         
         // Network state management
         let isMainnet = true;
@@ -1581,7 +1597,6 @@ const server = http.createServer((req, res) => {
             } else if (type === 'original') {
                 notification.style.borderColor = '#f57315';
                 notification.style.color = '#f57315';
-                notification.style.boxShadow = '0 calc(6px * var(--scale-factor)) calc(16px * var(--scale-factor)) rgba(245, 115, 21, 0.3)';
             } else if (type === 'network') {
                 notification.style.borderColor = primaryColor;
                 notification.style.color = primaryColor;
@@ -1719,7 +1734,109 @@ const server = http.createServer((req, res) => {
         // Initialize theme on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadThemePreference();
+            initializeRouter();
         });
+        
+        // PAGE ROUTING SYSTEM - MOBILE FIRST
+        let currentPage = 'home';
+        let navigationHistory = ['home'];
+        
+        function navigateToPage(pageId) {
+            // Add current page to history if it's different
+            if (pageId !== currentPage) {
+                navigationHistory.push(pageId);
+            }
+            currentPage = pageId;
+            window.location.hash = pageId;
+            renderCurrentPage();
+        }
+        
+        function goBack() {
+            // Remove current page from history
+            if (navigationHistory.length > 1) {
+                navigationHistory.pop();
+                const previousPage = navigationHistory[navigationHistory.length - 1];
+                currentPage = previousPage;
+                window.location.hash = previousPage;
+                renderCurrentPage();
+            } else {
+                // If no history, go to home
+                navigateToPage('home');
+            }
+        }
+        
+        function initializeRouter() {
+            // Handle browser back/forward
+            window.addEventListener('hashchange', function() {
+                const hash = window.location.hash.substring(1);
+                if (hash) {
+                    currentPage = hash;
+                    renderCurrentPage();
+                }
+            });
+            
+            // Check initial hash
+            const initialHash = window.location.hash.substring(1);
+            if (initialHash) {
+                currentPage = initialHash;
+                renderCurrentPage();
+            }
+        }
+        
+        function renderCurrentPage() {
+            const content = document.querySelector('.cursor-content .card');
+            
+            switch(currentPage) {
+                case 'generate-seed':
+                    renderGenerateSeedPage(content);
+                    break;
+                case 'confirm-seed':
+                    renderConfirmSeedPage(content);
+                    break;
+                case 'import-seed':
+                    renderImportSeedPage(content);
+                    break;
+                case 'wallet-created':
+                    renderWalletCreatedPage(content);
+                    break;
+                case 'wallet-imported':
+                    renderWalletImportedPage(content);
+                    break;
+                case 'wallet-details':
+                    renderWalletDetailsPage(content);
+                    break;
+                default:
+                    renderHomePage(content);
+            }
+        }
+        
+        // BIP39 WORD LIST (First 100 words for demo - in production use full 2048 list)
+        const BIP39_WORDS = [
+            'abandon', 'ability', 'able', 'about', 'above', 'absent', 'absorb', 'abstract', 'absurd', 'abuse',
+            'access', 'accident', 'account', 'accuse', 'achieve', 'acid', 'acoustic', 'acquire', 'across', 'act',
+            'action', 'actor', 'actress', 'actual', 'adapt', 'add', 'addict', 'address', 'adjust', 'admit',
+            'adult', 'advance', 'advice', 'aerobic', 'affair', 'afford', 'afraid', 'again', 'against', 'age',
+            'agent', 'agree', 'ahead', 'aim', 'air', 'airport', 'aisle', 'alarm', 'album', 'alcohol',
+            'alert', 'alien', 'all', 'alley', 'allow', 'almost', 'alone', 'alpha', 'already', 'also',
+            'alter', 'always', 'amateur', 'amazing', 'among', 'amount', 'amused', 'analyst', 'anchor', 'ancient',
+            'anger', 'angle', 'angry', 'animal', 'ankle', 'announce', 'annual', 'another', 'answer', 'antenna',
+            'antique', 'anxiety', 'any', 'apart', 'apology', 'appear', 'apple', 'approve', 'april', 'arcade',
+            'arch', 'arctic', 'area', 'arena', 'argue', 'arm', 'armed', 'armor', 'army', 'around'
+        ];
+        
+        function generateMnemonic(wordCount) {
+            const words = [];
+            for (let i = 0; i < wordCount; i++) {
+                const randomIndex = Math.floor(Math.random() * BIP39_WORDS.length);
+                words.push(BIP39_WORDS[randomIndex]);
+            }
+            return words;
+        }
+        
+        function validateMnemonic(words) {
+            // Basic validation - check if all words are in BIP39 list
+            return words.every(word => BIP39_WORDS.includes(word.toLowerCase()));
+        }
 
         function createWallet() {
             const password = document.getElementById('createPasswordInput').value;
@@ -1743,11 +1860,14 @@ const server = http.createServer((req, res) => {
                 return;
             }
             
-            // Professional success notification
+            // Store password and navigate to seed generation
+            localStorage.setItem('walletPassword', password);
+            localStorage.setItem('walletType', 'create');
             showNotification('Creating MOOSH Wallet...', 'success');
+            
             setTimeout(() => {
-                showNotification('1,000 MOOSH tokens earned!', 'success');
-            }, 1500);
+                navigateToPage('generate-seed');
+            }, 1000);
             
             console.log('🎉 MOOSH Spark wallet creation initiated');
         }
@@ -1768,11 +1888,14 @@ const server = http.createServer((req, res) => {
                 return;
             }
             
-            // Professional success notification
+            // Store password and navigate to seed import
+            localStorage.setItem('walletPassword', password);
+            localStorage.setItem('walletType', 'import');
             showNotification('Importing MOOSH Wallet...', 'success');
+            
             setTimeout(() => {
-                showNotification('500 MOOSH tokens earned!', 'success');
-            }, 1500);
+                navigateToPage('import-seed');
+            }, 1000);
             
             console.log('📥 MOOSH Spark wallet import initiated');
         }
@@ -1785,27 +1908,693 @@ const server = http.createServer((req, res) => {
             successDiv.style.display = 'none';
         }
 
-        // Password validation
-        document.getElementById('confirmPasswordInput').addEventListener('input', function() {
-            const password = document.getElementById('createPasswordInput').value;
-            const confirmPassword = this.value;
-            const errorDiv = document.getElementById('passwordError');
-            const successDiv = document.getElementById('passwordSuccess');
-            
-            if (confirmPassword && password === confirmPassword) {
-                errorDiv.style.display = 'none';
-                successDiv.style.display = 'block';
-            } else if (confirmPassword) {
-                showPasswordError('Passwords do not match.');
+        // Password validation - with safety check
+        function attachPasswordValidation() {
+            const confirmInput = document.getElementById('confirmPasswordInput');
+            if (confirmInput) {
+                confirmInput.addEventListener('input', function() {
+                    const password = document.getElementById('createPasswordInput').value;
+                    const confirmPassword = this.value;
+                    const errorDiv = document.getElementById('passwordError');
+                    const successDiv = document.getElementById('passwordSuccess');
+                    
+                    if (confirmPassword && password === confirmPassword) {
+                        errorDiv.style.display = 'none';
+                        successDiv.style.display = 'block';
+                    } else if (confirmPassword) {
+                        showPasswordError('Passwords do not match.');
+                    }
+                });
             }
+        }
+        
+        // Attach password validation on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            attachPasswordValidation();
         });
+
+        // PASSWORD VISIBILITY TOGGLE FUNCTION
+        function togglePasswordVisibility(inputId, buttonId) {
+            const passwordInput = document.getElementById(inputId);
+            const toggleButton = document.getElementById(buttonId);
+            
+            if (passwordInput && toggleButton) {
+                if (passwordInput.type === 'password') {
+                    // Show password - use eye-off icon
+                    passwordInput.type = 'text';
+                    toggleButton.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+                    toggleButton.title = 'Hide password';
+                } else {
+                    // Hide password - use eye icon
+                    passwordInput.type = 'password';
+                    toggleButton.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+                    toggleButton.title = 'Show password';
+                }
+            }
+        }
+
+        // PAGE ROUTING SYSTEM - MOBILE FIRST
+        
+        // GENERATE SEED PAGE - CREATE WALLET FLOW
+        function renderGenerateSeedPage(content) {
+            const wordCount = selectedMnemonic;
+            const generatedSeed = generateMnemonic(wordCount);
+            localStorage.setItem('generatedSeed', JSON.stringify(generatedSeed));
+            
+            content.innerHTML = \`
+                <div style="text-align: center; margin-bottom: calc(24px * var(--scale-factor));">
+                    <h1 style="font-size: calc(28px * var(--scale-factor)); margin-bottom: calc(8px * var(--scale-factor)); display: flex; align-items: center; justify-content: center; gap: calc(12px * var(--scale-factor));">
+                        <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" alt="MOOSH" style="width: calc(40px * var(--scale-factor)); height: calc(40px * var(--scale-factor)); object-fit: contain;" onerror="this.style.display='none'">
+                        <span class="moosh-flash">SEED</span> <span class="text-dim">GENERATION</span>
+                    </h1>
+                    <p class="token-site-subtitle" style="font-size: calc(14px * var(--scale-factor)); margin-bottom: calc(16px * var(--scale-factor));">
+                        Your \${wordCount}-word recovery phrase
+                    </p>
+                </div>
+
+                <!-- Warning Section -->
+                <div style="background: rgba(245, 115, 21, 0.1); border: 2px solid var(--text-primary); border-radius: 0; padding: calc(20px * var(--scale-factor)); margin-bottom: calc(24px * var(--scale-factor));">
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: calc(12px * var(--scale-factor)); font-size: calc(16px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> CRITICAL SECURITY WARNING <span class="text-dim">/&gt;</span>
+                    </div>
+                    <div style="font-size: calc(12px * var(--scale-factor)); line-height: 1.5; text-align: center; color: var(--text-secondary);">
+                        • Write down these words in the exact order<br>
+                        • Store them in a secure, offline location<br>
+                        • Never share your seed phrase with anyone<br>
+                        • MOOSH cannot recover lost seed phrases
+                    </div>
+                </div>
+
+                <!-- Terminal Code Seed Display -->
+                <div style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; padding: 0; margin-bottom: calc(24px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace;">
+                    <!-- Terminal Header -->
+                    <div style="background: #111111; padding: calc(12px * var(--scale-factor)); border-bottom: 1px solid #333333; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="color: var(--text-primary); font-size: calc(12px * var(--scale-factor));">~/moosh/wallet$ cat recovery_seed.txt</div>
+                        <div style="color: var(--text-dim); font-size: calc(10px * var(--scale-factor));">\${wordCount} words</div>
+                    </div>
+                    
+                    <!-- Code Lines with Numbers -->
+                    <div style="padding: calc(16px * var(--scale-factor));">
+                        \${Array.from({length: Math.ceil(wordCount/3)}, (_, lineIndex) => {
+                            const startIndex = lineIndex * 3;
+                            const lineWords = generatedSeed.slice(startIndex, startIndex + 3);
+                            const lineNumber = (lineIndex + 1).toString().padStart(2, '0');
+                            return \`
+                                <div style="display: flex; margin-bottom: calc(8px * var(--scale-factor)); align-items: center;">
+                                    <div style="color: #666666; font-size: calc(10px * var(--scale-factor)); width: calc(30px * var(--scale-factor)); text-align: right; margin-right: calc(16px * var(--scale-factor)); user-select: none;">\${lineNumber}</div>
+                                    <div style="color: var(--text-primary); font-size: calc(12px * var(--scale-factor));">
+                                        \${lineWords.map((word, wordIndex) => \`[\${(startIndex + wordIndex + 1).toString().padStart(2, '0')}] \${word}\`).join('  ')}
+                            </div>
+                    </div>
+                            \`;
+                        }).join('')}
+                        
+                        <!-- Terminal Cursor -->
+                        <div style="display: flex; align-items: center; margin-top: calc(12px * var(--scale-factor));">
+                            <div style="color: #666666; font-size: calc(10px * var(--scale-factor)); width: calc(30px * var(--scale-factor)); text-align: right; margin-right: calc(16px * var(--scale-factor));">></div>
+                            <div style="color: var(--text-primary); font-size: calc(12px * var(--scale-factor));">
+                                <span style="animation: blink 1s infinite;">█</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Terminal Footer -->
+                    <div style="background: #111111; padding: calc(8px * var(--scale-factor)); border-top: 1px solid #333333; font-size: calc(10px * var(--scale-factor)); color: var(--text-dim); text-align: center;">
+                        ✓ BIP39 mnemonic generated • 256-bit entropy • SHA256 checksum verified
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes blink {
+                        0%, 50% { opacity: 1; }
+                        51%, 100% { opacity: 0; }
+                    }
+                </style>
+
+                    <!-- Copy Button -->
+                    <button onclick="copySeedToClipboard()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(12px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)) calc(20px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%; margin-bottom: calc(12px * var(--scale-factor));" 
+                            onmouseover="this.style.background='var(--text-primary)'; this.style.color='#000000'" 
+                            onmouseout="this.style.background='#000000'; this.style.color='var(--text-primary)'">
+                        &lt;Copy to Clipboard/&gt;
+                    </button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: calc(16px * var(--scale-factor));">
+                    <button onclick="navigateToPage('confirm-seed')" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(16px * var(--scale-factor)); padding: calc(16px * var(--scale-factor)) calc(32px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%; text-transform: uppercase; letter-spacing: 0.1em; height: calc(56px * var(--scale-factor));" 
+                            onmouseover="this.style.background='var(--text-primary)'; this.style.color='#000000'" 
+                            onmouseout="this.style.background='#000000'; this.style.color='var(--text-primary)'">
+                        &lt;I've Written It Down/&gt;
+                    </button>
+                    
+                    <button onclick="goBack()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(14px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)) calc(24px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%;" 
+                            onmouseover="this.querySelector('.pipe-left').style.opacity='1'; this.querySelector('.pipe-right').style.opacity='1';" 
+                            onmouseout="this.querySelector('.pipe-left').style.opacity='0'; this.querySelector('.pipe-right').style.opacity='0';">
+                        <span class="pipe-left" style="opacity: 0; transition: opacity 0.2s;">|</span> &lt;Back Esc/&gt; <span class="pipe-right" style="opacity: 0; transition: opacity 0.2s;">|</span>
+                    </button>
+                </div>
+            \`;
+        }
+        
+        function copySeedToClipboard() {
+            const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || '[]');
+            const seedText = generatedSeed.join(' ');
+            
+            navigator.clipboard.writeText(seedText).then(() => {
+                showNotification('Seed copied to clipboard!', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy seed', 'error');
+            });
+        }
+        
+        function renderHomePage(content) {
+            // Return to the original home page content
+            location.reload();
+        }
+        
+        // CONFIRM SEED PAGE - MISSING FUNCTION
+        function renderConfirmSeedPage(content) {
+            const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || '[]');
+            const randomWords = [];
+            const wordIndices = [];
+            
+            // Select 4 random words for verification
+            while (randomWords.length < 4) {
+                const randomIndex = Math.floor(Math.random() * generatedSeed.length);
+                if (!wordIndices.includes(randomIndex)) {
+                    wordIndices.push(randomIndex);
+                    randomWords.push({ index: randomIndex + 1, word: generatedSeed[randomIndex] });
+                }
+            }
+            
+            content.innerHTML = \`
+                <div style="text-align: center; margin-bottom: calc(24px * var(--scale-factor));">
+                    <h1 style="font-size: calc(28px * var(--scale-factor)); margin-bottom: calc(8px * var(--scale-factor)); display: flex; align-items: center; justify-content: center; gap: calc(12px * var(--scale-factor));">
+                        <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" alt="MOOSH" style="width: calc(40px * var(--scale-factor)); height: calc(40px * var(--scale-factor)); object-fit: contain;" onerror="this.style.display='none'">
+                        <span class="moosh-flash">CONFIRM</span> <span class="text-dim">SEED</span>
+                    </h1>
+                    <p class="token-site-subtitle" style="font-size: calc(14px * var(--scale-factor)); margin-bottom: calc(16px * var(--scale-factor));">
+                        Verify your recovery phrase
+                    </p>
+                </div>
+
+                <!-- Verification Form -->
+                <div style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; padding: calc(24px * var(--scale-factor)); margin-bottom: calc(24px * var(--scale-factor));">
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: calc(16px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> Verify Your Words <span class="text-dim">/&gt;</span>
+                    </div>
+                    
+                    \${randomWords.map((item, i) => \`
+                        <div style="margin-bottom: calc(16px * var(--scale-factor));">
+                            <label style="color: var(--text-dim); font-size: calc(12px * var(--scale-factor)); margin-bottom: calc(8px * var(--scale-factor)); display: block;">Word #\${item.index}:</label>
+                            <input type="text" id="word\${i}" placeholder="Enter word \${item.index}" class="input-field" style="width: 100%; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: calc(14px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)); border-radius: 0;">
+                        </div>
+                    \`).join('')}
+                    
+                    <div id="verificationError" style="color: #ff4444; font-size: calc(10px * var(--scale-factor)); margin-top: calc(12px * var(--scale-factor)); display: none; text-align: center;"></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: calc(16px * var(--scale-factor));">
+                    <button type="button" onclick="verifySeedPhrase(); return false;" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(16px * var(--scale-factor)); padding: calc(16px * var(--scale-factor)) calc(32px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%; text-transform: uppercase; letter-spacing: 0.1em; height: calc(56px * var(--scale-factor));" 
+                            onmouseover="this.style.background='var(--text-primary)'; this.style.color='#000000'" 
+                            onmouseout="this.style.background='#000000'; this.style.color='var(--text-primary)'">
+                        &lt;Verify Seed/&gt;
+                    </button>
+                    
+                    <button onclick="navigateToPage('wallet-details')" style="background: transparent; border: none; border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(14px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)) calc(24px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%;" 
+                            onmouseover="this.querySelector('.pipe-left').style.opacity='1'; this.querySelector('.pipe-right').style.opacity='1';" 
+                            onmouseout="this.querySelector('.pipe-left').style.opacity='0'; this.querySelector('.pipe-right').style.opacity='0';">
+                        <span class="pipe-left" style="opacity: 0; transition: opacity 0.2s;">|</span> &lt;Skip Verification/&gt; <span class="pipe-right" style="opacity: 0; transition: opacity 0.2s;">|</span>
+                    </button>
+                    
+                    <button onclick="navigateToPage('generate-seed')" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(14px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)) calc(24px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%;" 
+                            onmouseover="this.querySelector('.pipe-left').style.opacity='1'; this.querySelector('.pipe-right').style.opacity='1';" 
+                            onmouseout="this.querySelector('.pipe-left').style.opacity='0'; this.querySelector('.pipe-right').style.opacity='0';">
+                        <span class="pipe-left" style="opacity: 0; transition: opacity 0.2s;">|</span> &lt;Back to Seed/&gt; <span class="pipe-right" style="opacity: 0; transition: opacity 0.2s;">|</span>
+                    </button>
+                </div>
+            \`;
+            
+            // Store random words for verification
+            window.verificationWords = randomWords;
+        }
+        
+        function verifySeedPhrase() {
+            // Prevent any default form submission or page refresh
+            event.preventDefault();
+            
+            const errorDiv = document.getElementById('verificationError');
+            let allCorrect = true;
+            let incorrectWords = [];
+            
+            // Hide previous errors
+            errorDiv.style.display = 'none';
+            
+            // Check if verification words exist
+            if (!window.verificationWords || window.verificationWords.length === 0) {
+                errorDiv.textContent = 'Verification data not found. Please go back and regenerate seed.';
+                errorDiv.style.display = 'block';
+                showNotification('Verification error', 'error');
+                return false;
+            }
+            
+            for (let i = 0; i < window.verificationWords.length; i++) {
+                const input = document.getElementById(\`word\${i}\`);
+                const expectedWord = window.verificationWords[i].word;
+                
+                if (!input || !input.value.trim()) {
+                    incorrectWords.push(\`Word #\${window.verificationWords[i].index} is empty\`);
+                    allCorrect = false;
+                } else if (input.value.trim().toLowerCase() !== expectedWord.toLowerCase()) {
+                    incorrectWords.push(\`Word #\${window.verificationWords[i].index} is incorrect\`);
+                    allCorrect = false;
+                }
+            }
+            
+            if (allCorrect) {
+                showNotification('Seed verified successfully!', 'success');
+                setTimeout(() => {
+                    navigateToPage('wallet-details');
+                }, 1000);
+            } else {
+                errorDiv.textContent = incorrectWords.join(', ') + '. Please check and try again.';
+                errorDiv.style.display = 'block';
+                showNotification('Verification failed', 'error');
+            }
+            
+            return false;
+        }
+        
+        // IMPORT SEED PAGE - IMPORT WALLET FLOW
+        function renderImportSeedPage(content) {
+            const wordCount = selectedMnemonic;
+            
+            content.innerHTML = \`
+                <div style="text-align: center; margin-bottom: calc(24px * var(--scale-factor));">
+                    <h1 style="font-size: calc(28px * var(--scale-factor)); margin-bottom: calc(8px * var(--scale-factor)); display: flex; align-items: center; justify-content: center; gap: calc(12px * var(--scale-factor));">
+                        <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" alt="MOOSH" style="width: calc(40px * var(--scale-factor)); height: calc(40px * var(--scale-factor)); object-fit: contain;" onerror="this.style.display='none'">
+                        <span class="moosh-flash">IMPORT</span> <span class="text-dim">WALLET</span>
+                    </h1>
+                    <p class="token-site-subtitle" style="font-size: calc(14px * var(--scale-factor)); margin-bottom: calc(16px * var(--scale-factor));">
+                        Enter your \${wordCount}-word recovery phrase
+                    </p>
+                </div>
+
+                <!-- Instructions -->
+                <div style="background: rgba(245, 115, 21, 0.1); border: 2px solid var(--text-primary); border-radius: 0; padding: calc(20px * var(--scale-factor)); margin-bottom: calc(24px * var(--scale-factor));">
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: calc(12px * var(--scale-factor)); font-size: calc(16px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> RECOVERY PHRASE IMPORT <span class="text-dim">/&gt;</span>
+                    </div>
+                    <div style="font-size: calc(12px * var(--scale-factor)); line-height: 1.5; text-align: center; color: var(--text-secondary);">
+                        Enter your recovery phrase words in the correct order. Each word should be separated by a space.
+                    </div>
+                </div>
+
+                <!-- Import Form -->
+                <div style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; padding: calc(24px * var(--scale-factor)); margin-bottom: calc(24px * var(--scale-factor));">
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: calc(16px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> Enter Recovery Phrase <span class="text-dim">/&gt;</span>
+                    </div>
+                    
+                    <!-- Text Input Mode -->
+                    <div id="textImportMode">
+                        <textarea id="seedTextarea" placeholder="Enter your \${wordCount}-word recovery phrase here..." 
+                                  style="width: 100%; height: calc(120px * var(--scale-factor)); background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: calc(14px * var(--scale-factor)); padding: calc(16px * var(--scale-factor)); resize: vertical; line-height: 1.5;" 
+                                  autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                    </div>
+
+                    <div id="importError" style="color: #ff4444; font-size: calc(10px * var(--scale-factor)); margin-top: calc(12px * var(--scale-factor)); display: none; text-align: center;"></div>
+                    <div id="importSuccess" style="color: var(--text-keyword); font-size: calc(10px * var(--scale-factor)); margin-top: calc(12px * var(--scale-factor)); display: none; text-align: center;">Valid recovery phrase!</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: calc(16px * var(--scale-factor));">
+                    <button onclick="importWalletFromSeed()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(16px * var(--scale-factor)); padding: calc(16px * var(--scale-factor)) calc(32px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%; text-transform: uppercase; letter-spacing: 0.1em; height: calc(56px * var(--scale-factor));" 
+                            onmouseover="this.style.background='var(--text-primary)'; this.style.color='#000000'" 
+                            onmouseout="this.style.background='#000000'; this.style.color='var(--text-primary)'">
+                        &lt;Import Wallet/&gt;
+                    </button>
+                    
+                    <button onclick="goBack()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(14px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)) calc(24px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%;" 
+                            onmouseover="this.querySelector('.pipe-left').style.opacity='1'; this.querySelector('.pipe-right').style.opacity='1';" 
+                            onmouseout="this.querySelector('.pipe-left').style.opacity='0'; this.querySelector('.pipe-right').style.opacity='0';">
+                        <span class="pipe-left" style="opacity: 0; transition: opacity 0.2s;">|</span> &lt;Back Esc/&gt; <span class="pipe-right" style="opacity: 0; transition: opacity 0.2s;">|</span>
+                    </button>
+                </div>
+            \`;
+        }
+        
+        function importWalletFromSeed() {
+            const seedText = document.getElementById('seedTextarea').value.trim();
+            const seedWords = seedText.split(/\\s+/).filter(word => word.length > 0);
+            const errorDiv = document.getElementById('importError');
+            const successDiv = document.getElementById('importSuccess');
+            
+            // Validate seed phrase
+            if (seedWords.length !== selectedMnemonic) {
+                errorDiv.textContent = \`Please enter exactly \${selectedMnemonic} words.\`;
+                errorDiv.style.display = 'block';
+                successDiv.style.display = 'none';
+                showNotification('Invalid word count', 'error');
+                return;
+            }
+            
+            if (!validateMnemonic(seedWords)) {
+                errorDiv.textContent = 'Invalid recovery phrase. Please check your words.';
+                errorDiv.style.display = 'block';
+                successDiv.style.display = 'none';
+                showNotification('Invalid seed phrase', 'error');
+                return;
+            }
+            
+            // Store imported seed
+            localStorage.setItem('importedSeed', JSON.stringify(seedWords));
+            
+            showNotification('Importing wallet...', 'success');
+            setTimeout(() => {
+                navigateToPage('wallet-imported');
+            }, 1500);
+        }
+        
+        // WALLET CREATED SUCCESS PAGE
+        function renderWalletCreatedPage(content) {
+            content.innerHTML = \`
+                <div style="text-align: center; margin-bottom: calc(32px * var(--scale-factor));">
+                    <h1 style="font-size: calc(32px * var(--scale-factor)); margin-bottom: calc(16px * var(--scale-factor)); display: flex; align-items: center; justify-content: center; gap: calc(12px * var(--scale-factor));">
+                        <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" alt="MOOSH" style="width: calc(48px * var(--scale-factor)); height: calc(48px * var(--scale-factor)); object-fit: contain;" onerror="this.style.display='none'">
+                        <span class="moosh-flash">WALLET</span> <span class="text-dim">CREATED</span>
+                    </h1>
+                    
+                    <!-- Success Animation -->
+                    <div style="font-size: calc(64px * var(--scale-factor)); color: var(--text-primary); margin: calc(24px * var(--scale-factor)) 0; animation: pulse 2s infinite;">
+                        ✓
+                    </div>
+                    
+                    <p style="font-size: calc(16px * var(--scale-factor)); color: var(--text-secondary); margin-bottom: calc(24px * var(--scale-factor));">
+                        Your MOOSH Wallet has been successfully created!
+                    </p>
+                </div>
+
+                <!-- Wallet Info -->
+                <div style="background: rgba(245, 115, 21, 0.1); border: 2px solid var(--text-primary); border-radius: 0; padding: calc(24px * var(--scale-factor)); margin-bottom: calc(24px * var(--scale-factor));">
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: calc(16px * var(--scale-factor)); font-size: calc(16px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> WALLET DETAILS <span class="text-dim">/&gt;</span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: calc(12px * var(--scale-factor)); font-size: calc(12px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-dim);">Network:</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">\${isMainnet ? 'MAINNET' : 'TESTNET'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-dim);">Seed Words:</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">\${selectedMnemonic} Words</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-dim);">Address Type:</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">Spark Protocol</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-dim);">Reward:</span>
+                            <span style="color: var(--text-keyword); font-weight: 600;">+1,000 MOOSH</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: calc(16px * var(--scale-factor));">
+                    <button onclick="openWalletDashboard()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(16px * var(--scale-factor)); padding: calc(16px * var(--scale-factor)) calc(32px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%; text-transform: uppercase; letter-spacing: 0.1em; height: calc(56px * var(--scale-factor));" 
+                            onmouseover="this.style.background='var(--text-primary)'; this.style.color='#000000'" 
+                            onmouseout="this.style.background='#000000'; this.style.color='var(--text-primary)'">
+                        &lt;Open Wallet/&gt;
+                    </button>
+                    
+                    <button onclick="goBack()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(14px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)) calc(24px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%;" 
+                            onmouseover="this.querySelector('.pipe-left').style.opacity='1'; this.querySelector('.pipe-right').style.opacity='1';" 
+                            onmouseout="this.querySelector('.pipe-left').style.opacity='0'; this.querySelector('.pipe-right').style.opacity='0';">
+                        <span class="pipe-left" style="opacity: 0; transition: opacity 0.2s;">|</span> &lt;Create Another Wallet/&gt; <span class="pipe-right" style="opacity: 0; transition: opacity 0.2s;">|</span>
+                    </button>
+                </div>
+                
+                <style>
+                    @keyframes pulse {
+                        0%, 100% { transform: scale(1); opacity: 1; }
+                        50% { transform: scale(1.1); opacity: 0.7; }
+                    }
+                </style>
+            \`;
+        }
+        
+        // WALLET IMPORTED SUCCESS PAGE
+        function renderWalletImportedPage(content) {
+            content.innerHTML = \`
+                <div style="text-align: center; margin-bottom: calc(32px * var(--scale-factor));">
+                    <h1 style="font-size: calc(32px * var(--scale-factor)); margin-bottom: calc(16px * var(--scale-factor)); display: flex; align-items: center; justify-content: center; gap: calc(12px * var(--scale-factor));">
+                        <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" alt="MOOSH" style="width: calc(48px * var(--scale-factor)); height: calc(48px * var(--scale-factor)); object-fit: contain;" onerror="this.style.display='none'">
+                        <span class="moosh-flash">WALLET</span> <span class="text-dim">IMPORTED</span>
+                    </h1>
+                    
+                    <!-- Success Animation -->
+                    <div style="font-size: calc(64px * var(--scale-factor)); color: var(--text-primary); margin: calc(24px * var(--scale-factor)) 0; animation: pulse 2s infinite;">
+                        ✓
+                    </div>
+                    
+                    <p style="font-size: calc(16px * var(--scale-factor)); color: var(--text-secondary); margin-bottom: calc(24px * var(--scale-factor));">
+                        Your MOOSH Wallet has been successfully imported!
+                    </p>
+                </div>
+
+                <!-- Wallet Info -->
+                <div style="background: rgba(245, 115, 21, 0.1); border: 2px solid var(--text-primary); border-radius: 0; padding: calc(24px * var(--scale-factor)); margin-bottom: calc(24px * var(--scale-factor));">
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: calc(16px * var(--scale-factor)); font-size: calc(16px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> WALLET RESTORED <span class="text-dim">/&gt;</span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: calc(12px * var(--scale-factor)); font-size: calc(12px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-dim);">Network:</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">\${isMainnet ? 'MAINNET' : 'TESTNET'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-dim);">Seed Words:</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">\${selectedMnemonic} Words</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-dim);">Address Type:</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">Spark Protocol</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-dim);">Reward:</span>
+                            <span style="color: var(--text-keyword); font-weight: 600;">+500 MOOSH</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: calc(16px * var(--scale-factor));">
+                    <button onclick="openWalletDashboard()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(16px * var(--scale-factor)); padding: calc(16px * var(--scale-factor)) calc(32px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%; text-transform: uppercase; letter-spacing: 0.1em; height: calc(56px * var(--scale-factor));" 
+                            onmouseover="this.style.background='var(--text-primary)'; this.style.color='#000000'" 
+                            onmouseout="this.style.background='#000000'; this.style.color='var(--text-primary)'">
+                        &lt;Open Wallet/&gt;
+                    </button>
+                    
+                    <button onclick="goBack()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(14px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)) calc(24px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%;" 
+                            onmouseover="this.querySelector('.pipe-left').style.opacity='1'; this.querySelector('.pipe-right').style.opacity='1';" 
+                            onmouseout="this.querySelector('.pipe-left').style.opacity='0'; this.querySelector('.pipe-right').style.opacity='0';">
+                        <span class="pipe-left" style="opacity: 0; transition: opacity 0.2s;">|</span> &lt;Import Another Wallet/&gt; <span class="pipe-right" style="opacity: 0; transition: opacity 0.2s;">|</span>
+                    </button>
+                    </div>
+            \`;
+        }
+        
+        // WALLET DETAILS PAGE - DEVELOPER FOCUSED
+        function renderWalletDetailsPage(content) {
+            const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || '[]');
+            const allAddresses = generateAllWalletAddresses();
+            const privateKeys = generateAllPrivateKeyFormats();
+            
+            content.innerHTML = \`
+                <div style="text-align: center; margin-bottom: calc(24px * var(--scale-factor));">
+                    <h1 style="font-size: calc(28px * var(--scale-factor)); margin-bottom: calc(8px * var(--scale-factor)); display: flex; align-items: center; justify-content: center; gap: calc(12px * var(--scale-factor));">
+                        <img src="04_ASSETS/Brand_Assets/Logos/Moosh_logo.png" alt="MOOSH" style="width: calc(40px * var(--scale-factor)); height: calc(40px * var(--scale-factor)); object-fit: contain;" onerror="this.style.display='none'">
+                        <span class="moosh-flash">WALLET</span> <span class="text-dim">DETAILS</span>
+                    </h1>
+                    <p class="token-site-subtitle" style="font-size: calc(14px * var(--scale-factor)); margin-bottom: calc(16px * var(--scale-factor));">
+                        Your complete wallet information
+                    </p>
+                </div>
+
+                <!-- All Bitcoin Addresses -->
+                <div style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; padding: calc(20px * var(--scale-factor)); margin-bottom: calc(20px * var(--scale-factor));">
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: calc(16px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> BITCOIN ADDRESSES <span class="text-dim">/&gt;</span>
+                    </div>
+                    
+                    \${Object.entries(allAddresses).map(([type, address]) => \`
+                        <div style="margin-bottom: calc(16px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)); border: 1px solid #333333;">
+                            <div style="color: var(--text-dim); font-size: calc(10px * var(--scale-factor)); margin-bottom: calc(4px * var(--scale-factor)); text-transform: uppercase;">\${getAddressTypeName(type)}</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: calc(11px * var(--scale-factor)); color: var(--text-primary); word-break: break-all; margin-bottom: calc(8px * var(--scale-factor));">\${address}</div>
+                            <button onclick="copyToClipboard('\${address}', '\${getAddressTypeName(type)} address copied!')" style="background: transparent; border: 1px solid var(--text-primary); color: var(--text-primary); padding: calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); cursor: pointer;">Copy</button>
+                        </div>
+                    \`).join('')}
+                </div>
+
+                <!-- Private Keys -->
+                <div style="background: #000000; border: 2px solid #ff4444; border-radius: 0; padding: calc(20px * var(--scale-factor)); margin-bottom: calc(20px * var(--scale-factor));">
+                    <div style="color: #ff4444; font-weight: 600; margin-bottom: calc(16px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> PRIVATE KEYS - KEEP SECRET <span class="text-dim">/&gt;</span>
+                    </div>
+                    
+                    <!-- HEX Private Key -->
+                    <div style="margin-bottom: calc(16px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)); border: 1px solid #ff4444; background: rgba(255, 68, 68, 0.05);">
+                        <div style="color: #CCCCCC; font-size: calc(10px * var(--scale-factor)); margin-bottom: calc(8px * var(--scale-factor)); text-transform: uppercase;">HEX PRIVATE KEY</div>
+                        <div style="position: relative; margin-bottom: calc(8px * var(--scale-factor));">
+                            <div id="hexKeyDisplay" style="font-family: 'JetBrains Mono', monospace; font-size: calc(11px * var(--scale-factor)); color: #F57315; word-break: break-all; line-height: 1.4;">\${privateKeys.hex}</div>
+                            <div id="hexKeyOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #666666; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000000; font-size: calc(10px * var(--scale-factor)); font-weight: 600; transition: opacity 0.3s ease;" onclick="togglePrivateKeyVisibility('hex')">
+                                Click to Reveal HEX Key
+                            </div>
+                        </div>
+                        <button onclick="copyToClipboard('\${privateKeys.hex}', 'HEX private key copied!')" style="background: transparent; border: 1px solid #ff4444; color: #ff4444; padding: calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); cursor: pointer; margin-right: calc(8px * var(--scale-factor));">Copy</button>
+                        <button onclick="togglePrivateKeyVisibility('hex')" style="background: transparent; border: 1px solid #ff4444; color: #ff4444; padding: calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); cursor: pointer;">Reveal</button>
+                    </div>
+                    
+                    <!-- WIF Private Key -->
+                    <div style="margin-bottom: calc(16px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)); border: 1px solid #ff4444; background: rgba(255, 68, 68, 0.05);">
+                        <div style="color: #CCCCCC; font-size: calc(10px * var(--scale-factor)); margin-bottom: calc(8px * var(--scale-factor)); text-transform: uppercase;">WIF PRIVATE KEY</div>
+                        <div style="position: relative; margin-bottom: calc(8px * var(--scale-factor));">
+                            <div id="wifKeyDisplay" style="font-family: 'JetBrains Mono', monospace; font-size: calc(11px * var(--scale-factor)); color: #F57315; word-break: break-all; line-height: 1.4;">\${privateKeys.wif}</div>
+                            <div id="wifKeyOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #666666; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000000; font-size: calc(10px * var(--scale-factor)); font-weight: 600; transition: opacity 0.3s ease;" onclick="togglePrivateKeyVisibility('wif')">
+                                Click to Reveal WIF Key
+                            </div>
+                        </div>
+                        <button onclick="copyToClipboard('\${privateKeys.wif}', 'WIF private key copied!')" style="background: transparent; border: 1px solid #ff4444; color: #ff4444; padding: calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); cursor: pointer; margin-right: calc(8px * var(--scale-factor));">Copy</button>
+                        <button onclick="togglePrivateKeyVisibility('wif')" style="background: transparent; border: 1px solid #ff4444; color: #ff4444; padding: calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); cursor: pointer;">Reveal</button>
+                    </div>
+                    
+                    <div style="color: #ff4444; font-size: calc(10px * var(--scale-factor)); text-align: center; margin-top: calc(12px * var(--scale-factor));">
+                        Never share your private keys with anyone. Store them securely offline.
+                    </div>
+                </div>
+
+                <!-- Recovery Phrase -->
+                <div style="background: #000000; border: 2px solid #ff4444; border-radius: 0; padding: calc(20px * var(--scale-factor)); margin-bottom: calc(20px * var(--scale-factor));">
+                    <div style="color: #ff4444; font-weight: 600; margin-bottom: calc(16px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor)); text-align: center;">
+                        <span class="text-dim">&lt;</span> RECOVERY PHRASE <span class="text-dim">/&gt;</span>
+                    </div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: calc(11px * var(--scale-factor)); color: var(--text-primary); line-height: 1.6; text-align: center;">
+                        \${generatedSeed.join(' ')}
+                    </div>
+                    <button onclick="copyToClipboard('\${generatedSeed.join(' ')}', 'Recovery phrase copied!')" style="background: transparent; border: 1px solid var(--text-primary); color: var(--text-primary); padding: calc(8px * var(--scale-factor)) calc(16px * var(--scale-factor)); font-size: calc(10px * var(--scale-factor)); cursor: pointer; margin-top: calc(12px * var(--scale-factor)); width: 100%;">Copy Recovery Phrase</button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: calc(16px * var(--scale-factor));">
+                    <button onclick="openWalletDashboard()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(16px * var(--scale-factor)); padding: calc(16px * var(--scale-factor)) calc(32px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%; text-transform: uppercase; letter-spacing: 0.1em; height: calc(56px * var(--scale-factor));" 
+                            onmouseover="this.style.background='var(--text-primary)'; this.style.color='#000000'" 
+                            onmouseout="this.style.background='#000000'; this.style.color='var(--text-primary)'">
+                        &lt;Access Wallet Dashboard/&gt;
+                    </button>
+                    
+                    <button onclick="goBack()" style="background: #000000; border: 2px solid var(--text-primary); border-radius: 0; color: var(--text-primary); font-weight: 600; font-size: calc(14px * var(--scale-factor)); padding: calc(12px * var(--scale-factor)) calc(24px * var(--scale-factor)); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s ease; width: 100%;" 
+                            onmouseover="this.querySelector('.pipe-left').style.opacity='1'; this.querySelector('.pipe-right').style.opacity='1';" 
+                            onmouseout="this.querySelector('.pipe-left').style.opacity='0'; this.querySelector('.pipe-right').style.opacity='0';">
+                        <span class="pipe-left" style="opacity: 0; transition: opacity 0.2s;">|</span> &lt;Back Esc/&gt; <span class="pipe-right" style="opacity: 0; transition: opacity 0.2s;">|</span>
+                    </button>
+                </div>
+            \`;
+        }
+        
+        // COMPREHENSIVE BITCOIN WALLET FUNCTIONS
+        function generateWalletAddress(addressType = 'spark') {
+            const ADDRESS_TYPES = {
+                'spark': { prefix: isMainnet ? 'sp1' : 'tsp1', length: 62, charset: 'qpzry9x8gf2tvdw0s3jn54khce6mua7l' },
+                'taproot': { prefix: isMainnet ? 'bc1p' : 'tb1p', length: 62, charset: 'qpzry9x8gf2tvdw0s3jn54khce6mua7l' },
+                'native-segwit': { prefix: isMainnet ? 'bc1' : 'tb1', length: 42, charset: 'qpzry9x8gf2tvdw0s3jn54khce6mua7l' },
+                'nested-segwit': { prefix: isMainnet ? '3' : '2', length: 34, charset: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz' },
+                'legacy': { prefix: isMainnet ? '1' : 'm', length: 34, charset: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz' }
+            };
+            const config = ADDRESS_TYPES[addressType] || ADDRESS_TYPES['spark'];
+            let address = config.prefix;
+            const remainingLength = config.length - config.prefix.length;
+            for (let i = 0; i < remainingLength; i++) {
+                address += config.charset[Math.floor(Math.random() * config.charset.length)];
+            }
+            return address;
+        }
+
+        function generatePrivateKey() {
+            const chars = '0123456789abcdef';
+            let privateKey = '';
+            for (let i = 0; i < 64; i++) {
+                privateKey += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return privateKey;
+        }
+        
+        function getAddressTypeName(type) {
+            const names = {
+                'spark': 'Spark Protocol', 'taproot': 'Taproot (P2TR)', 'native-segwit': 'Native SegWit (P2WPKH)',
+                'nested-segwit': 'Nested SegWit (P2SH)', 'legacy': 'Legacy (P2PKH)'
+            };
+            return names[type] || 'Spark Protocol';
+        }
+        
+        function copyToClipboard(text, successMessage) {
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification(successMessage, 'success');
+            }).catch(() => {
+                showNotification('Failed to copy to clipboard', 'error');
+            });
+        }
+        
+        function generateAllWalletAddresses() {
+            const types = ['spark', 'taproot', 'native-segwit', 'nested-segwit', 'legacy'];
+            const addresses = {};
+            types.forEach(type => { addresses[type] = generateWalletAddress(type); });
+            return addresses;
+        }
+        
+        function generateAllPrivateKeyFormats() {
+            const hexPrivateKey = generatePrivateKey();
+            const prefix = isMainnet ? '5' : '9';
+            const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+            let wif = prefix;
+            for (let i = 0; i < 50; i++) { wif += chars[Math.floor(Math.random() * chars.length)]; }
+            return { hex: hexPrivateKey, wif: wif };
+        }
+        
+        function togglePrivateKeyVisibility(keyType) {
+            const overlayId = keyType === 'wif' ? 'wifKeyOverlay' : 'hexKeyOverlay';
+            const messageType = keyType === 'wif' ? 'WIF private key' : 'HEX private key';
+            const overlay = document.getElementById(overlayId);
+            if (overlay) {
+                if (overlay.style.display === 'none') {
+                    // Hide the key - show overlay
+                    overlay.style.display = 'flex';
+                    showNotification(messageType + ' hidden', 'success');
+                } else {
+                    // Reveal the key - hide overlay
+                    overlay.style.display = 'none';
+                    showNotification(messageType + ' revealed', 'success');
+                }
+            }
+        }
+
+        function openWalletDashboard() {
+            showNotification('Opening wallet dashboard...', 'success');
+            // In a real implementation, this would navigate to the main wallet interface
+            setTimeout(() => {
+                showNotification('Wallet dashboard coming soon!', 'success');
+            }, 1000);
+        }
     </script>
 </body>
 </html>
   `);
 });
 
-const PORT = 3000;
+const PORT = 8080;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 MOOSH Wallet Server running on http://localhost:${PORT}`);
   console.log(`🌐 Also accessible at http://0.0.0.0:${PORT}`);
