@@ -1883,8 +1883,8 @@
         actionsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(120px * var(--scale-factor)), 1fr)); gap: calc(16px * var(--scale-factor));';
         
         const actions = [
-            { icon: '📤', label: 'SEND', action: () => showNotification('Send feature coming soon!', 'success') },
-            { icon: '📥', label: 'RECEIVE', action: () => showNotification('Receive feature coming soon!', 'success') },
+            { icon: '📤', label: 'SEND', action: () => showSendModal() },
+            { icon: '📥', label: 'RECEIVE', action: () => showReceiveModal() },
             { icon: '🔄', label: 'SWAP', action: () => showNotification('Swap feature coming soon!', 'success') },
             { icon: '💸', label: 'BUY', action: () => openTokenSite() }
         ];
@@ -2022,23 +2022,442 @@
     }
     
     function initializeDashboard() {
-        // Set up periodic data refresh
-        setInterval(() => {
-            // In a real implementation, fetch updated balances
-            console.log('Refreshing wallet data...');
-        }, 30000); // Refresh every 30 seconds
+        // Initialize advanced dashboard controller
+        window.dashboardController = new DashboardController();
+        window.dashboardController.init();
         
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && document.querySelector('.wallet-dashboard-container')) {
-                showNotification('Returning to wallet...', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 500);
+        showNotification('Dashboard loaded successfully', 'success');
+    }
+    
+    // Advanced Dashboard Controller Class
+    class DashboardController {
+        constructor() {
+            this.state = {
+                wallet: {
+                    masterKey: null,
+                    accounts: [],
+                    activeAccountId: 'acc_001'
+                },
+                ui: {
+                    currentView: 'dashboard',
+                    modals: { active: null, data: {} },
+                    privacy: { balancesHidden: false },
+                    animations: { enabled: true }
+                },
+                network: {
+                    connected: true,
+                    latency: 0,
+                    lastBlock: 0,
+                    feeRates: { fast: 0, medium: 0, slow: 0 },
+                    sparkStatus: 'active'
+                },
+                cache: {
+                    prices: { BTC_USD: 0, lastUpdate: null },
+                    transactions: new Map(),
+                    expiry: 300000
+                },
+                security: {
+                    sessionId: null,
+                    lastActivity: Date.now(),
+                    lockTimeout: 1800000,
+                    locked: false
+                }
+            };
+            
+            this.apis = {
+                blockstream: new BlockstreamAPI(),
+                priceData: new PriceAPI()
+            };
+            
+            this.refreshInterval = null;
+            this.activityTimer = null;
+        }
+        
+        init() {
+            this.bindEvents();
+            this.startDataRefresh();
+            this.startActivityMonitoring();
+            this.loadInitialData();
+        }
+        
+        bindEvents() {
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.querySelector('.wallet-dashboard-container')) {
+                    showNotification('Returning to wallet...', 'success');
+                    setTimeout(() => location.reload(), 500);
+                }
+                
+                // Additional shortcuts
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key) {
+                        case 'r':
+                            e.preventDefault();
+                            this.refreshData();
+                            break;
+                        case 'p':
+                            e.preventDefault();
+                            togglePrivacyMode();
+                            break;
+                    }
+                }
+            });
+            
+            // Activity monitoring
+            ['mousedown', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+                document.addEventListener(event, () => this.updateActivity());
+            });
+        }
+        
+        async loadInitialData() {
+            try {
+                // Load BTC price
+                const price = await this.apis.priceData.getBTCPrice();
+                this.updateState('cache.prices.BTC_USD', price);
+                
+                // Update UI
+                this.updatePriceDisplays(price);
+                
+            } catch (error) {
+                console.error('Failed to load initial data:', error);
+                showNotification('Failed to load price data', 'error');
+            }
+        }
+        
+        startDataRefresh() {
+            // Initial refresh
+            this.refreshData();
+            
+            // Set up periodic refresh
+            this.refreshInterval = setInterval(() => {
+                this.refreshData();
+            }, 30000); // 30 seconds
+        }
+        
+        async refreshData() {
+            showNotification('Refreshing wallet data...', 'success');
+            
+            try {
+                // Refresh price data
+                const price = await this.apis.priceData.getBTCPrice();
+                this.updateState('cache.prices.BTC_USD', price);
+                this.updatePriceDisplays(price);
+                
+                // TODO: Refresh balance data when addresses are available
+                
+            } catch (error) {
+                console.error('Refresh failed:', error);
+                showNotification('Failed to refresh data', 'error');
+            }
+        }
+        
+        updatePriceDisplays(price) {
+            const usdDisplay = document.querySelector('.balance-section .balance-usd');
+            if (usdDisplay && !window.dashboardState.privacyMode) {
+                // Update based on actual BTC balance
+                const btcBalance = parseFloat(window.dashboardState.balances.btc);
+                const usdValue = (btcBalance * price).toFixed(2);
+                usdDisplay.textContent = `$${usdValue} USD`;
+            }
+        }
+        
+        startActivityMonitoring() {
+            this.activityTimer = setInterval(() => {
+                const inactive = Date.now() - this.state.security.lastActivity;
+                if (inactive > this.state.security.lockTimeout) {
+                    this.lockDashboard();
+                }
+            }, 60000); // Check every minute
+        }
+        
+        updateActivity() {
+            this.state.security.lastActivity = Date.now();
+        }
+        
+        lockDashboard() {
+            this.state.security.locked = true;
+            showNotification('Dashboard locked due to inactivity', 'warning');
+            setTimeout(() => location.reload(), 1000);
+        }
+        
+        updateState(path, value) {
+            const keys = path.split('.');
+            let current = this.state;
+            
+            for (let i = 0; i < keys.length - 1; i++) {
+                current = current[keys[i]];
+            }
+            
+            current[keys[keys.length - 1]] = value;
+        }
+        
+        destroy() {
+            if (this.refreshInterval) clearInterval(this.refreshInterval);
+            if (this.activityTimer) clearInterval(this.activityTimer);
+        }
+    }
+    
+    // Modal Functions
+    function showSendModal() {
+        const modal = createModal('SEND BITCOIN', () => {
+            // Modal closed
+        });
+        
+        const content = document.createElement('div');
+        content.style.cssText = 'padding: calc(20px * var(--scale-factor));';
+        
+        // Recipient address input
+        const addressGroup = createInputGroup('Recipient Address', 'text', 'Enter Bitcoin address...');
+        
+        // Amount input
+        const amountGroup = createInputGroup('Amount (BTC)', 'number', '0.00000000');
+        amountGroup.querySelector('input').step = '0.00000001';
+        
+        // Fee selector
+        const feeGroup = document.createElement('div');
+        feeGroup.style.cssText = 'margin-bottom: calc(20px * var(--scale-factor));';
+        
+        const feeLabel = document.createElement('label');
+        feeLabel.style.cssText = 'display: block; margin-bottom: calc(8px * var(--scale-factor)); color: var(--text-dim); font-size: calc(12px * var(--scale-factor)); text-transform: uppercase;';
+        feeLabel.textContent = 'Network Fee';
+        
+        const feeOptions = document.createElement('div');
+        feeOptions.style.cssText = 'display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(8px * var(--scale-factor));';
+        
+        ['Slow', 'Medium', 'Fast'].forEach((speed, index) => {
+            const option = document.createElement('button');
+            option.style.cssText = 'background: var(--bg-secondary); border: calc(1px * var(--scale-factor)) solid var(--border-color); color: var(--text-primary); padding: calc(12px * var(--scale-factor)); cursor: pointer; transition: all 0.2s ease; font-family: \'JetBrains Mono\', monospace;';
+            option.textContent = speed;
+            option.onclick = () => {
+                feeOptions.querySelectorAll('button').forEach(btn => {
+                    btn.style.borderColor = 'var(--border-color)';
+                    btn.style.background = 'var(--bg-secondary)';
+                });
+                option.style.borderColor = 'var(--text-primary)';
+                option.style.background = 'var(--bg-hover)';
+            };
+            if (index === 1) option.click(); // Default to medium
+            feeOptions.appendChild(option);
+        });
+        
+        feeGroup.appendChild(feeLabel);
+        feeGroup.appendChild(feeOptions);
+        
+        // Send button
+        const sendButton = document.createElement('button');
+        sendButton.style.cssText = 'width: 100%; background: var(--text-primary); color: var(--bg-primary); border: none; padding: calc(16px * var(--scale-factor)); font-size: calc(16px * var(--scale-factor)); font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-family: \'JetBrains Mono\', monospace; text-transform: uppercase; letter-spacing: 0.05em;';
+        sendButton.textContent = 'SEND BITCOIN';
+        sendButton.onclick = () => {
+            showNotification('Transaction feature coming soon!', 'warning');
+            modal.remove();
+        };
+        
+        content.appendChild(addressGroup);
+        content.appendChild(amountGroup);
+        content.appendChild(feeGroup);
+        content.appendChild(sendButton);
+        
+        modal.querySelector('.modal-body').appendChild(content);
+        document.body.appendChild(modal);
+    }
+    
+    function showReceiveModal() {
+        const modal = createModal('RECEIVE BITCOIN', () => {
+            // Modal closed
+        });
+        
+        const content = document.createElement('div');
+        content.style.cssText = 'padding: calc(20px * var(--scale-factor)); text-align: center;';
+        
+        // Address type selector
+        const typeSelector = document.createElement('div');
+        typeSelector.style.cssText = 'display: flex; gap: calc(8px * var(--scale-factor)); margin-bottom: calc(20px * var(--scale-factor)); justify-content: center;';
+        
+        ['On-chain', 'Lightning'].forEach((type, index) => {
+            const btn = document.createElement('button');
+            btn.style.cssText = 'background: var(--bg-secondary); border: calc(1px * var(--scale-factor)) solid var(--border-color); color: var(--text-primary); padding: calc(8px * var(--scale-factor)) calc(16px * var(--scale-factor)); cursor: pointer; transition: all 0.2s ease; font-family: \'JetBrains Mono\', monospace;';
+            btn.textContent = type;
+            btn.onclick = () => {
+                typeSelector.querySelectorAll('button').forEach(b => {
+                    b.style.borderColor = 'var(--border-color)';
+                    b.style.background = 'var(--bg-secondary)';
+                });
+                btn.style.borderColor = 'var(--text-primary)';
+                btn.style.background = 'var(--bg-hover)';
+            };
+            if (index === 0) btn.click(); // Default to on-chain
+            typeSelector.appendChild(btn);
+        });
+        
+        // QR Code placeholder
+        const qrContainer = document.createElement('div');
+        qrContainer.style.cssText = 'width: calc(200px * var(--scale-factor)); height: calc(200px * var(--scale-factor)); background: var(--bg-secondary); border: calc(2px * var(--scale-factor)) solid var(--text-primary); margin: 0 auto calc(20px * var(--scale-factor)); display: flex; align-items: center; justify-content: center;';
+        
+        const qrPlaceholder = document.createElement('div');
+        qrPlaceholder.style.cssText = 'color: var(--text-dim); font-size: calc(14px * var(--scale-factor));';
+        qrPlaceholder.textContent = 'QR Code';
+        qrContainer.appendChild(qrPlaceholder);
+        
+        // Address display
+        const addressDisplay = document.createElement('div');
+        addressDisplay.style.cssText = 'background: var(--bg-secondary); border: calc(1px * var(--scale-factor)) solid var(--border-color); padding: calc(16px * var(--scale-factor)); margin-bottom: calc(16px * var(--scale-factor)); font-family: \'JetBrains Mono\', monospace; font-size: calc(12px * var(--scale-factor)); word-break: break-all;';
+        addressDisplay.textContent = 'bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297';
+        
+        // Copy button
+        const copyButton = document.createElement('button');
+        copyButton.style.cssText = 'width: 100%; background: transparent; border: calc(2px * var(--scale-factor)) solid var(--text-primary); color: var(--text-primary); padding: calc(12px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor)); cursor: pointer; transition: all 0.2s ease; font-family: \'JetBrains Mono\', monospace; text-transform: uppercase;';
+        copyButton.textContent = 'COPY ADDRESS';
+        copyButton.onclick = () => {
+            navigator.clipboard.writeText(addressDisplay.textContent);
+            showNotification('Address copied to clipboard!', 'success');
+        };
+        
+        content.appendChild(typeSelector);
+        content.appendChild(qrContainer);
+        content.appendChild(addressDisplay);
+        content.appendChild(copyButton);
+        
+        modal.querySelector('.modal-body').appendChild(content);
+        document.body.appendChild(modal);
+    }
+    
+    function createModal(title, onClose) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+        
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.cssText = 'background: var(--bg-primary); border: calc(2px * var(--scale-factor)) solid var(--text-primary); max-width: calc(500px * var(--scale-factor)); width: 90%; max-height: 90vh; overflow-y: auto;';
+        
+        const modalHeader = document.createElement('div');
+        modalHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: calc(20px * var(--scale-factor)); border-bottom: calc(1px * var(--scale-factor)) solid var(--border-color);';
+        
+        const modalTitle = document.createElement('h2');
+        modalTitle.style.cssText = 'font-size: calc(18px * var(--scale-factor)); color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.05em;';
+        modalTitle.textContent = title;
+        
+        const closeButton = document.createElement('button');
+        closeButton.style.cssText = 'background: transparent; border: none; color: var(--text-primary); font-size: calc(24px * var(--scale-factor)); cursor: pointer; padding: 0; width: calc(32px * var(--scale-factor)); height: calc(32px * var(--scale-factor)); display: flex; align-items: center; justify-content: center;';
+        closeButton.textContent = '×';
+        closeButton.onclick = () => {
+            modal.remove();
+            if (onClose) onClose();
+        };
+        
+        modalHeader.appendChild(modalTitle);
+        modalHeader.appendChild(closeButton);
+        
+        const modalBody = document.createElement('div');
+        modalBody.className = 'modal-body';
+        
+        modalContent.appendChild(modalHeader);
+        modalContent.appendChild(modalBody);
+        modal.appendChild(modalContent);
+        
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+                if (onClose) onClose();
             }
         });
         
-        showNotification('Dashboard loaded successfully', 'success');
+        // Close on Escape
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                if (onClose) onClose();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+        
+        return modal;
+    }
+    
+    function createInputGroup(label, type, placeholder) {
+        const group = document.createElement('div');
+        group.style.cssText = 'margin-bottom: calc(20px * var(--scale-factor));';
+        
+        const labelEl = document.createElement('label');
+        labelEl.style.cssText = 'display: block; margin-bottom: calc(8px * var(--scale-factor)); color: var(--text-dim); font-size: calc(12px * var(--scale-factor)); text-transform: uppercase;';
+        labelEl.textContent = label;
+        
+        const input = document.createElement('input');
+        input.type = type;
+        input.placeholder = placeholder;
+        input.style.cssText = 'width: 100%; background: var(--bg-secondary); border: calc(1px * var(--scale-factor)) solid var(--border-color); color: var(--text-primary); padding: calc(12px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor)); font-family: \'JetBrains Mono\', monospace; transition: all 0.2s ease;';
+        
+        input.addEventListener('focus', () => {
+            input.style.borderColor = 'var(--text-primary)';
+        });
+        
+        input.addEventListener('blur', () => {
+            input.style.borderColor = 'var(--border-color)';
+        });
+        
+        group.appendChild(labelEl);
+        group.appendChild(input);
+        
+        return group;
+    }
+    
+    // API Integration Classes
+    class BlockstreamAPI {
+        constructor() {
+            this.baseURL = 'https://blockstream.info/api';
+        }
+        
+        async getBalance(address) {
+            try {
+                const response = await fetch(`${this.baseURL}/address/${address}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                return {
+                    confirmed: data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum,
+                    unconfirmed: data.mempool_stats.funded_txo_sum - data.mempool_stats.spent_txo_sum,
+                    txCount: data.chain_stats.tx_count
+                };
+            } catch (error) {
+                console.error('Blockstream API error:', error);
+                throw error;
+            }
+        }
+        
+        async getTransactions(address, limit = 10) {
+            try {
+                const response = await fetch(`${this.baseURL}/address/${address}/txs`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const txs = await response.json();
+                return txs.slice(0, limit);
+            } catch (error) {
+                console.error('Failed to fetch transactions:', error);
+                return [];
+            }
+        }
+    }
+    
+    class PriceAPI {
+        async getBTCPrice() {
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+                const data = await response.json();
+                return data.bitcoin.usd;
+            } catch (error) {
+                // Fallback to CoinCap
+                try {
+                    const response = await fetch('https://api.coincap.io/v2/rates/bitcoin');
+                    const data = await response.json();
+                    return parseFloat(data.data.rateUsd);
+                } catch (fallbackError) {
+                    console.error('All price APIs failed:', fallbackError);
+                    return 0;
+                }
+            }
+        }
     }
     
     // Initialize application
