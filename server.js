@@ -24,8 +24,9 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   
-  // Parse URL
-  let filePath = req.url;
+  // Parse URL and remove query parameters
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  let filePath = url.pathname;
   
   // Handle logo requests from any path
   if (filePath.includes('Moosh_logo.png')) {
