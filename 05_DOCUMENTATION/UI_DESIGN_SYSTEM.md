@@ -10,13 +10,13 @@
 
 ---
 
-## 🎨 Color System
+## 🎨 Color Systemactu
 
 ### Primary Colors
 ```css
 --text-primary: #f57315     /* Orange - Main accent color */
 --text-dim: #888888         /* Medium grey - Secondary text */
---text-keyword: #69fd97bd   /* Green - Code highlights */
+--text-keyword:     /* Green - Code highlights */
 --border-color: #333333     /* Dark grey - Borders/dividers */
 --background: #000000       /* Pure black - Main background */
 ```

@@ -685,6 +685,55 @@
                     }
                 }
 
+                /* RESPONSIVE STATUS INDICATOR - Small version positioned below security seed box */
+                .status-indicator-small {
+                    color: #009f6b;
+                    font-size: clamp(6px, 1.2vw, 8px) !important;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 1px;
+                    flex-shrink: 0;
+                    position: relative;
+                    float: right;
+                    clear: both;
+                    margin-top: calc(4px * var(--scale-factor));
+                    margin-right: calc(8px * var(--scale-factor));
+                    z-index: 5;
+                    padding: calc(2px * var(--scale-factor)) calc(4px * var(--scale-factor));
+                }
+
+                @media (max-width: 479px) {
+                    .status-indicator-small {
+                        font-size: clamp(5px, 1vw, 7px) !important;
+                        margin-top: calc(3px * var(--scale-factor));
+                        margin-right: calc(6px * var(--scale-factor));
+                        padding: calc(1px * var(--scale-factor)) calc(3px * var(--scale-factor));
+                    }
+                }
+
+                @media (max-width: 360px) {
+                    .status-indicator-small {
+                        font-size: clamp(4px, 0.8vw, 6px) !important;
+                        margin-top: calc(2px * var(--scale-factor));
+                        margin-right: calc(4px * var(--scale-factor));
+                    }
+                }
+
+                /* Mobile specific terminal header adjustments */
+                @media (max-width: 480px) {
+                    .terminal-header {
+                        gap: calc(4px * var(--scale-factor));
+                    }
+                }
+                
+                @media (max-width: 360px) {
+                    .terminal-header {
+                        font-size: calc(10px * var(--scale-factor)) !important;
+                    }
+                }
+
                 /* MOOSH MODE - ORANGE & BLACK THEME */
                 .theme-spark {
                     --text-primary: #f57315 !important;
@@ -909,15 +958,18 @@
                     margin-bottom: calc(8px * var(--scale-factor));
                     border-bottom: 1px solid var(--text-primary);
                     padding-bottom: calc(4px * var(--scale-factor));
+                    padding-right: clamp(80px, 20vw, 120px);
                     font-size: calc(12px * var(--scale-factor));
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     white-space: nowrap;
-                    overflow-x: auto;
-                    overflow-y: hidden;
+                    overflow: hidden;
+                    overflow-x: hidden;
                     -webkit-overflow-scrolling: touch;
-                    scrollbar-width: thin;
+                    scrollbar-width: none;
+                    position: relative;
+                    min-height: calc(24px * var(--scale-factor));
                 }
                 
                 .terminal-content {
@@ -994,13 +1046,13 @@
                     flex-wrap: nowrap !important;
                 }
 
-                /* Dashboard Button Overrides */
+                /* Dashboard Button Overrides - Responsive */
                 .dashboard-btn {
                     flex-shrink: 0 !important;
-                    min-width: 48px !important;
-                    max-width: 48px !important;
-                    width: 48px !important;
-                    height: 28px !important;
+                    min-width: clamp(56px, 12vw, 80px) !important;
+                    max-width: clamp(80px, 15vw, 120px) !important;
+                    width: auto !important;
+                    height: clamp(28px, 6vw, 32px) !important;
                     white-space: nowrap !important;
                     overflow: hidden !important;
                     text-overflow: ellipsis !important;
@@ -1008,12 +1060,33 @@
                     align-items: center !important;
                     justify-content: center !important;
                     font-size: var(--font-xs) !important;
-                    padding: var(--space-xs) !important;
+                    padding: var(--space-xs) calc(var(--space-xs) * 1.5) !important;
                     border: 1px solid #f57315 !important;
                     background: #000000 !important;
                     color: #f57315 !important;
                     box-sizing: border-box !important;
                     margin: 0 !important;
+                    transition: all 0.2s ease !important;
+                }
+
+                /* Mobile optimizations for dashboard buttons */
+                @media (max-width: 480px) {
+                    .dashboard-btn {
+                        min-width: clamp(48px, 10vw, 64px) !important;
+                        max-width: clamp(64px, 12vw, 80px) !important;
+                        height: clamp(24px, 5vw, 28px) !important;
+                        font-size: clamp(8px, 2vw, 10px) !important;
+                        padding: calc(var(--space-xs) * 0.75) var(--space-xs) !important;
+                    }
+                }
+
+                @media (max-width: 360px) {
+                    .dashboard-btn {
+                        min-width: clamp(40px, 9vw, 56px) !important;
+                        max-width: clamp(56px, 11vw, 72px) !important;
+                        font-size: clamp(7px, 1.8vw, 9px) !important;
+                        padding: calc(var(--space-xs) * 0.5) calc(var(--space-xs) * 0.75) !important;
+                    }
                 }
 
                 /* Theme Toggle */
@@ -1066,52 +1139,53 @@
                 .network-toggle {
                     display: inline-flex;
                     align-items: center;
-                    gap: calc(var(--spacing-unit) * var(--scale-factor));
+                    gap: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
                     margin-left: auto;
+                    position: absolute;
+                    top: calc(8px * var(--scale-factor));
+                    right: calc(12px * var(--scale-factor));
+                    z-index: 10;
+                    max-width: clamp(60px, 15vw, 85px);
+                    min-width: clamp(45px, 10vw, 60px);
                 }
                 
                 .toggle-switch {
-                    background: #000000;
-                    border: calc(1.5px * var(--scale-factor)) solid var(--text-primary);
-                    border-radius: 0;
-                    width: calc(36px * var(--scale-factor));
-                    height: calc(18px * var(--scale-factor));
-                    position: relative;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    display: flex;
-                    align-items: center;
-                    padding: calc(1px * var(--scale-factor));
-                }
-                
-                .toggle-slider {
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    background: transparent;
-                    border: none;
-                    border-radius: 0;
-                    color: var(--text-primary);
-                    font-size: calc(12px * var(--scale-factor));
-                    font-weight: 700;
+                    width: calc(8px * var(--scale-factor));
+                    height: calc(8px * var(--scale-factor));
+                    border: calc(1px * var(--scale-factor)) solid #333333;
+                    border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    transition: none;
-                    left: 0;
-                    top: 0;
-                    line-height: 1;
+                    background: #000000;
+                    transition: all 0.2s ease;
+                    flex-shrink: 0;
+                    cursor: pointer;
+                    position: relative;
+                }
+                
+                .toggle-switch:hover {
+                    border-color: var(--text-primary);
+                }
+                
+                .toggle-slider {
+                    width: calc(2.5px * var(--scale-factor));
+                    height: calc(2.5px * var(--scale-factor));
+                    border-radius: 50%;
+                    background: var(--text-primary);
+                    transition: all 0.2s ease;
+                    position: relative;
                 }
                 
                 .toggle-switch.testnet .toggle-slider {
-                    /* No transform needed - just change the symbol */
+                    background: #ff6b6b;
                 }
                 
                 .network-label {
-                    font-size: calc(10px * var(--scale-factor));
-                    color: var(--text-primary);
-                    font-weight: 500;
-                    min-width: calc(50px * var(--scale-factor));
+                    font-size: calc(7px * var(--scale-factor));
+                    color: var(--text-dim);
+                    font-weight: 400;
+                    min-width: calc(35px * var(--scale-factor));
                 }
 
                 /* Custom Radio Buttons */
@@ -1334,48 +1408,39 @@
                     }
                     
                     .network-toggle {
-                        margin-left: calc(var(--spacing-unit) * var(--scale-factor));
-                        gap: calc(var(--spacing-unit) * var(--scale-factor));
+                        margin-left: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
+                        gap: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
                         display: flex;
                         align-items: center;
                         justify-content: center;
                     }
                     
                     .toggle-switch {
-                        width: calc(36px * var(--scale-factor)) !important;
-                        height: calc(18px * var(--scale-factor)) !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: flex-start !important;
-                        position: relative !important;
-                        padding: calc(1px * var(--scale-factor)) !important;
-                        aspect-ratio: 2 / 1 !important;
-                        min-width: calc(36px * var(--scale-factor)) !important;
-                        min-height: calc(18px * var(--scale-factor)) !important;
-                    }
-                    
-                    .toggle-slider {
-                        width: calc(16px * var(--scale-factor)) !important;
-                        height: calc(16px * var(--scale-factor)) !important;
-                        position: absolute !important;
-                        top: calc(3px * var(--scale-factor)) !important;
-                        left: calc(3px * var(--scale-factor)) !important;
-                        font-size: calc(12px * var(--scale-factor)) !important;
+                        width: calc(8px * var(--scale-factor)) !important;
+                        height: calc(8px * var(--scale-factor)) !important;
+                        border-radius: 50% !important;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        transition: transform 0.2s ease !important;
-                        aspect-ratio: 1 / 1 !important;
+                        flex-shrink: 0 !important;
+                    }
+                    
+                    .toggle-slider {
+                        width: calc(2.5px * var(--scale-factor)) !important;
+                        height: calc(2.5px * var(--scale-factor)) !important;
+                        border-radius: 50% !important;
+                        background: var(--text-primary) !important;
+                        transition: all 0.2s ease !important;
                     }
                     
                     .toggle-switch.testnet .toggle-slider {
-                        transform: translateX(calc(22px * var(--scale-factor))) !important;
+                        background: #ff6b6b !important;
                     }
                     
                     .network-label {
-                        font-size: calc(12px * var(--scale-factor));
-                        min-width: calc(60px * var(--scale-factor));
-                        font-weight: 500;
+                        font-size: calc(7px * var(--scale-factor));
+                        min-width: calc(35px * var(--scale-factor));
+                        font-weight: 400;
                         line-height: var(--mobile-line-height);
                     }
                     
@@ -1951,25 +2016,10 @@
             }, [
                 this.props.showNetworkToggle ? this.createNetworkToggle() : null,
                 $.div({ className: 'terminal-header' }, [
-                    $.span({}, ['~/moosh/spark-wallet $']),
-                    $.span({ 
-                        className: 'text-keyword',
-                        style: { 
-                            color: '#009f6b',
-                            fontSize: 'calc(10px * var(--scale-factor))'
-                        }
-                    }, [
-                        'Bitcoin Ready ',
-                        $.span({
-                            className: 'blink',
-                            style: { 
-                                fontSize: 'calc(10px * var(--scale-factor))',
-                                color: '#009f6b'
-                            }
-                        }, ['●'])
-                    ])
+                    $.span({}, ['~/moosh/spark-wallet $'])
                 ]),
                 this.props.radioSection ? this.createRadioSection() : null,
+                this.props.radioSection ? this.createStatusIndicator() : null,
                 this.createTerminalContent()
             ]);
         }
@@ -1999,7 +2049,7 @@
                     },
                     onmouseover: function() { 
                         this.querySelectorAll('span').forEach(span => {
-                            span.style.color = '#f57315';
+                            span.style.color = 'var(--text-primary)';
                         });
                     },
                     onmouseout: function() {
@@ -2047,13 +2097,13 @@
                 $.span({
                     id: 'networkLabel',
                     className: 'network-label'
-                }, [isMainnet ? 'MAINNET' : 'TESTNET']),
+                }, [isMainnet ? '.mainnet' : '.testnet']),
                 $.div({
                     id: 'networkToggle',
                     className: isMainnet ? 'toggle-switch' : 'toggle-switch testnet',
                     onclick: () => this.toggleNetwork()
                 }, [
-                    $.div({ className: 'toggle-slider' }, [isMainnet ? '+' : '-'])
+                    $.div({ className: 'toggle-slider' })
                 ])
             ]);
         }
@@ -2064,21 +2114,18 @@
             
             const toggle = document.getElementById('networkToggle');
             const label = document.getElementById('networkLabel');
-            const slider = toggle.querySelector('.toggle-slider');
             
             if (isMainnet) {
                 toggle.classList.remove('testnet');
-                label.textContent = 'MAINNET';
-                slider.textContent = '+';
+                label.textContent = '.mainnet';
                 console.log('🌐 Switched to Bitcoin MAINNET');
             } else {
                 toggle.classList.add('testnet');
-                label.textContent = 'TESTNET';
-                slider.textContent = '-';
+                label.textContent = '.testnet';
                 console.log('🧪 Switched to Bitcoin TESTNET');
             }
             
-            this.app.showNotification(`Network: ${isMainnet ? 'MAINNET' : 'TESTNET'}`, 'network');
+            this.app.showNotification(`Network: ${isMainnet ? '.mainnet' : '.testnet'}`, 'network');
         }
 
         createRadioOption(words, isSelected) {
@@ -2139,6 +2186,23 @@
             }
             
             this.app.showNotification(words + ' Word Mnemonic selected', 'success');
+        }
+
+        createStatusIndicator() {
+            return $.span({ 
+                className: 'status-indicator-small',
+                style: { 
+                    color: '#009f6b'
+                }
+            }, [
+                'Bitcoin Ready ',
+                $.span({
+                    className: 'blink',
+                    style: { 
+                        color: '#009f6b'
+                    }
+                }, ['●'])
+            ]);
         }
 
         createTerminalContent() {
@@ -3767,15 +3831,6 @@
                         $.h2({ 
                             style: 'font-size: calc(20px * var(--scale-factor)); font-weight: 600; font-family: JetBrains Mono, monospace; margin: 0;'
                         }, [
-                            $.span({ className: 'text-dim' }, ['<']),
-                            $.span({ 
-                                className: 'text-primary'
-                            }, ['Moosh_Spark_Wallet_Dashboard']),
-                            $.span({ className: 'text-dim' }, [' />']),
-                            $.span({ 
-                                className: 'blink',
-                                style: 'color: var(--text-primary); margin-left: 4px; font-weight: 300;'
-                            }, ['|'])
                         ]),
                         
                         // Right side: Header buttons
@@ -3784,18 +3839,15 @@
                             style: 'display: flex; gap: calc(8px * var(--scale-factor)); align-items: center;'
                         }, [
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.showMultiAccountManager()
                             }, ['+ Accounts']),
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.handleRefresh()
                             }, ['Refresh']),
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.toggleBalanceVisibility()
                             }, ['Hide'])
                         ])
@@ -3912,33 +3964,48 @@
                 style: 'display: flex; flex-direction: column; gap: calc(12px * var(--scale-factor)); margin-top: calc(24px * var(--scale-factor));'
             }, [
                 $.button({
-                    className: 'btn-primary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor));',
+                    className: 'btn-secondary',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showSendPayment()
+,
+                    onmouseover: function() { this.style.background = 'var(--text-primary)'; this.style.color = '#000000'; },
+                    onmouseout: function() { this.style.background = '#000000'; this.style.color = 'var(--text-primary)'; }
                 }, ['Send Lightning Payment']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showReceivePayment()
+,
+                    onmouseover: function() { this.style.background = 'var(--text-primary)'; this.style.color = '#000000'; },
+                    onmouseout: function() { this.style.background = '#000000'; this.style.color = 'var(--text-primary)'; }
                 }, ['Receive Payment']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTokenMenu()
+,
+                    onmouseover: function() { this.style.background = 'var(--text-primary)'; this.style.color = '#000000'; },
+                    onmouseout: function() { this.style.background = '#000000'; this.style.color = 'var(--text-primary)'; }
                 }, ['Token Menu']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTransactionHistory()
+,
+                    onmouseover: function() { this.style.background = 'var(--text-primary)'; this.style.color = '#000000'; },
+                    onmouseout: function() { this.style.background = '#000000'; this.style.color = 'var(--text-primary)'; }
                 }, ['Transaction History']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showWalletSettings()
+,
+                    onmouseover: function() { this.style.background = 'var(--text-primary)'; this.style.color = '#000000'; },
+                    onmouseout: function() { this.style.background = '#000000'; this.style.color = 'var(--text-primary)'; }
                 }, ['Wallet Settings'])
             ]);
         }
@@ -4086,7 +4153,7 @@
                 className: 'warning-box',
                 style: 'background: rgba(105, 253, 151, 0.1); border: 1px solid var(--text-accent); margin-bottom: calc(24px * var(--scale-factor));'
             }, [
-                $.div({ style: 'color: var(--text-accent); font-weight: 600; margin-bottom: calc(8px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor));' }, ['⚡ Spark Protocol Active']),
+                $.div({ style: 'color: var(--text-accent); font-weight: 600; margin-bottom: calc(8px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor));' }, ['Spark Protocol Active']),
                 $.div({ 
                     className: 'feature-tagline',
                     style: 'margin-bottom: calc(4px * var(--scale-factor));'
@@ -4273,7 +4340,7 @@
             
             return $.div({ className: 'spark-protocol-section' }, [
                 $.div({ className: 'spark-header' }, [
-                    $.h3({ className: 'spark-title' }, ['⚡ Spark Protocol Terminal']),
+                    $.h3({ className: 'spark-title' }, ['Spark Protocol Terminal']),
                     $.button({
                         className: 'spark-toggle',
                         onclick: () => this.toggleSparkTerminal()
@@ -6161,15 +6228,6 @@
                         $.h2({ 
                             style: 'font-size: calc(20px * var(--scale-factor)); font-weight: 600; font-family: JetBrains Mono, monospace; margin: 0;'
                         }, [
-                            $.span({ className: 'text-dim' }, ['<']),
-                            $.span({ 
-                                className: 'text-primary'
-                            }, ['Moosh_Spark_Wallet_Dashboard']),
-                            $.span({ className: 'text-dim' }, [' />']),
-                            $.span({ 
-                                className: 'blink',
-                                style: 'color: var(--text-primary); margin-left: 4px; font-weight: 300;'
-                            }, ['|'])
                         ]),
                         
                         // Right side: Header buttons
@@ -6178,18 +6236,15 @@
                             style: 'display: flex; gap: calc(8px * var(--scale-factor)); align-items: center;'
                         }, [
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.showMultiAccountManager()
                             }, ['+ Accounts']),
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.handleRefresh()
                             }, ['Refresh']),
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.toggleBalanceVisibility()
                             }, ['Hide'])
                         ])
@@ -6313,25 +6368,25 @@
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showReceivePayment()
                 }, ['Receive Payment']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTokenMenu()
                 }, ['Token Menu']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTransactionHistory()
                 }, ['Transaction History']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showWalletSettings()
                 }, ['Wallet Settings'])
             ]);
@@ -6480,7 +6535,7 @@
                 className: 'warning-box',
                 style: 'background: rgba(105, 253, 151, 0.1); border: 1px solid var(--text-accent); margin-bottom: calc(24px * var(--scale-factor));'
             }, [
-                $.div({ style: 'color: var(--text-accent); font-weight: 600; margin-bottom: calc(8px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor));' }, ['⚡ Spark Protocol Active']),
+                $.div({ style: 'color: var(--text-accent); font-weight: 600; margin-bottom: calc(8px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor));' }, ['Spark Protocol Active']),
                 $.div({ 
                     className: 'feature-tagline',
                     style: 'margin-bottom: calc(4px * var(--scale-factor));'
@@ -6667,7 +6722,7 @@
             
             return $.div({ className: 'spark-protocol-section' }, [
                 $.div({ className: 'spark-header' }, [
-                    $.h3({ className: 'spark-title' }, ['⚡ Spark Protocol Terminal']),
+                    $.h3({ className: 'spark-title' }, ['Spark Protocol Terminal']),
                     $.button({
                         className: 'spark-toggle',
                         onclick: () => this.toggleSparkTerminal()
@@ -7661,15 +7716,6 @@
                         $.h2({ 
                             style: 'font-size: calc(20px * var(--scale-factor)); font-weight: 600; font-family: JetBrains Mono, monospace; margin: 0;'
                         }, [
-                            $.span({ className: 'text-dim' }, ['<']),
-                            $.span({ 
-                                className: 'text-primary'
-                            }, ['Moosh_Spark_Wallet_Dashboard']),
-                            $.span({ className: 'text-dim' }, [' />']),
-                            $.span({ 
-                                className: 'blink',
-                                style: 'color: var(--text-primary); margin-left: 4px; font-weight: 300;'
-                            }, ['|'])
                         ]),
                         
                         // Right side: Header buttons
@@ -7678,18 +7724,15 @@
                             style: 'display: flex; gap: calc(8px * var(--scale-factor)); align-items: center;'
                         }, [
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.showMultiAccountManager()
                             }, ['+ Accounts']),
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.handleRefresh()
                             }, ['Refresh']),
                             $.button({
-                                className: 'btn-secondary',
-                                style: 'padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)); font-size: calc(11px * var(--scale-factor)); min-width: auto; background: #000000; border: 1px solid #f57315; color: #f57315;',
+                                className: 'btn-secondary dashboard-btn',
                                 onclick: () => this.toggleBalanceVisibility()
                             }, ['Hide'])
                         ])
@@ -7813,25 +7856,25 @@
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showReceivePayment()
                 }, ['Receive Payment']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTokenMenu()
                 }, ['Token Menu']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTransactionHistory()
                 }, ['Transaction History']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showWalletSettings()
                 }, ['Wallet Settings'])
             ]);
@@ -7980,7 +8023,7 @@
                 className: 'warning-box',
                 style: 'background: rgba(105, 253, 151, 0.1); border: 1px solid var(--text-accent); margin-bottom: calc(24px * var(--scale-factor));'
             }, [
-                $.div({ style: 'color: var(--text-accent); font-weight: 600; margin-bottom: calc(8px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor));' }, ['⚡ Spark Protocol Active']),
+                $.div({ style: 'color: var(--text-accent); font-weight: 600; margin-bottom: calc(8px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor));' }, ['Spark Protocol Active']),
                 $.div({ 
                     className: 'feature-tagline',
                     style: 'margin-bottom: calc(4px * var(--scale-factor));'
@@ -8167,7 +8210,7 @@
             
             return $.div({ className: 'spark-protocol-section' }, [
                 $.div({ className: 'spark-header' }, [
-                    $.h3({ className: 'spark-title' }, ['⚡ Spark Protocol Terminal']),
+                    $.h3({ className: 'spark-title' }, ['Spark Protocol Terminal']),
                     $.button({
                         className: 'spark-toggle',
                         onclick: () => this.toggleSparkTerminal()
@@ -9334,25 +9377,25 @@
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showReceivePayment()
                 }, ['Receive Payment']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTokenMenu()
                 }, ['Token Menu']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTransactionHistory()
                 }, ['Transaction History']),
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor));',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showWalletSettings()
                 }, ['Wallet Settings'])
             ]);
@@ -9501,7 +9544,7 @@
                 className: 'warning-box',
                 style: 'background: rgba(105, 253, 151, 0.1); border: 1px solid var(--text-accent); margin-bottom: calc(24px * var(--scale-factor));'
             }, [
-                $.div({ style: 'color: var(--text-accent); font-weight: 600; margin-bottom: calc(8px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor));' }, ['⚡ Spark Protocol Active']),
+                $.div({ style: 'color: var(--text-accent); font-weight: 600; margin-bottom: calc(8px * var(--scale-factor)); font-size: calc(14px * var(--scale-factor));' }, ['Spark Protocol Active']),
                 $.div({ 
                     className: 'feature-tagline',
                     style: 'margin-bottom: calc(4px * var(--scale-factor));'
@@ -9688,7 +9731,7 @@
             
             return $.div({ className: 'spark-protocol-section' }, [
                 $.div({ className: 'spark-header' }, [
-                    $.h3({ className: 'spark-title' }, ['⚡ Spark Protocol Terminal']),
+                    $.h3({ className: 'spark-title' }, ['Spark Protocol Terminal']),
                     $.button({
                         className: 'spark-toggle',
                         onclick: () => this.toggleSparkTerminal()
@@ -12367,4 +12410,5 @@
     }
 
 })();
+
 

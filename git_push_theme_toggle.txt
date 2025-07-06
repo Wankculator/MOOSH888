@@ -1,0 +1,64 @@
+# Git Push Instructions for Theme Toggle Fix Branch
+
+## Branch Info
+- Branch name: theme-toggle-fix
+- Based on: ui-improvements-mobile-optimization
+- Commit: 🎨 Fix theme toggle and implement MOOSH mode styling
+
+## Push Commands
+Run these commands in your terminal:
+
+```bash
+# Make sure you're in the MOOSH WALLET directory
+cd "/mnt/c/Users/sk84l/OneDrive/Desktop/MOOSH WALLET"
+
+# Push the branch
+git push -u origin theme-toggle-fix
+```
+
+## What's Included
+1. **public/js/moosh-wallet.js** - Updated with theme toggle functionality
+2. **server.js** - Pure Node.js static server (no HTML strings)
+
+## Theme Features
+- ✅ Working theme toggle between Original and MOOSH modes
+- ✅ MOOSH mode: Green (#69fd97) with dark borders (#232b2b)
+- ✅ Original mode: Orange (#f57315) standard theme
+- ✅ Hover effects on all interactive elements
+- ✅ Clean Moosh.money link with pipe hover effect
+- ✅ 100% Pure JavaScript implementation
+
+## Create Pull Request
+After pushing, create a PR with this description:
+
+```
+## Theme Toggle Implementation
+
+This PR implements a fully functional theme toggle system for MOOSH Wallet.
+
+### Changes
+- Add theme toggle functionality with persistent storage
+- Implement MOOSH mode with green color scheme
+- Fix hover effects for all UI elements
+- Clean up navigation link styling
+- Ensure 100% pure JavaScript implementation
+
+### Features
+- **Original Mode**: Orange (#f57315) theme
+- **MOOSH Mode**: Green (#69fd97) theme with dark borders
+- Smooth transitions between themes
+- Theme preference saved to localStorage
+- All hover states properly themed
+
+### Testing
+- [x] Theme toggle switches colors correctly
+- [x] Theme preference persists on reload
+- [x] All hover effects work in both themes
+- [x] No HTML strings in JavaScript
+- [x] Mobile responsive maintained
+```
+
+## Alternative: Use GitHub CLI
+```bash
+gh pr create --title "🎨 Fix theme toggle and implement MOOSH mode" --body "See commit message for details"
+```
