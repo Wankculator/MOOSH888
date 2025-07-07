@@ -1040,7 +1040,7 @@
                     overflow: hidden !important;
                     max-width: 40% !important;
                     justify-content: flex-end !important;
-                    gap: var(--space-xs) !important;
+                    gap: 4px !important;
                     display: flex !important;
                     align-items: center !important;
                     flex-wrap: nowrap !important;
@@ -1059,14 +1059,17 @@
                     display: flex !important;
                     align-items: center !important;
                     justify-content: center !important;
-                    font-size: var(--font-xs) !important;
-                    padding: var(--space-xs) calc(var(--space-xs) * 1.5) !important;
+                    font-size: 10px !important;
+                    padding: 4px 8px !important;
                     border: 1px solid #f57315 !important;
                     background: #000000 !important;
                     color: #f57315 !important;
                     box-sizing: border-box !important;
                     margin: 0 !important;
                     transition: all 0.2s ease !important;
+                    border-radius: 0 !important;
+                    cursor: pointer !important;
+                    font-family: 'JetBrains Mono', monospace !important;
                 }
 
                 /* Mobile optimizations for dashboard buttons */
@@ -1076,7 +1079,7 @@
                         max-width: clamp(64px, 12vw, 80px) !important;
                         height: clamp(24px, 5vw, 28px) !important;
                         font-size: clamp(8px, 2vw, 10px) !important;
-                        padding: calc(var(--space-xs) * 0.75) var(--space-xs) !important;
+                        padding: 3px 4px !important;
                     }
                 }
 
@@ -1085,7 +1088,7 @@
                         min-width: clamp(40px, 9vw, 56px) !important;
                         max-width: clamp(56px, 11vw, 72px) !important;
                         font-size: clamp(7px, 1.8vw, 9px) !important;
-                        padding: calc(var(--space-xs) * 0.5) calc(var(--space-xs) * 0.75) !important;
+                        padding: 2px 3px !important;
                     }
                 }
 
@@ -9073,187 +9076,211 @@
         createDashboardHeader() {
             const $ = ElementFactory;
             
-            // Use ResponsiveUtils for consistent breakpoint detection
-            const isUltraCompact = ResponsiveUtils.getBreakpoint() === 'xs';
-            const isCompact = ['xs', 'sm'].includes(ResponsiveUtils.getBreakpoint());
-            const isMobile = ResponsiveUtils.isMobile();
+            // Get current responsive breakpoint
+            const breakpoint = ResponsiveUtils.getBreakpoint();
+            const isXS = breakpoint === 'xs';
+            const isSM = breakpoint === 'sm';
+            const isCompact = isXS || isSM;
             
             return $.div({ 
                 className: 'terminal-box dashboard-terminal-box', 
                 style: {
-                    marginBottom: 'var(--space-lg)',
+                    marginBottom: '20px',
                     overflow: 'hidden',
-                    isolation: 'isolate',
-                    contain: 'layout style',
-                    padding: isUltraCompact ? 'var(--space-xs)' : 'var(--space-sm)'
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    background: '#000000',
+                    border: '1px solid #f57315',
+                    borderRadius: '0'
                 }
             }, [
+                // Terminal header with path
                 $.div({ 
                     className: 'terminal-header',
                     style: {
-                        padding: 'var(--space-xs) var(--space-sm)',
+                        padding: '8px 12px',
+                        borderBottom: '1px solid #333333',
+                        fontSize: isXS ? '10px' : '12px',
+                        fontFamily: 'JetBrains Mono, monospace',
                         whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        ...ResponsiveUtils.getResponsiveTextStyle('small')
+                        overflow: 'hidden'
                     }
                 }, [
-                    $.span({ style: 'color: var(--text-dim);' }, ['~/moosh/wallet/dashboard $']),
-                    $.span({ className: 'text-keyword', style: 'margin-left: calc(8px * var(--scale-factor));' }, ['active'])
+                    $.span({ style: 'color: #666666;' }, ['~/moosh/wallet/dashboard $']),
+                    $.span({ style: 'color: #f57315; margin-left: 8px;' }, ['active'])
                 ]),
+                
+                // Main content area
                 $.div({ 
                     className: 'terminal-content',
                     style: {
-                        padding: isUltraCompact ? 'var(--space-xs)' : 'var(--space-sm)'
+                        padding: isXS ? '8px' : '12px',
+                        width: '100%',
+                        boxSizing: 'border-box'
                     }
                 }, [
-                    // Main content row with responsive layout
+                    // Dashboard header row
                     $.div({ 
                         className: 'dashboard-header-row',
                         style: {
                             display: 'flex',
                             justifyContent: 'space-between',
-                            alignItems: isUltraCompact ? 'flex-start' : 'center',
-                            flexWrap: 'wrap',
-                            gap: 'var(--space-sm)',
-                            marginBottom: 'var(--space-md)',
+                            alignItems: 'center',
                             width: '100%',
-                            boxSizing: 'border-box',
-                            overflow: 'hidden'
+                            marginBottom: '12px',
+                            gap: '8px',
+                            flexWrap: isXS ? 'wrap' : 'nowrap'
                         }
                     }, [
-                        // Left side: Terminal title with intelligent truncation
-                        $.h2({ 
+                        // Left: Dashboard title
+                        $.div({ 
                             className: 'dashboard-title',
                             style: {
-                                ...ResponsiveUtils.getResponsiveTextStyle(isUltraCompact ? 'body' : 'subtitle'),
-                                fontWeight: '600',
-                                fontFamily: 'JetBrains Mono, monospace',
-                                margin: 0,
                                 flex: '1 1 auto',
                                 minWidth: 0,
+                                fontSize: isXS ? '14px' : isSM ? '16px' : '18px',
+                                fontWeight: '600',
+                                fontFamily: 'JetBrains Mono, monospace',
+                                color: '#ffffff',
+                                overflow: 'hidden',
                                 display: 'flex',
-                                alignItems: 'center',
-                                maxWidth: isUltraCompact ? '55%' : '60%',
-                                overflow: 'hidden'
+                                alignItems: 'center'
                             }
                         }, [
-                            $.span({ className: 'text-dim' }, ['<']),
+                            $.span({ style: 'color: #666666;' }, ['<']),
                             $.span({ 
-                                className: 'text-primary dashboard-title-text',
-                                style: 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;',
+                                style: 'color: #f57315; margin: 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;',
                                 title: 'Moosh_Spark_Wallet_Dashboard'
-                            }, [isUltraCompact ? 'Moosh_Wallet' : 'Moosh_Spark_Wallet_Dashboard']),
-                            $.span({ className: 'text-dim' }, [' />']),
+                            }, [isXS ? 'Moosh_Wallet' : 'Moosh_Spark_Wallet_Dashboard']),
+                            $.span({ style: 'color: #666666;' }, [' />']),
                             $.span({ 
                                 className: 'blink',
-                                style: 'color: var(--text-primary); margin-left: 4px; font-weight: 300;'
+                                style: 'color: #ffffff; margin-left: 4px;'
                             }, ['|'])
                         ]),
                         
-                        // Right side: Header buttons with responsive sizing
+                        // Right: Action buttons
                         $.div({ 
-                            className: 'header-buttons',
+                            className: 'dashboard-action-buttons',
                             style: {
                                 display: 'flex',
-                                gap: 'var(--space-xs)',
-                                alignItems: 'center',
+                                gap: '6px',
                                 flexShrink: 0,
-                                flexWrap: 'nowrap',
-                                maxWidth: isUltraCompact ? '45%' : '40%',
-                                overflow: 'hidden',
-                                justifyContent: 'flex-end'
+                                alignItems: 'center'
                             }
                         }, [
-                            ResponsiveUtils.createResponsiveButton({
-                                className: 'btn-secondary dashboard-btn',
+                            // + Accounts button
+                            $.button({
+                                className: 'dashboard-btn',
                                 style: {
-                                    padding: isUltraCompact ? 'var(--space-xs)' : 'var(--space-xs) var(--space-sm)',
-                                    fontSize: 'var(--font-xs)',
-                                    minWidth: isUltraCompact ? '32px' : '48px',
-                                    maxWidth: isUltraCompact ? '32px' : '48px',
-                                    width: isUltraCompact ? '32px' : '48px',
-                                    height: isUltraCompact ? '24px' : '28px',
+                                    padding: isXS ? '4px 6px' : '6px 8px',
+                                    fontSize: isXS ? '10px' : '11px',
+                                    fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
                                     border: '1px solid #f57315',
                                     color: '#f57315',
+                                    borderRadius: '0',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    flexShrink: 0,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    minHeight: 'auto',
+                                    minWidth: isXS ? '28px' : '60px',
+                                    height: isXS ? '20px' : '24px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     boxSizing: 'border-box'
+                                },
+                                onmouseover: (e) => {
+                                    e.currentTarget.style.background = '#f57315';
+                                    e.currentTarget.style.color = '#000000';
+                                },
+                                onmouseout: (e) => {
+                                    e.currentTarget.style.background = '#000000';
+                                    e.currentTarget.style.color = '#f57315';
                                 },
                                 onclick: () => this.showMultiAccountManager(),
                                 title: 'Manage Accounts'
-                            }, [isUltraCompact ? '+' : isCompact ? '+ Acc' : '+ Acc']),
-                            ResponsiveUtils.createResponsiveButton({
-                                className: 'btn-secondary dashboard-btn',
+                            }, [isXS ? '+' : '+ Accounts']),
+                            
+                            // Refresh button
+                            $.button({
+                                className: 'dashboard-btn',
                                 style: {
-                                    padding: isUltraCompact ? 'var(--space-xs)' : 'var(--space-xs) var(--space-sm)',
-                                    fontSize: 'var(--font-xs)',
-                                    minWidth: isUltraCompact ? '32px' : '48px',
-                                    maxWidth: isUltraCompact ? '32px' : '48px',
-                                    width: isUltraCompact ? '32px' : '48px',
-                                    height: isUltraCompact ? '24px' : '28px',
+                                    padding: isXS ? '4px 6px' : '6px 8px',
+                                    fontSize: isXS ? '10px' : '11px',
+                                    fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
                                     border: '1px solid #f57315',
                                     color: '#f57315',
+                                    borderRadius: '0',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    flexShrink: 0,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    minHeight: 'auto',
+                                    minWidth: isXS ? '28px' : '55px',
+                                    height: isXS ? '20px' : '24px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     boxSizing: 'border-box'
+                                },
+                                onmouseover: (e) => {
+                                    e.currentTarget.style.background = '#f57315';
+                                    e.currentTarget.style.color = '#000000';
+                                },
+                                onmouseout: (e) => {
+                                    e.currentTarget.style.background = '#000000';
+                                    e.currentTarget.style.color = '#f57315';
                                 },
                                 onclick: () => this.handleRefresh(),
                                 title: 'Refresh Data'
-                            }, [isUltraCompact ? '↻' : 'Refresh']),
-                            ResponsiveUtils.createResponsiveButton({
-                                className: 'btn-secondary dashboard-btn',
+                            }, [isXS ? '↻' : 'Refresh']),
+                            
+                            // Hide/Show button
+                            $.button({
+                                className: 'dashboard-btn',
                                 style: {
-                                    padding: isUltraCompact ? 'var(--space-xs)' : 'var(--space-xs) var(--space-sm)',
-                                    fontSize: 'var(--font-xs)',
-                                    minWidth: isUltraCompact ? '32px' : '48px',
-                                    maxWidth: isUltraCompact ? '32px' : '48px',
-                                    width: isUltraCompact ? '32px' : '48px',
-                                    height: isUltraCompact ? '24px' : '28px',
+                                    padding: isXS ? '4px 6px' : '6px 8px',
+                                    fontSize: isXS ? '10px' : '11px',
+                                    fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
                                     border: '1px solid #f57315',
                                     color: '#f57315',
+                                    borderRadius: '0',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    flexShrink: 0,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    minHeight: 'auto',
+                                    minWidth: isXS ? '28px' : '40px',
+                                    height: isXS ? '20px' : '24px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     boxSizing: 'border-box'
                                 },
+                                onmouseover: (e) => {
+                                    e.currentTarget.style.background = '#f57315';
+                                    e.currentTarget.style.color = '#000000';
+                                },
+                                onmouseout: (e) => {
+                                    e.currentTarget.style.background = '#000000';
+                                    e.currentTarget.style.color = '#f57315';
+                                },
                                 onclick: () => this.toggleBalanceVisibility(),
                                 title: 'Toggle Balance Visibility'
-                            }, [isUltraCompact ? '👁' : 'Hide'])
+                            }, [isXS ? '👁' : 'Hide'])
                         ])
                     ]),
                     
-                    // Account indicator - on its own line for better mobile layout
+                    // Account indicator
                     $.div({ 
                         id: 'currentAccountIndicator',
                         className: 'account-indicator',
                         style: {
+                            fontSize: isXS ? '10px' : '11px',
                             fontFamily: 'JetBrains Mono, monospace',
-                            ...ResponsiveUtils.getResponsiveTextStyle('small'),
-                            color: 'var(--text-accent)',
-                            marginTop: 'var(--space-xs)',
-                            padding: 'var(--space-xs) var(--space-sm)',
+                            color: '#69fd97',
+                            padding: '4px 8px',
                             background: 'rgba(105, 253, 151, 0.1)',
-                            border: '1px solid var(--text-accent)',
+                            border: '1px solid #69fd97',
                             borderRadius: '0',
                             display: 'inline-block',
                             cursor: 'pointer',

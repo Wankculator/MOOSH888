@@ -1,0 +1,49 @@
+{
+  "name": "moosh-wallet",
+  "version": "1.0.0",
+  "description": "Professional Bitcoin wallet with AI integration - Enhanced Build Rules v4.0",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server/server.js",
+    "dev": "node src/server/server.js",
+    "server": "node src/server/server.js",
+    "test": "node tests/test-user-simulation.js && node tests/ui-responsive-test.js",
+    "test:ui": "node tests/ui-responsive-test.js",
+    "test:simulation": "node tests/test-user-simulation.js",
+    "lint": "eslint public/js/src/**/*.js",
+    "lint:fix": "eslint public/js/src/**/*.js --fix",
+    "build": "node scripts/build.js",
+    "build:watch": "nodemon --watch public/js/src --exec npm run build",
+    "validate:quick": "npm run lint && npm test",
+    "validate:all": "npm run lint && npm test && echo 'All quality gates passed'"
+  },
+  "keywords": [
+    "bitcoin",
+    "wallet",
+    "cryptocurrency",
+    "security",
+    "professional",
+    "moosh"
+  ],
+  "author": "MOOSH Wallet Limited",
+  "license": "PROPRIETARY",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wankculator/Moosh.git"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/server-puppeteer": "^2025.5.12",
+    "@upstash/context7-mcp": "^1.0.14",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "babel-jest": "^29.7.0",
+    "nodemon": "^3.0.3"
+  }
+}
