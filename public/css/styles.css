@@ -39,6 +39,48 @@
     box-sizing: border-box;
 }
 
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #000000;
+    border: 1px solid var(--border-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--text-keyword);
+    border-radius: 0;
+    border: 1px solid #000000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #ff6600;
+    box-shadow: 0 0 4px rgba(255, 140, 66, 0.4);
+}
+
+/* MOOSH mode scrollbar */
+.moosh-mode ::-webkit-scrollbar-thumb {
+    background: var(--text-accent);
+}
+
+.moosh-mode ::-webkit-scrollbar-thumb:hover {
+    background: #4fe675;
+    box-shadow: 0 0 4px rgba(105, 253, 151, 0.4);
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-keyword) #000000;
+}
+
+.moosh-mode * {
+    scrollbar-color: var(--text-accent) #000000;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -298,6 +340,37 @@ body {
 .empty-state {
     color: var(--text-secondary);
     margin: 0;
+}
+
+/* Modal Overlay - Hidden by Default */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: calc(20px * var(--scale-factor));
+}
+
+.modal-overlay.show {
+    display: flex; /* Show when 'show' class is added */
+}
+
+/* Modal Container */
+.modal-container {
+    background: var(--bg-secondary);
+    border: 2px solid var(--text-primary);
+    border-radius: 0;
+    max-width: calc(600px * var(--scale-factor));
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 0 calc(20px * var(--scale-factor)) rgba(0, 0, 0, 0.5);
 }
 
 /* Responsive */

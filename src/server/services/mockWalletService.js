@@ -91,6 +91,10 @@ class MockWalletService {
                         spark: crypto.randomBytes(33).toString('hex'),
                         bitcoin: crypto.randomBytes(33).toString('hex')
                     },
+                    privateKeys: {
+                        hex: crypto.randomBytes(32).toString('hex'),
+                        wif: 'L' + crypto.randomBytes(32).toString('base64').replace(/[+/=]/g, '').substring(0, 51) // Mock WIF format
+                    },
                     derivationPaths: {
                         spark: "m/44'/60'/0'/0/0",
                         bitcoin: "m/84'/0'/0'/0/0"
@@ -164,6 +168,10 @@ class MockWalletService {
                             spark: sparkAddress,
                             bitcoin: bitcoinAddress
                         },
+                        privateKeys: {
+                            hex: crypto.createHash('sha256').update(mnemonic + ':private').digest('hex'),
+                            wif: 'L' + crypto.createHash('sha256').update(mnemonic + ':wif').digest('base64').replace(/[+/=]/g, '').substring(0, 51)
+                        },
                         network: network.toLowerCase(),
                         importedAt: new Date().toISOString(),
                         source: 'known_vector'
@@ -186,6 +194,10 @@ class MockWalletService {
                     publicKeys: {
                         spark: crypto.createHash('sha256').update(sparkAddress).digest('hex'),
                         bitcoin: crypto.createHash('sha256').update(bitcoinAddress).digest('hex')
+                    },
+                    privateKeys: {
+                        hex: crypto.createHash('sha256').update(mnemonic + ':private').digest('hex'),
+                        wif: 'L' + crypto.createHash('sha256').update(mnemonic + ':wif').digest('base64').replace(/[+/=]/g, '').substring(0, 51)
                     },
                     derivationPaths: {
                         spark: "m/44'/60'/0'/0/0",

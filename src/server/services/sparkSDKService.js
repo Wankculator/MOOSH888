@@ -6,15 +6,14 @@
 const crypto = require('crypto');
 
 // Try to load the SDK dependencies
-let SparkWallet, bip39, BIP32Factory, ecc;
+let SparkWallet, bip39, bip32, ecc;
 let sdkAvailable = false;
 
 try {
     const sparkSDK = require('@buildonspark/spark-sdk');
     SparkWallet = sparkSDK.SparkWallet;
     bip39 = require('bip39');
-    const bip32Module = require('bip32');
-    BIP32Factory = bip32Module.BIP32Factory;
+    bip32 = require('bip32');
     ecc = require('tiny-secp256k1');
     sdkAvailable = true;
     console.log('✅ Spark SDK loaded successfully');
@@ -233,24 +232,40 @@ function mnemonicToSeed(mnemonic, passphrase = '') {
 /**
  * Generate real Spark wallet using SDK or fallback
  */
-async function generateRealSparkWallet(network = 'MAINNET') {
+async function generateRealSparkWallet(network = 'MAINNET', existingMnemonic = null) {
     try {
         // Try SDK first if available
         if (sdkAvailable && SparkWallet) {
             console.log('🚀 Using official Spark SDK...');
             
-            const { wallet, mnemonic } = await SparkWallet.initialize({
-                options: { 
-                    network: network 
-                }
-            });
+            let wallet, mnemonic;
+            
+            if (existingMnemonic) {
+                // Use provided mnemonic
+                ({ wallet } = await SparkWallet.initialize({
+                    mnemonicOrSeed: existingMnemonic,
+                    options: { network: network }
+                }));
+                mnemonic = existingMnemonic;
+            } else {
+                // Generate new wallet
+                ({ wallet, mnemonic } = await SparkWallet.initialize({
+                    options: { network: network }
+                }));
+            }
             
             // Get real addresses from SDK
             const bitcoinAddress = await wallet.getSingleUseDepositAddress();
-            const sparkAddress = await wallet.getAddress();
+            // Use the correct method - getSparkAddress not getAddress
+            let sparkAddress = null;
+            if (wallet.getSparkAddress) {
+                sparkAddress = await wallet.getSparkAddress();
+            } else {
+                console.log('⚠️ getSparkAddress method not available, checking for getAddress');
+                sparkAddress = await wallet.getAddress?.() || null;
+            }
             
             // Extract private keys
-            const bip32 = BIP32Factory(ecc);
             const seed = bip39.mnemonicToSeedSync(mnemonic);
             const root = bip32.fromSeed(seed);
             const child = root.derivePath("m/84'/0'/0'/0/0");
@@ -410,9 +425,15 @@ async function importSparkWallet(mnemonic, network = 'MAINNET') {
             });
             
             const bitcoinAddress = await wallet.getSingleUseDepositAddress();
-            const sparkAddress = await wallet.getAddress();
+            // Use the correct method - getSparkAddress not getAddress
+            let sparkAddress = null;
+            if (wallet.getSparkAddress) {
+                sparkAddress = await wallet.getSparkAddress();
+            } else {
+                console.log('⚠️ getSparkAddress method not available in import');
+                sparkAddress = await wallet.getAddress?.() || null;
+            }
             
-            const bip32 = BIP32Factory(ecc);
             const seed = bip39.mnemonicToSeedSync(mnemonic);
             const root = bip32.fromSeed(seed);
             const child = root.derivePath("m/84'/0'/0'/0/0");
@@ -473,7 +494,15 @@ async function importSparkWallet(mnemonic, network = 'MAINNET') {
     }
 }
 
+/**
+ * Generate Spark address from existing mnemonic
+ */
+async function generateSparkFromMnemonic(mnemonic) {
+    return await generateRealSparkWallet('MAINNET', mnemonic);
+}
+
 module.exports = {
     generateSparkWallet: generateRealSparkWallet,
-    importSparkWallet: importSparkWallet
+    importSparkWallet: importSparkWallet,
+    generateSparkFromMnemonic: generateSparkFromMnemonic
 };

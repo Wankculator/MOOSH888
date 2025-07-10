@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test MOOSH Wallet UI</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #444; background: #222; }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .address { word-break: break-all; font-size: 12px; color: #00ffff; }
+        button { padding: 10px 20px; margin: 10px; background: #444; color: #fff; border: 1px solid #666; cursor: pointer; }
+        button:hover { background: #555; }
+    </style>
+</head>
+<body>
+    <h1>MOOSH Wallet UI Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Generate New Wallet</h2>
+        <button onclick="testGenerateWallet()">Generate Wallet</button>
+        <div id="generate-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Check UI Display</h2>
+        <button onclick="openWalletUI()">Open Wallet UI</button>
+        <p>This will open the wallet UI in a new window</p>
+    </div>
+    
+    <script>
+        async function testGenerateWallet() {
+            const resultDiv = document.getElementById('generate-result');
+            resultDiv.innerHTML = 'Generating wallet...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/spark/generate-wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ strength: 128 })
+                });
+                
+                const wallet = await response.json();
+                
+                if (wallet.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Wallet Generated Successfully!</p>
+                        <p><strong>Seed Phrase:</strong> ${wallet.data.mnemonic}</p>
+                        <p><strong>Spark Address:</strong> <span class="address">${wallet.data.addresses.spark}</span></p>
+                        <p><strong>Address Length:</strong> ${wallet.data.addresses.spark.length} chars</p>
+                        <p><strong>Address Format:</strong> ${wallet.data.addresses.spark.startsWith('sp1pgss') ? '✅ Real SDK Format' : '❌ Custom Format'}</p>
+                        <hr>
+                        <p><strong>All Bitcoin Addresses:</strong></p>
+                        <p>Native SegWit: <span class="address">${wallet.data.bitcoinAddresses.segwit}</span></p>
+                        <p>Taproot: <span class="address">${wallet.data.bitcoinAddresses.taproot}</span></p>
+                        <p>Nested SegWit: <span class="address">${wallet.data.bitcoinAddresses.nestedSegwit}</span></p>
+                        <p>Legacy: <span class="address">${wallet.data.bitcoinAddresses.legacy}</span></p>
+                    `;
+                    
+                    // Store in localStorage for UI to use
+                    localStorage.setItem('walletData', JSON.stringify(wallet.data));
+                    localStorage.setItem('walletDataTimestamp', new Date().toISOString());
+                    
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Error: ${wallet.error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        function openWalletUI() {
+            window.open('http://localhost:3333', '_blank');
+        }
+    </script>
+</body>
+</html>

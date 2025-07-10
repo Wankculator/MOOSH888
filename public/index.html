@@ -3,72 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MOOSH Wallet - Professional Bitcoin Wallet</title>
-    
-    <!-- Preload critical fonts -->
+    <title>MOOSH Wallet</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Basic loading styles -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Loading screen styles */
         body {
             margin: 0;
             padding: 0;
-            background: #0a0a0a;
+            background: #000000;
             color: #ffffff;
             font-family: 'JetBrains Mono', monospace;
-            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
         
-        #app {
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            min-height: 100vh;
+            height: 100%;
+            background: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
         }
         
-        /* Loading state */
-        .loading {
-            text-align: center;
-            padding: 48px;
-        }
-        
-        .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid #333333;
-            border-top-color: #69fd97;
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top: 3px solid #f57315;
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 24px;
+            animation: spin 1s linear infinite;
         }
         
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        noscript {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #000000;
+            color: #f57315;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
-    <!-- App container -->
-    <div id="app">
-        <div class="loading">
-            <div class="loading-spinner"></div>
-            <p>Loading MOOSH Wallet...</p>
-        </div>
+    <div id="loading-screen">
+        <div class="loader"></div>
     </div>
     
-    <!-- 100% Pure JavaScript Implementation - No HTML UI Elements -->
-    <script src="/js/moosh-wallet.js"></script>
-    
-    <!-- Fallback for older browsers -->
     <noscript>
-        <style>
-            .loading { display: none; }
-        </style>
-        <div style="text-align: center; padding: 48px;">
-            <h1>JavaScript Required</h1>
-            <p>MOOSH Wallet requires JavaScript to be enabled.</p>
-            <p>Please enable JavaScript in your browser settings and refresh the page.</p>
-        </div>
+        <div>JavaScript is required to run MOOSH Wallet</div>
     </noscript>
+    
+    <script src="/js/moosh-wallet.js"></script>
 </body>
 </html>

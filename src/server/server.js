@@ -1,9 +1,14 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configuration
 const PORT = process.env.PORT || 3333;
+const ROOT_DIR = path.join(__dirname, '../..');
 const PUBLIC_DIR = path.join(__dirname, '../../public');
 
 // MIME types for static files
@@ -28,6 +33,18 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   let filePath = url.pathname;
   
+  // Handle health check endpoint
+  if (filePath === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'ok',
+      service: 'MOOSH Wallet UI Server',
+      port: PORT,
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+  
   // Handle logo requests from any path
   if (filePath.includes('Moosh_logo.png')) {
     filePath = '/04_ASSETS/Brand_Assets/Logos/Moosh_logo.png';
@@ -41,28 +58,32 @@ const server = http.createServer((req, res) => {
   // Security: prevent directory traversal
   filePath = filePath.replace(/\.\./g, '');
   
-  // Get absolute path - try public dir first, then root dir
-  let absolutePath = path.join(PUBLIC_DIR, filePath);
+  // Determine which directory to serve from
+  let absolutePath;
+  if (filePath.startsWith('/public/')) {
+    // Serve from public directory
+    absolutePath = path.join(ROOT_DIR, filePath);
+  } else if (filePath === '/index.html') {
+    // Serve index.html from public directory
+    absolutePath = path.join(PUBLIC_DIR, 'index.html');
+  } else if (filePath.startsWith('/css/') || filePath.startsWith('/js/') || filePath.startsWith('/images/')) {
+    // Serve static assets from public directory
+    absolutePath = path.join(PUBLIC_DIR, filePath);
+  } else {
+    // Try root directory first for other files
+    absolutePath = path.join(ROOT_DIR, filePath);
+  }
   
-  // Check if file exists in public dir
+  // Check if file exists
   fs.access(absolutePath, fs.constants.F_OK, (err) => {
     if (err) {
-      // Try root directory for assets
-      absolutePath = path.join(__dirname, '../..', filePath);
-      
-      fs.access(absolutePath, fs.constants.F_OK, (err2) => {
-        if (err2) {
-          // File not found
-          res.writeHead(404, { 'Content-Type': 'text/plain' });
-          res.end('404 Not Found');
-          return;
-        }
-        
-        serveFile(absolutePath, res);
-      });
-    } else {
-      serveFile(absolutePath, res);
+      // File not found
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('404 Not Found');
+      return;
     }
+    
+    serveFile(absolutePath, res);
   });
 });
 
@@ -97,7 +118,7 @@ server.listen(PORT, '0.0.0.0', () => {
 ============================================
 🌐 Local:    http://localhost:${PORT}
 🌐 Network:  http://0.0.0.0:${PORT}
-📁 Serving:  ${PUBLIC_DIR}
+📁 Serving:  ${ROOT_DIR}
 🕐 Started:  ${new Date().toISOString()}
 💻 Mode:     100% Pure JavaScript Implementation
 ============================================

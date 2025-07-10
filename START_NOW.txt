@@ -1,0 +1,19 @@
+QUICK START - COPY AND PASTE THESE COMMANDS:
+
+1. Open Command Prompt or PowerShell on Windows
+
+2. Navigate to your MOOSH WALLET folder:
+   cd "C:\Users\sk84l\OneDrive\Desktop\MOOSH WALLET"
+
+3. Start the server:
+   node src\server\server.js
+
+4. You should see:
+   🚀 MOOSH Wallet Server - Professional Edition
+   ============================================
+   🌐 Local:    http://localhost:3333
+
+5. Open your browser and go to:
+   http://localhost:3333
+
+YOUR UI IS STILL THERE! Nothing has been changed. The moosh-wallet.js file contains all your original UI code.

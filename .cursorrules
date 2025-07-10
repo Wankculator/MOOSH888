@@ -1,17 +1,22 @@
 # 🛡️ ENHANCED BUILD RULES v5.0 - MANDATORY FOR ALL AI ASSISTANTS
 # CRITICAL: READ BEFORE ANY ACTION - NO EXCEPTIONS
+# 🚨 UI DIRECTIVE: ONLY USE /public/js/moosh-wallet.js - NO NEW UIs!
 
 ## 🚨 CORE DIRECTIVES - NEVER VIOLATE
-1. **ASK_FIRST**: Never modify, delete, or move files without explicit permission
-2. **NO_ASSUMPTIONS**: If unclear, ask for clarification - never guess
-3. **STEP_BY_STEP**: Build incrementally from current foundation
-4. **PROFESSIONAL_ONLY**: Follow established folder structure
-5. **SECURITY_FIRST**: Client-side only, never expose private keys
-6. **MOBILE_FIRST**: Every feature must be mobile-optimized before desktop
-7. **DYNAMIC_SCALING**: Use calc(size * var(--scale-factor)) for ALL sizing
-8. **PERFORMANCE_OBSESSED**: <3s load, <100ms interactions, 60fps animations
+1. **UI_DIRECTIVE**: ONLY modify /public/js/moosh-wallet.js - NEVER create new UI files
+2. **ASK_FIRST**: Never modify, delete, or move files without explicit permission
+3. **NO_ASSUMPTIONS**: If unclear, ask for clarification - never guess
+4. **STEP_BY_STEP**: Build incrementally from current foundation
+5. **PROFESSIONAL_ONLY**: Follow established folder structure
+6. **SECURITY_FIRST**: Client-side only, never expose private keys
+7. **MOBILE_FIRST**: Every feature must be mobile-optimized before desktop
+8. **DYNAMIC_SCALING**: Use calc(size * var(--scale-factor)) for ALL sizing
+9. **PERFORMANCE_OBSESSED**: <3s load, <100ms interactions, 60fps animations
 
 ## 🛑 NEVER DO - ABSOLUTE PROHIBITIONS
+- ❌ Create new wallet UI files (test.html, demo.html, etc.)
+- ❌ Create alternative wallet implementations
+- ❌ Make "simple" or "quick" UI versions
 - ❌ Delete or move files without explicit permission
 - ❌ Create files in wrong directories
 - ❌ Modify existing professional structure
@@ -54,9 +59,10 @@ MOOSH WALLET/
 
 ## 🎯 CURRENT PROJECT FOCUS
 - Building professional Bitcoin wallet
-- Implementing wallet selection dashboard
-- Following step-by-step enhancement approach
-- Using reference HTML for feature direction only
+- Using ONLY /public/js/moosh-wallet.js for UI
+- Current UI location: http://localhost:3333
+- UI is a 12,441-line Single Page Application
+- DO NOT create new UI files - modify existing only
 
 ## 🚨 VIOLATION CONSEQUENCES
 If these rules are violated:
