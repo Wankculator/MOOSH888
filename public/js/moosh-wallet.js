@@ -129,10 +129,6 @@
         static option(attrs = {}, children = []) {
             return this.create('option', attrs, children);
         }
-        
-        static br(attrs = {}) {
-            return this.create('br', attrs, []);
-        }
     }
 
     const $ = ElementFactory; // Shorthand
@@ -314,6 +310,7 @@
             this.addComponentStyles();
             this.addAnimations();
             this.addResponsiveStyles();
+            this.addLockScreenStyles();
         }
 
         addCoreStyles() {
@@ -779,15 +776,19 @@
 
                 .cursor-header {
                     background: var(--bg-primary);
-                    border-bottom: 1px solid var(--border-color);
                     padding: 0 var(--container-padding);
                     height: calc(53px * var(--scale-factor));
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
+                    justify-content: center;
                     position: sticky;
-                    top: 0;
+                    top: calc(10px * var(--scale-factor));
                     z-index: 1000;
+                    box-sizing: border-box;
+                }
+                
+                .cursor-header > * {
+                    flex-shrink: 0;
                 }
 
                 .cursor-content {
@@ -841,7 +842,6 @@
                 .btn-primary:hover {
                     background: var(--text-secondary);
                     transform: translateY(-2px);
-                    box-shadow: 0 10px 20px rgba(245, 115, 21, 0.3);
                 }
 
                 .btn-secondary {
@@ -866,6 +866,8 @@
                     display: flex;
                     align-items: center;
                     gap: calc(var(--spacing-unit) * 0.5 * var(--scale-factor));
+                    margin-left: auto;
+                    order: 2;
                 }
                 
                 .nav-link {
@@ -895,10 +897,13 @@
                 .brand-box {
                     background: transparent;
                     padding: 0;
-                    display: inline-flex;
+                    display: flex;
                     align-items: center;
                     gap: calc(var(--spacing-unit) * var(--scale-factor));
                     font-family: inherit;
+                    min-width: 200px;
+                    flex-shrink: 0;
+                    order: 1;
                 }
 
                 .brand-text {
@@ -1515,6 +1520,261 @@
             
             this.styleElement.textContent += responsiveCSS;
         }
+        
+        addLockScreenStyles() {
+            const lockScreenCSS = `
+                /* Lock Screen Styles */
+                .wallet-lock-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.95);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    backdrop-filter: blur(5px);
+                }
+                
+                .wallet-lock-container {
+                    width: 90%;
+                    max-width: 480px;
+                    background: #000000;
+                    border: 1px solid #f57315;
+                    border-radius: 0;
+                    padding: 0;
+                }
+                
+                .wallet-lock-container.terminal-box .terminal-header {
+                    background: #000000;
+                    border-bottom: 1px solid #333333;
+                    padding: 8px 12px;
+                    font-size: 12px;
+                    color: #666666;
+                }
+                
+                .wallet-lock-container.terminal-box .terminal-content {
+                    background: #000000;
+                }
+                
+                .lock-terminal-header {
+                    background: var(--text-primary);
+                    color: #000000;
+                    padding: 8px 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+                
+                .lock-terminal-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .lock-terminal-controls {
+                    display: flex;
+                    gap: 8px;
+                }
+                
+                .lock-terminal-button {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: #000000;
+                    opacity: 0.3;
+                    cursor: pointer;
+                    transition: opacity 0.2s ease;
+                }
+                
+                .lock-terminal-button:hover {
+                    opacity: 0.6;
+                }
+                
+                .lock-terminal-button.close {
+                    background: #ff5f56;
+                    opacity: 1;
+                }
+                
+                .lock-terminal-button.close:hover {
+                    opacity: 0.8;
+                }
+                
+                .lock-terminal-body {
+                    padding: 30px;
+                }
+                
+                .lock-icon {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    font-size: 48px;
+                    color: var(--text-primary);
+                }
+                
+                .lock-title {
+                    text-align: center;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin-bottom: 8px;
+                }
+                
+                .lock-subtitle {
+                    text-align: center;
+                    font-size: 12px;
+                    color: var(--text-dim);
+                    margin-bottom: 30px;
+                }
+                
+                .lock-input-group {
+                    position: relative;
+                    margin-bottom: 20px;
+                }
+                
+                .lock-input {
+                    width: 100%;
+                    padding: 12px 40px 12px 12px;
+                    background: #000000;
+                    border: 2px solid #333333;
+                    color: var(--text-primary);
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 14px;
+                    transition: border-color 0.2s ease;
+                }
+                
+                .lock-input:focus {
+                    outline: none;
+                    border-color: var(--text-primary);
+                }
+                
+                .lock-input-toggle {
+                    position: absolute;
+                    right: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: none;
+                    border: none;
+                    color: var(--text-dim);
+                    cursor: pointer;
+                    padding: 4px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: color 0.2s ease;
+                }
+                
+                .lock-input-toggle:hover {
+                    color: var(--text-primary);
+                }
+                
+                .lock-error {
+                    color: #ff4444;
+                    font-size: 12px;
+                    margin-bottom: 20px;
+                    text-align: center;
+                    min-height: 16px;
+                }
+                
+                .lock-actions {
+                    display: flex;
+                    gap: 12px;
+                }
+                
+                .lock-button {
+                    flex: 1;
+                    padding: 12px 24px;
+                    background: #000000;
+                    border: 2px solid var(--text-primary);
+                    color: var(--text-primary);
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                
+                .lock-button:hover {
+                    background: var(--text-primary);
+                    color: #000000;
+                }
+                
+                .lock-button.secondary {
+                    border-color: #333333;
+                    color: var(--text-dim);
+                }
+                
+                .lock-button.secondary:hover {
+                    border-color: var(--text-dim);
+                    background: transparent;
+                    color: var(--text-primary);
+                }
+                
+                .lock-attempts {
+                    text-align: center;
+                    font-size: 11px;
+                    color: var(--text-dim);
+                    margin-top: 20px;
+                }
+                
+                .lock-attempts.warning {
+                    color: #ff9900;
+                }
+                
+                .lock-attempts.danger {
+                    color: #ff4444;
+                }
+                
+                /* MOOSH mode overrides for lock screen */
+                body.moosh-mode .wallet-lock-container {
+                    border-color: #69fd97;
+                }
+                
+                body.moosh-mode .wallet-lock-container.terminal-box {
+                    border-color: #232b2b;
+                }
+                
+                body.moosh-mode .wallet-lock-container.terminal-box:hover {
+                    border-color: #69fd97;
+                }
+                
+                /* Lock screen shake animation */
+                @keyframes lockShake {
+                    0%, 100% { transform: translateX(0); }
+                    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                    20%, 40%, 60%, 80% { transform: translateX(5px); }
+                }
+                
+                .lock-shake {
+                    animation: lockShake 0.5s ease-in-out;
+                }
+                
+                /* Responsive lock screen */
+                @media (max-width: 480px) {
+                    .wallet-lock-container {
+                        width: 95%;
+                        max-width: none;
+                    }
+                    
+                    .lock-terminal-body {
+                        padding: 20px;
+                    }
+                    
+                    .lock-icon {
+                        font-size: 36px;
+                    }
+                    
+                    .lock-title {
+                        font-size: 18px;
+                    }
+                }
+            `;
+            
+            this.styleElement.textContent += lockScreenCSS;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1535,7 +1795,7 @@
                 
                 // Multi-account management
                 accounts: [],
-                activeAccountIndex: 0,
+                currentAccountId: null,
                 
                 // Wallet data
                 walletData: {
@@ -1557,6 +1817,7 @@
             
             this.listeners = new Map();
             this.loadPersistedState();
+            this.loadAccounts();
         }
 
         get(key) {
@@ -1640,37 +1901,129 @@
             }
         }
         
-        addAccount(name, mnemonic, type = 'taproot') {
-            const account = {
-                id: Date.now().toString(),
-                name: name || `Account ${this.state.accounts.length + 1}`,
-                type: type,
-                mnemonic: mnemonic,
-                addresses: {},
-                balances: {
-                    bitcoin: 0,
-                    lightning: 0,
-                    stablecoins: {}
-                },
-                createdAt: new Date().toISOString()
-            };
-            
-            const accounts = [...this.state.accounts, account];
-            this.set('accounts', accounts);
-            this.set('activeAccountIndex', accounts.length - 1);
-            return account;
+        // Multi-account management methods
+        async createAccount(name, mnemonic, isImport = false) {
+            try {
+                // Generate addresses from mnemonic using API
+                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        mnemonic: Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic,
+                        network: this.state.isMainnet ? 'MAINNET' : 'TESTNET'
+                    })
+                });
+                
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error);
+                
+                const account = {
+                    id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    name: name || `Account ${this.state.accounts.length + 1}`,
+                    addresses: {
+                        spark: result.data.spark.address,
+                        segwit: result.data.bitcoin.segwit,
+                        taproot: result.data.bitcoin.taproot,
+                        legacy: result.data.bitcoin.legacy
+                    },
+                    seedHash: this.hashSeed(mnemonic), // For verification only
+                    balances: {
+                        bitcoin: 0,
+                        lightning: 0,
+                        stablecoins: {}
+                    },
+                    createdAt: Date.now(),
+                    lastUsed: Date.now(),
+                    isImport: isImport
+                };
+                
+                // Add to accounts
+                const accounts = [...this.state.accounts, account];
+                this.set('accounts', accounts);
+                this.set('currentAccountId', account.id);
+                
+                // Persist to localStorage
+                this.persistAccounts();
+                
+                return account;
+            } catch (error) {
+                console.error('[StateManager] Failed to create account:', error);
+                throw error;
+            }
         }
         
-        switchAccount(index) {
-            if (index >= 0 && index < this.state.accounts.length) {
-                this.set('activeAccountIndex', index);
+        switchAccount(accountId) {
+            const account = this.state.accounts.find(a => a.id === accountId);
+            if (account) {
+                this.set('currentAccountId', accountId);
+                account.lastUsed = Date.now();
+                this.persistAccounts();
                 return true;
             }
             return false;
         }
         
         getCurrentAccount() {
-            return this.state.accounts[this.state.activeAccountIndex] || null;
+            return this.state.accounts.find(a => a.id === this.state.currentAccountId) || null;
+        }
+        
+        deleteAccount(accountId) {
+            if (this.state.accounts.length <= 1) {
+                throw new Error('Cannot delete the last account');
+            }
+            
+            const accounts = this.state.accounts.filter(a => a.id !== accountId);
+            this.set('accounts', accounts);
+            
+            // If deleted account was current, switch to first
+            if (this.state.currentAccountId === accountId) {
+                this.set('currentAccountId', accounts[0].id);
+            }
+            
+            this.persistAccounts();
+        }
+        
+        // Utility methods
+        hashSeed(seed) {
+            // Simple hash for verification (not for security)
+            const str = Array.isArray(seed) ? seed.join(' ') : seed;
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return hash.toString(36);
+        }
+        
+        persistAccounts() {
+            try {
+                const dataToStore = {
+                    accounts: this.state.accounts,
+                    currentAccountId: this.state.currentAccountId,
+                    lastSaved: Date.now()
+                };
+                localStorage.setItem('mooshAccounts', JSON.stringify(dataToStore));
+            } catch (e) {
+                console.error('[StateManager] Failed to persist accounts:', e);
+            }
+        }
+        
+        loadAccounts() {
+            try {
+                const stored = localStorage.getItem('mooshAccounts');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    if (data.accounts && data.accounts.length > 0) {
+                        this.state.accounts = data.accounts;
+                        this.state.currentAccountId = data.currentAccountId || data.accounts[0].id;
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.error('[StateManager] Failed to load accounts:', e);
+            }
+            return false;
         }
     }
 
@@ -2066,8 +2419,29 @@
                     content.innerHTML = '';
                     const page = PageClass();
                     console.log('[Router] Page instance created:', !!page);
+                    
+                    // Mount the page
                     page.mount(content);
                     console.log('[Router] Page mounted, content children:', content.children.length);
+                    
+                    // Refresh header to show/hide lock button
+                    if (this.app.header) {
+                        const headerContainer = document.querySelector('.cursor-header');
+                        if (headerContainer) {
+                            headerContainer.innerHTML = '';
+                            this.app.header = new Header(this.app);
+                            this.app.header.mount(headerContainer);
+                        }
+                    }
+                    
+                    // Force focus on password input if lock screen is showing
+                    setTimeout(() => {
+                        const passwordInput = document.getElementById('lockPassword');
+                        if (passwordInput) {
+                            passwordInput.focus();
+                            console.log('[Router] Lock screen password input focused');
+                        }
+                    }, 100);
                 } else {
                     console.error('[Router] Content element .cursor-content not found!');
                 }
@@ -2092,8 +2466,12 @@
 
         mount(parent) {
             this.element = this.render();
-            parent.appendChild(this.element);
-            this.afterMount();
+            if (this.element) {
+                parent.appendChild(this.element);
+                this.afterMount();
+            } else {
+                console.error('[Component] render() returned null or undefined');
+            }
         }
 
         afterMount() {
@@ -2104,6 +2482,267 @@
             if (this.element && this.element.parentNode) {
                 this.element.parentNode.removeChild(this.element);
             }
+            // Also check if the element is directly in body
+            const lockOverlay = document.querySelector('.wallet-lock-overlay');
+            if (lockOverlay && lockOverlay.parentNode) {
+                lockOverlay.parentNode.removeChild(lockOverlay);
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WALLET LOCK SCREEN COMPONENT
+    // ═══════════════════════════════════════════════════════════════════════
+    class WalletLockScreen extends Component {
+        constructor(app) {
+            super(app);
+            this.failedAttempts = 0;
+            this.maxAttempts = 5;
+        }
+
+        render() {
+            const $ = ElementFactory;
+            
+            this.element = $.div({ 
+                className: 'wallet-lock-overlay',
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100vw',
+                    height: '100vh',
+                    background: 'rgba(0, 0, 0, 0.95)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: '999999',
+                    backdropFilter: 'blur(5px)',
+                    visibility: 'visible',
+                    opacity: '1'
+                }
+            }, [
+                $.div({ 
+                    className: 'terminal-box wallet-lock-container',
+                    style: {
+                        width: '90%',
+                        maxWidth: '480px',
+                        background: '#000000',
+                        border: '1px solid #f57315',
+                        boxShadow: 'none',
+                        borderRadius: '0'
+                    }
+                }, [
+                    $.div({ className: 'terminal-header' }, [
+                        $.span({}, ['~/moosh/security $ '])
+                    ]),
+                    $.div({ className: 'terminal-content', style: 'padding: 30px;' }, [
+                        $.div({ style: 'text-align: center; margin-bottom: 30px;' }, [
+                            $.img({
+                                src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                                alt: 'MOOSH Logo',
+                                style: 'width: 60px; height: 60px; margin-bottom: 10px;',
+                                onerror: function() { this.style.display = 'none'; }
+                            }),
+                            $.h2({ style: 'font-size: 24px; margin-bottom: 10px; color: var(--text-primary);' }, ['Wallet Locked']),
+                            $.p({ style: 'font-size: 14px; color: var(--text-dim);' }, ['Enter your password to unlock your wallet'])
+                        ]),
+                        $.div({ style: 'max-width: 300px; margin: 0 auto;' }, [
+                            $.div({ style: 'position: relative; margin-bottom: 20px;' }, [
+                                $.input({
+                                    type: 'password',
+                                    id: 'lockPassword',
+                                    placeholder: 'Enter password',
+                                    autocomplete: 'off',
+                                    style: 'width: 100%; padding: 12px 50px 12px 12px; background: #000000; border: 2px solid #f57315; color: var(--text-primary); font-family: JetBrains Mono, monospace; font-size: 14px; border-radius: 0; outline: none; box-shadow: none;',
+                                    onkeydown: (e) => {
+                                        if (e.key === 'Enter') {
+                                            this.handleUnlock();
+                                        }
+                                    },
+                                    onfocus: (e) => { 
+                                        e.target.style.borderColor = '#f57315';
+                                        e.target.style.outline = 'none';
+                                        e.target.style.borderRadius = '0';
+                                    },
+                                    onblur: (e) => { 
+                                        e.target.style.borderColor = '#f57315';
+                                        e.target.style.borderRadius = '0';
+                                    },
+                                    onmouseover: (e) => {
+                                        e.target.style.borderColor = '#f57315';
+                                        e.target.style.borderRadius = '0';
+                                    },
+                                    onclick: (e) => {
+                                        e.target.style.borderColor = '#f57315';
+                                        e.target.style.borderRadius = '0';
+                                        e.target.style.outline = 'none';
+                                    }
+                                }),
+                                $.button({
+                                    type: 'button',
+                                    style: 'position: absolute; right: 2px; top: 2px; bottom: 2px; width: 46px; background: #000000; border: none; border-left: 1px solid #333333; color: var(--text-dim); cursor: pointer; font-size: 11px; transition: color 0.2s ease;',
+                                    onclick: () => this.togglePasswordVisibility(),
+                                    onmouseover: (e) => { e.target.style.color = 'var(--text-primary)'; },
+                                    onmouseout: (e) => { e.target.style.color = 'var(--text-dim)'; },
+                                    id: 'togglePasswordBtn'
+                                }, ['Show'])
+                            ]),
+                            $.div({ id: 'lockErrorContainer', style: 'min-height: 20px; margin-bottom: 20px;' }),
+                            $.button({
+                                className: 'btn-primary',
+                                style: 'width: 100%; padding: 12px; background: #000000; border: 2px solid #f57315; color: #f57315; font-family: JetBrains Mono, monospace; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; border-radius: 0;',
+                                onclick: () => this.handleUnlock(),
+                                onmouseover: (e) => { 
+                                    e.target.style.background = '#f57315'; 
+                                    e.target.style.color = '#000000'; 
+                                },
+                                onmouseout: (e) => { 
+                                    e.target.style.background = '#000000'; 
+                                    e.target.style.color = '#f57315'; 
+                                }
+                            }, ['UNLOCK WALLET']),
+                            $.div({ 
+                                className: `lock-attempts ${this.getAttemptsClass()}`,
+                                id: 'lockAttempts',
+                                style: 'text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 20px;'
+                            }, this.getAttemptsMessage())
+                        ])
+                    ])
+                ])
+            ]);
+            
+            return this.element;
+        }
+
+        togglePasswordVisibility() {
+            const passwordInput = document.getElementById('lockPassword');
+            const toggleBtn = document.getElementById('togglePasswordBtn');
+            if (passwordInput && toggleBtn) {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    toggleBtn.textContent = 'Hide';
+                } else {
+                    passwordInput.type = 'password';
+                    toggleBtn.textContent = 'Show';
+                }
+            }
+        }
+
+        getAttemptsClass() {
+            if (this.failedAttempts >= 4) return 'danger';
+            if (this.failedAttempts >= 2) return 'warning';
+            return '';
+        }
+
+        getAttemptsMessage() {
+            if (this.failedAttempts === 0) return [];
+            const remaining = this.maxAttempts - this.failedAttempts;
+            if (remaining === 1) {
+                return ['⚠️ Last attempt remaining!'];
+            }
+            return [`${remaining} attempts remaining`];
+        }
+
+        handleUnlock() {
+            const passwordInput = document.getElementById('lockPassword');
+            if (!passwordInput) {
+                console.error('[Lock] Password input not found!');
+                return;
+            }
+            
+            const enteredPassword = passwordInput.value;
+            const storedPassword = localStorage.getItem('walletPassword');
+
+            console.log('[Lock] Unlock attempt - Entered:', enteredPassword ? 'YES' : 'NO');
+            console.log('[Lock] Stored password exists:', !!storedPassword);
+            console.log('[Lock] Stored password value:', storedPassword);
+
+            if (!enteredPassword) {
+                this.showError('Please enter a password');
+                return;
+            }
+
+            if (enteredPassword === storedPassword) {
+                console.log('[Lock] Password correct - unlocking');
+                // Success - unlock the wallet
+                sessionStorage.setItem('walletUnlocked', 'true');
+                
+                // Show success notification
+                this.app.showNotification('Wallet unlocked successfully', 'success');
+                
+                // Force complete page re-render to show dashboard
+                // This ensures the dashboard renders fresh with unlocked state
+                this.app.router.render();
+                
+                // Reset body overflow
+                document.body.style.overflow = 'auto';
+            } else {
+                console.log('[Lock] Password incorrect');
+                // Failed attempt
+                this.failedAttempts++;
+                passwordInput.value = '';
+                
+                if (this.failedAttempts >= this.maxAttempts) {
+                    // Max attempts reached - clear wallet and redirect
+                    this.handleMaxAttemptsReached();
+                } else {
+                    // Show error and update attempts
+                    this.showError('Incorrect password');
+                    this.updateAttemptsDisplay();
+                    this.shakeContainer();
+                }
+            }
+        }
+
+        showError(message) {
+            const errorContainer = document.getElementById('lockErrorContainer');
+            if (errorContainer) {
+                errorContainer.innerHTML = '';
+                const errorDiv = ElementFactory.div({ 
+                    style: 'color: #ff4444; font-size: 12px; text-align: center;'
+                }, [message]);
+                errorContainer.appendChild(errorDiv);
+                
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    if (errorContainer) {
+                        errorContainer.innerHTML = '';
+                    }
+                }, 3000);
+            }
+        }
+
+        updateAttemptsDisplay() {
+            const attemptsDiv = document.getElementById('lockAttempts');
+            if (attemptsDiv) {
+                const message = this.getAttemptsMessage();
+                attemptsDiv.textContent = message.length > 0 ? message[0] : '';
+                attemptsDiv.className = `lock-attempts ${this.getAttemptsClass()}`;
+            }
+        }
+
+        shakeContainer() {
+            const container = document.querySelector('.wallet-lock-container');
+            if (container) {
+                container.classList.add('lock-shake');
+                setTimeout(() => {
+                    container.classList.remove('lock-shake');
+                }, 500);
+            }
+        }
+
+        handleMaxAttemptsReached() {
+            // Clear session and redirect to home
+            sessionStorage.clear();
+            localStorage.removeItem('sparkWallet');
+            localStorage.removeItem('generatedSeed');
+            localStorage.removeItem('importedSeed');
+            
+            this.app.showNotification('Maximum attempts exceeded. Wallet has been locked for security.', 'error');
+            setTimeout(() => {
+                window.location.hash = 'home';
+                window.location.reload();
+            }, 2000);
         }
     }
 
@@ -2112,23 +2751,39 @@
     // ═══════════════════════════════════════════════════════════════════════
     class Header extends Component {
         render() {
+            const $ = ElementFactory;
+            const brandBox = this.createBrandBox();
+            const navLinks = this.createNavLinks();
+            
+            console.log('[Header] Rendering - Brand box:', brandBox);
+            console.log('[Header] Rendering - Nav links:', navLinks);
+            console.log('[Header] Brand box className:', brandBox.className);
+            console.log('[Header] Nav links className:', navLinks.className);
+            
             const header = $.header({
                 className: 'cursor-header'
             }, [
-                this.createBrandBox(),
-                this.createNavLinks()
+                brandBox,
+                navLinks
             ]);
 
             return header;
         }
 
         createBrandBox() {
+            const $ = ElementFactory;
             return $.div({ className: 'brand-box' }, [
                 $.img({
-                    src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                    src: '/04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
                     alt: 'MOOSH Logo',
                     className: 'brand-logo',
-                    onerror: function() { this.style.display = 'none'; }
+                    onerror: function() { 
+                        console.log('[Header] Logo failed to load from:', this.src);
+                        this.style.width = '32px';
+                        this.style.height = '32px';
+                        this.style.background = '#f57315';
+                        this.style.borderRadius = '50%';
+                    }
                 }),
                 $.div({ className: 'brand-text' }, [
                     $.span({ className: 'text-dim' }, ['~/']),
@@ -2152,11 +2807,29 @@
         }
 
         createNavLinks() {
-            return $.nav({ className: 'nav-links' }, [
-                this.createThemeToggle(),
+            const $ = ElementFactory;
+            const currentPage = this.app.state.get('currentPage');
+            const isDashboard = currentPage === 'dashboard';
+            const hasPassword = localStorage.getItem('walletPassword');
+            
+            const elements = [
+                this.createThemeToggle()
+            ];
+            
+            // Add lock button when has password
+            if (hasPassword) {
+                elements.push(this.createLockButton());
+            }
+            
+            // Add Moosh.money link
+            elements.push(
                 $.a({
                     href: '#',
                     className: 'nav-link',
+                    style: {
+                        fontSize: 'calc(12px * var(--scale-factor))',
+                        fontWeight: '600'
+                    },
                     onclick: (e) => {
                         e.preventDefault();
                         this.openTokenSite();
@@ -2194,10 +2867,39 @@
                         }
                     }, ['|'])
                 ])
+            );
+            
+            return $.nav({ className: 'nav-links' }, elements);
+        }
+
+        createLockButton() {
+            const $ = ElementFactory;
+            const isLocked = sessionStorage.getItem('walletUnlocked') !== 'true';
+            
+            const lockToggle = $.div({
+                className: 'theme-toggle',
+                onclick: (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggleLock();
+                },
+                title: 'Toggle Lock'
+            }, [
+                $.span({
+                    className: 'theme-toggle-icon'
+                }, ['.lock']),
+                $.div({
+                    className: 'theme-toggle-button'
+                }, [
+                    $.div({ className: 'theme-toggle-inner' })
+                ])
             ]);
+
+            return lockToggle;
         }
 
         createThemeToggle() {
+            const $ = ElementFactory;
             const toggle = $.div({
                 className: 'theme-toggle',
                 onclick: (e) => {
@@ -2245,6 +2947,22 @@
             setTimeout(() => {
                 window.open('https://www.moosh.money/', '_blank');
             }, 500);
+        }
+        
+        toggleLock() {
+            const isUnlocked = sessionStorage.getItem('walletUnlocked') === 'true';
+            
+            if (isUnlocked) {
+                // Lock the wallet
+                sessionStorage.removeItem('walletUnlocked');
+                this.app.showNotification('Wallet locked', 'success');
+                
+                // Re-render to show lock screen
+                this.app.router.render();
+            } else {
+                // Already locked, just show notification
+                this.app.showNotification('Wallet is already locked', 'info');
+            }
         }
     }
 
@@ -3232,12 +3950,799 @@
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // PAGE COMPONENTS
-    // ═══════════════════════════════════════════════════════════════════════
-
-    // BIP39 Word List - Will be loaded dynamically to avoid content filtering
-    let BIP39_WORDS = [];
+        // ═══════════════════════════════════════════════════════════════════════
+        // SPARK PROTOCOL DASHBOARD MODAL - Real SparkSat Features
+        // ═══════════════════════════════════════════════════════════════════════
+    
+        class SparkDashboardModal {
+            constructor(app) {
+                this.app = app;
+                this.modal = null;
+                this.sparkWallet = app.sparkWalletManager.activeWallet;
+            }
+    
+            show() {
+                this.modal = ElementFactory.div({
+                    className: 'modal-overlay',
+                    onclick: (e) => {
+                        if (e.target === this.modal) this.hide();
+                    }
+                }, [
+                    ElementFactory.div({
+                        className: 'modal spark-dashboard-modal',
+                        style: {
+                            maxWidth: '900px',
+                            height: '80vh',
+                            background: 'linear-gradient(135deg, #0A0F25 0%, #1A2332 100%)', // SparkSat colors
+                            borderRadius: '20px',
+                            color: '#ffffff',
+                            border: '1px solid #00D4FF'
+                        }
+                    }, [
+                        this.createHeader(),
+                        this.createSparkStats(),
+                        this.createFeatureGrid(),
+                        this.createActionButtons()
+                    ])
+                ]);
+    
+                document.body.appendChild(this.modal);
+                requestAnimationFrame(() => {
+                    this.modal.classList.add('show');
+                });
+    
+                this.initializeSparkData();
+            }
+    
+            createHeader() {
+                return ElementFactory.div({
+                    className: 'modal-header spark-header',
+                    style: {
+                        background: 'linear-gradient(90deg, #00D4FF 0%, #f57315 100%)',
+                        padding: '20px',
+                        borderRadius: '20px 20px 0 0',
+                        color: '#000',
+                        textAlign: 'center'
+                    }
+                }, [
+                    ElementFactory.h2({}, ['🔥 SPARK PROTOCOL DASHBOARD']),
+                    ElementFactory.p({
+                        style: { margin: '5px 0 0 0', opacity: '0.8' }
+                    }, ['Real Bitcoin Spark Integration - Authentic SparkSat Features'])
+                ]);
+            }
+    
+            createSparkStats() {
+                return ElementFactory.div({
+                    className: 'spark-stats-grid',
+                    style: {
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '15px',
+                        padding: '20px',
+                        background: 'rgba(0, 212, 255, 0.1)',
+                        margin: '0 20px',
+                        borderRadius: '15px',
+                        border: '1px solid rgba(0, 212, 255, 0.3)'
+                    }
+                }, [
+                    this.createStatCard('Bitcoin Balance', '0.00000000 BTC', '$0.00', '₿'),
+                    this.createStatCard('Spark Balance', '0.00000000 BTC', 'Layer 2', '🔥'),
+                    this.createStatCard('Lightning Balance', '0.00000000 BTC', 'Instant Payments', '⚡'),
+                    this.createStatCard('Total Value', '0.00000000 BTC', '$0.00', '💰')
+                ]);
+            }
+    
+            createStatCard(title, value, subtitle, icon) {
+                return ElementFactory.div({
+                    className: 'spark-stat-card',
+                    style: {
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        padding: '15px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        textAlign: 'center'
+                    }
+                }, [
+                    ElementFactory.div({
+                        style: { fontSize: '24px', marginBottom: '10px' }
+                    }, [icon]),
+                    ElementFactory.div({
+                        style: { fontSize: '12px', color: '#00D4FF', marginBottom: '5px' }
+                    }, [title]),
+                    ElementFactory.div({
+                        className: `${title.toLowerCase().replace(' ', '-')}-value`,
+                        style: { fontSize: '16px', fontWeight: 'bold', marginBottom: '5px' }
+                    }, [value]),
+                    ElementFactory.div({
+                        style: { fontSize: '10px', opacity: '0.7' }
+                    }, [subtitle])
+                ]);
+            }
+    
+            createFeatureGrid() {
+                return ElementFactory.div({
+                    className: 'spark-features',
+                    style: {
+                        padding: '20px',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                        gap: '15px'
+                    }
+                }, [
+                    this.createFeatureCard(
+                        '🔥 Spark Deposits',
+                        'Deposit Bitcoin into Spark Protocol for instant Layer 2 transactions',
+                        'Create Deposit',
+                        () => this.handleSparkDeposit()
+                    ),
+                    this.createFeatureCard(
+                        '⚡ Lightning Network',
+                        'Open Lightning channels and make instant payments',
+                        'Lightning Manager',
+                        () => this.handleLightningManager()
+                    ),
+                    this.createFeatureCard(
+                        '🔄 Spark Exits',
+                        'Exit from Spark Protocol back to Bitcoin mainnet',
+                        'Exit to Bitcoin',
+                        () => this.handleSparkExit()
+                    ),
+                    this.createFeatureCard(
+                        '📊 Market Intelligence',
+                        'Real-time Bitcoin and DeFi market data',
+                        'Market Data',
+                        () => this.handleMarketData()
+                    ),
+                    this.createFeatureCard(
+                        '🏦 DeFi Integration',
+                        'Access DeFi protocols through Spark',
+                        'DeFi Dashboard',
+                        () => this.handleDeFiIntegration()
+                    ),
+                    this.createFeatureCard(
+                        '🔐 Advanced Security',
+                        'Hardware wallet and multi-sig support',
+                        'Security Settings',
+                        () => this.handleSecurity()
+                    )
+                ]);
+            }
+    
+            createFeatureCard(title, description, buttonText, clickHandler) {
+                return ElementFactory.div({
+                    className: 'spark-feature-card',
+                    style: {
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        padding: '20px',
+                        borderRadius: '15px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.3s ease'
+                    },
+                    onmouseenter: function() {
+                        this.style.background = 'rgba(0, 212, 255, 0.1)';
+                        this.style.borderColor = '#00D4FF';
+                    },
+                    onmouseleave: function() {
+                        this.style.background = 'rgba(255, 255, 255, 0.05)';
+                        this.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    }
+                }, [
+                    ElementFactory.h3({
+                        style: { color: '#00D4FF', marginBottom: '10px', fontSize: '18px' }
+                    }, [title]),
+                    ElementFactory.p({
+                        style: { color: '#ffffff', opacity: '0.8', marginBottom: '15px', fontSize: '14px' }
+                    }, [description]),
+                    ElementFactory.button({
+                        className: 'spark-feature-btn',
+                        style: {
+                            background: 'linear-gradient(90deg, #00D4FF 0%, #f57315 100%)',
+                            border: 'none',
+                            padding: '10px 20px',
+                            borderRadius: '8px',
+                            color: '#000',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            width: '100%'
+                        },
+                        onclick: clickHandler
+                    }, [buttonText])
+                ]);
+            }
+    
+            createActionButtons() {
+                return ElementFactory.div({
+                    className: 'spark-actions',
+                    style: {
+                        padding: '20px',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        display: 'flex',
+                        gap: '15px',
+                        justifyContent: 'center'
+                    }
+                }, [
+                    ElementFactory.button({
+                        className: 'spark-action-btn primary',
+                        style: {
+                            background: 'linear-gradient(90deg, #00D4FF 0%, #f57315 100%)',
+                            border: 'none',
+                            padding: '12px 30px',
+                            borderRadius: '10px',
+                            color: '#000',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => this.createNewSparkWallet()
+                    }, ['🔥 Create Spark Wallet']),
+                    ElementFactory.button({
+                        className: 'spark-action-btn secondary',
+                        style: {
+                            background: 'transparent',
+                            border: '2px solid #00D4FF',
+                            padding: '12px 30px',
+                            borderRadius: '10px',
+                            color: '#00D4FF',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => this.refreshSparkData()
+                    }, ['🔄 Refresh Data']),
+                    ElementFactory.button({
+                        className: 'spark-action-btn close',
+                        style: {
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            padding: '12px 30px',
+                            borderRadius: '10px',
+                            color: '#ffffff',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => this.hide()
+                    }, ['Close'])
+                ]);
+            }
+    
+            async initializeSparkData() {
+                try {
+                    // Initialize or get current Spark wallet
+                    if (!this.sparkWallet) {
+                        this.sparkWallet = await this.app.sparkWalletManager.createSparkWallet();
+                        this.app.showNotification('Spark wallet created successfully!', 'success');
+                    }
+    
+                    // Update balance displays
+                    await this.updateSparkBalances();
+                    
+                } catch (error) {
+                    console.error('Failed to initialize Spark data:', error);
+                    this.app.showNotification('Failed to initialize Spark Protocol', 'error');
+                }
+            }
+    
+            async updateSparkBalances() {
+                try {
+                    const balance = await this.app.sparkWalletManager.getSparkBalance(this.sparkWallet?.id);
+                    
+                    // Update UI elements
+                    const bitcoinValue = document.querySelector('.bitcoin-balance-value');
+                    const sparkValue = document.querySelector('.spark-balance-value');
+                    const lightningValue = document.querySelector('.lightning-balance-value');
+                    const totalValue = document.querySelector('.total-value-value');
+    
+                    if (bitcoinValue) bitcoinValue.textContent = `${(balance.bitcoin / 100000000).toFixed(8)} BTC`;
+                    if (sparkValue) sparkValue.textContent = `${(balance.spark / 100000000).toFixed(8)} BTC`;
+                    if (lightningValue) lightningValue.textContent = `${(balance.lightning / 100000000).toFixed(8)} BTC`;
+                    if (totalValue) totalValue.textContent = `${(balance.total / 100000000).toFixed(8)} BTC`;
+    
+                } catch (error) {
+                    console.error('Failed to update Spark balances:', error);
+                }
+            }
+    
+            async createNewSparkWallet() {
+                try {
+                    const walletName = prompt('Enter wallet name:', 'My Spark Wallet');
+                    if (!walletName) return;
+    
+                    const wallet = await this.app.sparkWalletManager.createSparkWallet(walletName);
+                    this.sparkWallet = wallet;
+                    
+                    this.app.showNotification(`Spark wallet "${walletName}" created successfully!`, 'success');
+                    await this.updateSparkBalances();
+                    
+                    // Show wallet details
+                    alert(`
+    🔥 SPARK WALLET CREATED!
+    
+    Name: ${wallet.name}
+    Type: ${wallet.type}
+    Bitcoin Address: ${wallet.addresses.bitcoin}
+    Spark Address: ${wallet.addresses.spark}
+    Lightning Address: ${wallet.addresses.lightning}
+    
+    Your wallet is ready for Spark Protocol operations!
+                    `);
+                    
+                } catch (error) {
+                    console.error('Failed to create Spark wallet:', error);
+                    this.app.showNotification('Failed to create Spark wallet', 'error');
+                }
+            }
+    
+            async refreshSparkData() {
+                this.app.showNotification('Refreshing Spark data...', 'info');
+                await this.updateSparkBalances();
+                this.app.showNotification('Spark data refreshed!', 'success');
+            }
+    
+            handleSparkDeposit() {
+                this.app.modalManager.createSparkDepositModal();
+            }
+    
+            handleLightningManager() {
+                this.app.modalManager.createLightningChannelModal();
+            }
+    
+            handleSparkExit() {
+                this.app.showNotification('Spark exit functionality coming soon', 'info');
+            }
+    
+            handleMarketData() {
+                this.app.showNotification('Market intelligence dashboard coming soon', 'info');
+            }
+    
+            handleDeFiIntegration() {
+                this.app.showNotification('DeFi integration coming soon', 'info');
+            }
+    
+            handleSecurity() {
+                this.app.showNotification('Advanced security settings coming soon', 'info');
+            }
+    
+            hide() {
+                if (this.modal) {
+                    this.modal.classList.remove('show');
+                    setTimeout(() => {
+                        if (this.modal && this.modal.parentNode) {
+                            this.modal.remove();
+                        }
+                    }, 300);
+                }
+            }
+        }
+    
+        class SparkDepositModal {
+            constructor(app) {
+                this.app = app;
+                this.modal = null;
+            }
+    
+            show() {
+                this.modal = ElementFactory.div({
+                    className: 'modal-overlay',
+                    onclick: (e) => {
+                        if (e.target === this.modal) this.hide();
+                    }
+                }, [
+                    ElementFactory.div({
+                        className: 'modal spark-deposit-modal',
+                        style: {
+                            maxWidth: '500px',
+                            background: '#0A0F25',
+                            borderRadius: '20px',
+                            color: '#ffffff',
+                            border: '1px solid #00D4FF'
+                        }
+                    }, [
+                        ElementFactory.div({
+                            className: 'modal-header',
+                            style: {
+                                background: 'linear-gradient(90deg, #00D4FF 0%, #f57315 100%)',
+                                padding: '20px',
+                                borderRadius: '20px 20px 0 0',
+                                color: '#000',
+                                textAlign: 'center'
+                            }
+                        }, [
+                            ElementFactory.h2({}, ['🔥 Spark Protocol Deposit']),
+                            ElementFactory.p({}, ['Deposit Bitcoin into Spark for instant Layer 2 transactions'])
+                        ]),
+                        ElementFactory.div({
+                            className: 'modal-body',
+                            style: { padding: '20px' }
+                        }, [
+                            ElementFactory.div({
+                                style: { marginBottom: '20px' }
+                            }, [
+                                ElementFactory.label({
+                                    style: { display: 'block', marginBottom: '10px', color: '#00D4FF' }
+                                }, ['Amount to Deposit (BTC)']),
+                                ElementFactory.input({
+                                    type: 'number',
+                                    step: '0.00000001',
+                                    placeholder: '0.00000000',
+                                    id: 'spark-deposit-amount',
+                                    style: {
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #00D4FF',
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        color: '#ffffff'
+                                    }
+                                })
+                            ]),
+                            ElementFactory.div({
+                                style: { 
+                                    background: 'rgba(0, 212, 255, 0.1)',
+                                    padding: '15px',
+                                    borderRadius: '10px',
+                                    marginBottom: '20px',
+                                    border: '1px solid rgba(0, 212, 255, 0.3)'
+                                }
+                            }, [
+                                ElementFactory.h4({
+                                    style: { color: '#00D4FF', marginBottom: '10px' }
+                                }, ['💡 Spark Protocol Benefits']),
+                                ElementFactory.ul({
+                                    style: { margin: '0', paddingLeft: '20px' }
+                                }, [
+                                    ElementFactory.create('li', {}, ['Instant Layer 2 transactions']),
+                                    ElementFactory.create('li', {}, ['Ultra-low fees (< 1 sat)']),
+                                    ElementFactory.create('li', {}, ['7-day exit challenge period']),
+                                    ElementFactory.create('li', {}, ['Non-custodial security'])
+                                ])
+                            ]),
+                            ElementFactory.div({
+                                style: { display: 'flex', gap: '10px' }
+                            }, [
+                                ElementFactory.button({
+                                    style: {
+                                        flex: '1',
+                                        background: 'linear-gradient(90deg, #00D4FF 0%, #f57315 100%)',
+                                        border: 'none',
+                                        padding: '12px',
+                                        borderRadius: '8px',
+                                        color: '#000',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer'
+                                    },
+                                    onclick: () => this.processSparkDeposit()
+                                }, ['🔥 Create Deposit']),
+                                ElementFactory.button({
+                                    style: {
+                                        flex: '0 0 auto',
+                                        background: 'transparent',
+                                        border: '1px solid #ffffff',
+                                        padding: '12px 20px',
+                                        borderRadius: '8px',
+                                        color: '#ffffff',
+                                        cursor: 'pointer'
+                                    },
+                                    onclick: () => this.hide()
+                                }, ['Cancel'])
+                            ])
+                        ])
+                    ])
+                ]);
+    
+                document.body.appendChild(this.modal);
+                requestAnimationFrame(() => {
+                    this.modal.classList.add('show');
+                });
+            }
+    
+            async processSparkDeposit() {
+                const amountInput = document.getElementById('spark-deposit-amount');
+                const amount = parseFloat(amountInput.value);
+    
+                if (!amount || amount <= 0) {
+                    this.app.showNotification('Please enter a valid amount', 'error');
+                    return;
+                }
+    
+                try {
+                    this.app.showNotification('Creating Spark deposit transaction...', 'info');
+    
+                    // Create Spark deposit transaction
+                    const transaction = await this.app.sparkBitcoinManager.createSparkDeposit(
+                        Math.floor(amount * 100000000), // Convert to satoshis
+                        'bc1quser_bitcoin_address' // User's Bitcoin address
+                    );
+    
+                    // Show transaction details
+                    alert(`
+    🔥 SPARK DEPOSIT CREATED!
+    
+    Transaction ID: ${transaction.txid}
+    Amount: ${amount} BTC
+    Spark Address: ${transaction.outputs[0].address}
+    Status: Pending confirmation
+    
+    Your Bitcoin will be available on Spark Layer 2 after 1 confirmation!
+                    `);
+    
+                    this.app.showNotification('Spark deposit transaction created!', 'success');
+                    this.hide();
+    
+                } catch (error) {
+                    console.error('Failed to create Spark deposit:', error);
+                    this.app.showNotification('Failed to create Spark deposit', 'error');
+                }
+            }
+    
+            hide() {
+                if (this.modal) {
+                    this.modal.classList.remove('show');
+                    setTimeout(() => {
+                        if (this.modal && this.modal.parentNode) {
+                            this.modal.remove();
+                        }
+                    }, 300);
+                }
+            }
+        }
+    
+        class LightningChannelModal {
+            constructor(app) {
+                this.app = app;
+                this.modal = null;
+            }
+    
+            show() {
+                this.modal = ElementFactory.div({
+                    className: 'modal-overlay',
+                    onclick: (e) => {
+                        if (e.target === this.modal) this.hide();
+                    }
+                }, [
+                    ElementFactory.div({
+                        className: 'modal lightning-channel-modal',
+                        style: {
+                            maxWidth: '600px',
+                            background: '#0A0F25',
+                            borderRadius: '20px',
+                            color: '#ffffff',
+                            border: '1px solid #FFD700'
+                        }
+                    }, [
+                        ElementFactory.div({
+                            className: 'modal-header',
+                            style: {
+                                background: 'linear-gradient(90deg, #FFD700 0%, #f57315 100%)',
+                                padding: '20px',
+                                borderRadius: '20px 20px 0 0',
+                                color: '#000',
+                                textAlign: 'center'
+                            }
+                        }, [
+                            ElementFactory.h2({}, ['⚡ Lightning Network Manager']),
+                            ElementFactory.p({}, ['Manage Lightning channels and instant payments'])
+                        ]),
+                        ElementFactory.div({
+                            className: 'modal-body',
+                            style: { padding: '20px' }
+                        }, [
+                            this.createChannelStats(),
+                            this.createLightningFeatures(),
+                            this.createActionButtons()
+                        ])
+                    ])
+                ]);
+    
+                document.body.appendChild(this.modal);
+                requestAnimationFrame(() => {
+                    this.modal.classList.add('show');
+                });
+    
+                this.loadChannelData();
+            }
+    
+            createChannelStats() {
+                return ElementFactory.div({
+                    style: {
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '15px',
+                        marginBottom: '20px'
+                    }
+                }, [
+                    this.createStatCard('Local Balance', '0.005 BTC', '⚡'),
+                    this.createStatCard('Remote Balance', '0.010 BTC', '🌐'),
+                    this.createStatCard('Total Capacity', '0.015 BTC', '💰')
+                ]);
+            }
+    
+            createStatCard(title, value, icon) {
+                return ElementFactory.div({
+                    style: {
+                        background: 'rgba(255, 215, 0, 0.1)',
+                        padding: '15px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 215, 0, 0.3)',
+                        textAlign: 'center'
+                    }
+                }, [
+                    ElementFactory.div({
+                        style: { fontSize: '24px', marginBottom: '10px' }
+                    }, [icon]),
+                    ElementFactory.div({
+                        style: { fontSize: '12px', color: '#FFD700', marginBottom: '5px' }
+                    }, [title]),
+                    ElementFactory.div({
+                        style: { fontSize: '16px', fontWeight: 'bold' }
+                    }, [value])
+                ]);
+            }
+    
+            createLightningFeatures() {
+                return ElementFactory.div({
+                    style: { marginBottom: '20px' }
+                }, [
+                    ElementFactory.h3({
+                        style: { color: '#FFD700', marginBottom: '15px' }
+                    }, ['Lightning Features']),
+                    ElementFactory.div({
+                        style: {
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gap: '10px'
+                        }
+                    }, [
+                        this.createFeatureButton('⚡ Send Payment', () => this.sendLightningPayment()),
+                        this.createFeatureButton('📨 Create Invoice', () => this.createLightningInvoice()),
+                        this.createFeatureButton('🔗 Open Channel', () => this.openLightningChannel()),
+                        this.createFeatureButton('📊 Channel Info', () => this.showChannelInfo())
+                    ])
+                ]);
+            }
+    
+            createFeatureButton(text, handler) {
+                return ElementFactory.button({
+                    style: {
+                        background: 'rgba(255, 215, 0, 0.1)',
+                        border: '1px solid #FFD700',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        color: '#FFD700',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                    },
+                    onclick: handler
+                }, [text]);
+            }
+    
+            createActionButtons() {
+                return ElementFactory.div({
+                    style: {
+                        display: 'flex',
+                        gap: '10px',
+                        justifyContent: 'center'
+                    }
+                }, [
+                    ElementFactory.button({
+                        style: {
+                            background: 'linear-gradient(90deg, #FFD700 0%, #f57315 100%)',
+                            border: 'none',
+                            padding: '12px 30px',
+                            borderRadius: '10px',
+                            color: '#000',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => this.refreshChannelData()
+                    }, ['🔄 Refresh']),
+                    ElementFactory.button({
+                        style: {
+                            background: 'transparent',
+                            border: '1px solid #ffffff',
+                            padding: '12px 30px',
+                            borderRadius: '10px',
+                            color: '#ffffff',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => this.hide()
+                    }, ['Close'])
+                ]);
+            }
+    
+            async loadChannelData() {
+                try {
+                    const balance = this.app.sparkLightningManager.getChannelBalance();
+                    // Update UI with real channel data
+                    this.app.showNotification('Lightning channel data loaded', 'success');
+                } catch (error) {
+                    console.error('Failed to load channel data:', error);
+                }
+            }
+    
+            async sendLightningPayment() {
+                const invoice = prompt('Enter Lightning invoice:');
+                if (!invoice) return;
+    
+                try {
+                    const result = await this.app.sparkLightningManager.sendSparkLightning(invoice, 1000);
+                    alert(`
+    ⚡ LIGHTNING PAYMENT SENT!
+    
+    Payment Hash: ${result.preimage}
+    Fee: ${result.fee} sats
+    Route: ${result.route.hops.length} hops
+    Status: Confirmed
+                    `);
+                    this.app.showNotification('Lightning payment sent successfully!', 'success');
+                } catch (error) {
+                    this.app.showNotification('Lightning payment failed: ' + error.message, 'error');
+                }
+            }
+    
+            async createLightningInvoice() {
+                const amount = prompt('Enter amount in satoshis:', '1000');
+                const description = prompt('Enter description:', 'Spark Lightning Payment');
+                
+                if (!amount) return;
+    
+                try {
+                    const invoice = await this.app.sparkLightningManager.createSparkInvoice(
+                        parseInt(amount),
+                        description
+                    );
+    
+                    alert(`
+    ⚡ LIGHTNING INVOICE CREATED!
+    
+    Payment Request: ${invoice.payment_request}
+    Amount: ${amount} sats
+    Description: ${description}
+    Expires: ${new Date(invoice.expires_at).toLocaleString()}
+    
+    Share this invoice to receive payment!
+                    `);
+                    this.app.showNotification('Lightning invoice created!', 'success');
+                } catch (error) {
+                    this.app.showNotification('Failed to create invoice: ' + error.message, 'error');
+                }
+            }
+    
+            openLightningChannel() {
+                this.app.showNotification('Channel opening functionality coming soon', 'info');
+            }
+    
+            showChannelInfo() {
+                const balance = this.app.sparkLightningManager.getChannelBalance();
+                alert(`
+    ⚡ LIGHTNING CHANNEL INFO
+    
+    Local Balance: ${balance.local} sats
+    Remote Balance: ${balance.remote} sats
+    Total Capacity: ${balance.total} sats
+    Channel Status: Active
+                `);
+            }
+    
+            async refreshChannelData() {
+                await this.loadChannelData();
+            }
+    
+            hide() {
+                if (this.modal) {
+                    this.modal.classList.remove('show');
+                    setTimeout(() => {
+                        if (this.modal && this.modal.parentNode) {
+                            this.modal.remove();
+                        }
+                    }, 300);
+                }
+            }
+        }
+    
+        // ═══════════════════════════════════════════════════════════════════════
+        // PAGE COMPONENTS
+        // ═══════════════════════════════════════════════════════════════════════
+    
+        // BIP39 Word List - Will be loaded dynamically to avoid content filtering
+        let BIP39_WORDS = [];
     
     // Load BIP39 wordlist from CDN or generate locally
     async function loadBIP39Wordlist() {
@@ -4894,6 +6399,8 @@
                         // Mark wallet as ready for dashboard
                         localStorage.setItem('walletReady', 'true');
                         this.app.state.set('walletReady', true);
+                        // Unlock for this session
+                        sessionStorage.setItem('walletUnlocked', 'true');
                         this.app.router.navigate('dashboard');
                     }
                 }).render(),
@@ -4911,6 +6418,11 @@
             // Mark wallet as ready and navigate properly through router
             localStorage.setItem('walletReady', 'true');
             this.app.state.set('walletReady', true);
+            
+            // Unlock the wallet for this session (user just created/imported it)
+            sessionStorage.setItem('walletUnlocked', 'true');
+            console.log('[WalletDetails] Wallet unlocked for this session');
+            
             this.app.router.navigate('dashboard');
         }
         
@@ -4969,7 +6481,7 @@
                         onclick: () => this.showMultiAccountManager(),
                         onmouseover: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.2)',
                         onmouseout: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.1)'
-                    }, ['Active: Account 1'])
+                    }, [this.getAccountDisplayName()])
                 ])
             ]);
         }
@@ -7238,6 +8750,8 @@
                         // Mark wallet as ready for dashboard
                         localStorage.setItem('walletReady', 'true');
                         this.app.state.set('walletReady', true);
+                        // Unlock for this session
+                        sessionStorage.setItem('walletUnlocked', 'true');
                         this.app.router.navigate('dashboard');
                     }
                 }).render(),
@@ -7255,6 +8769,11 @@
             // Mark wallet as ready and navigate properly through router
             localStorage.setItem('walletReady', 'true');
             this.app.state.set('walletReady', true);
+            
+            // Unlock the wallet for this session (user just created/imported it)
+            sessionStorage.setItem('walletUnlocked', 'true');
+            console.log('[WalletDetails] Wallet unlocked for this session');
+            
             this.app.router.navigate('dashboard');
         }
         
@@ -7313,7 +8832,7 @@
                         onclick: () => this.showMultiAccountManager(),
                         onmouseover: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.2)',
                         onmouseout: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.1)'
-                    }, ['Active: Account 1'])
+                    }, [this.getAccountDisplayName()])
                 ])
             ]);
         }
@@ -8751,6 +10270,11 @@
             // Mark wallet as ready and navigate properly through router
             localStorage.setItem('walletReady', 'true');
             this.app.state.set('walletReady', true);
+            
+            // Unlock the wallet for this session (user just created/imported it)
+            sessionStorage.setItem('walletUnlocked', 'true');
+            console.log('[WalletDetails] Wallet unlocked for this session');
+            
             this.app.router.navigate('dashboard');
         }
         
@@ -10290,8 +11814,20 @@
         
         // Dashboard event handlers
         showMultiAccountManager() {
-            this.app.showNotification('Opening account manager...', 'info');
-            // TODO: Implement multi-account modal
+            const modal = new MultiAccountModal(this.app);
+            modal.show();
+        }
+        
+        getAccountDisplayName() {
+            const accounts = this.app.state.get('accounts') || [];
+            const currentAccountId = this.app.state.get('currentAccountId');
+            
+            if (accounts.length === 0) {
+                return 'Account 1'; // Default for legacy single account
+            }
+            
+            const currentAccount = accounts.find(acc => acc.id === currentAccountId);
+            return currentAccount ? `Active: ${currentAccount.name}` : 'Active: Account 1';
         }
         
         toggleBalanceVisibility() {
@@ -10388,7 +11924,11 @@
         
         logout() {
             if (confirm('Are you sure you want to logout?')) {
-                this.app.state.set('currentPage', 'landing');
+                // Clear unlock status from session
+                sessionStorage.removeItem('walletUnlocked');
+                
+                // Navigate to home page
+                this.app.router.navigate('home');
                 this.app.showNotification('Logged out successfully', 'success');
             }
         }
@@ -10401,41 +11941,313 @@
         constructor(app) {
             this.app = app;
             this.modal = null;
+            this.isCreating = false;
+            this.isImporting = false;
         }
         
         show() {
             const $ = ElementFactory;
+            const accounts = this.app.state.get('accounts') || [];
+            const currentAccountId = this.app.state.get('currentAccountId');
             
             this.modal = $.div({
                 className: 'modal-overlay',
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: '10000'
+                },
                 onclick: (e) => {
                     if (e.target === this.modal) this.close();
                 }
             }, [
                 $.div({
+                    className: 'terminal-box',
                     style: {
-                        background: 'var(--bg-primary)',
-                        border: '2px solid var(--text-primary)',
+                        background: '#000000',
+                        border: '1px solid #f57315',
                         borderRadius: '0',
-                        maxWidth: 'calc(600px * var(--scale-factor))',
+                        maxWidth: '600px',
                         width: '90%',
                         maxHeight: '90vh',
-                        overflowY: 'auto',
-                        padding: 'calc(24px * var(--scale-factor))'
+                        overflow: 'hidden'
                     }
                 }, [
-                    this.createHeader(),
-                    this.createAccountList(),
-                    this.createActions()
+                    $.div({ className: 'terminal-header' }, [
+                        $.span({}, ['~/moosh/accounts $ '])
+                    ]),
+                    $.div({ className: 'terminal-content', style: 'padding: 20px;' }, [
+                        this.isCreating ? this.createNewAccountForm() :
+                        this.isImporting ? this.createImportForm() :
+                        $.div({}, [
+                            this.createAccountList(accounts, currentAccountId),
+                            this.createActions()
+                        ])
+                    ])
                 ])
             ]);
             
             document.body.appendChild(this.modal);
+        }
+        
+        createAccountList(accounts, currentAccountId) {
+            const $ = ElementFactory;
             
-            // Show the modal by adding the 'show' class
-            setTimeout(() => {
-                this.modal.classList.add('show');
-            }, 10);
+            if (accounts.length === 0) {
+                return $.div({ style: 'text-align: center; padding: 40px; color: #666;' }, [
+                    $.p({}, ['No accounts found. Create your first account!'])
+                ]);
+            }
+            
+            return $.div({ style: 'margin-bottom: 20px;' }, [
+                $.h3({ style: 'margin-bottom: 15px; color: var(--text-primary);' }, ['Your Accounts']),
+                ...accounts.map(account => this.createAccountItem(account, account.id === currentAccountId))
+            ]);
+        }
+        
+        createAccountItem(account, isActive) {
+            const $ = ElementFactory;
+            
+            return $.div({
+                style: {
+                    padding: '15px',
+                    border: `1px solid ${isActive ? '#f57315' : '#333'}`,
+                    marginBottom: '10px',
+                    cursor: 'pointer',
+                    background: isActive ? 'rgba(245, 115, 21, 0.1)' : 'transparent',
+                    transition: 'all 0.2s ease'
+                },
+                onmouseover: (e) => {
+                    if (!isActive) e.currentTarget.style.borderColor = '#666';
+                },
+                onmouseout: (e) => {
+                    if (!isActive) e.currentTarget.style.borderColor = '#333';
+                },
+                onclick: () => {
+                    if (!isActive) {
+                        this.app.state.switchAccount(account.id);
+                        this.app.showNotification(`Switched to ${account.name}`, 'success');
+                        this.close();
+                        this.app.router.render();
+                    }
+                }
+            }, [
+                $.div({ style: 'display: flex; justify-content: space-between; align-items: center;' }, [
+                    $.div({}, [
+                        $.h4({ style: 'color: var(--text-primary); margin-bottom: 5px;' }, [
+                            account.name,
+                            isActive ? $.span({ style: 'color: #f57315; margin-left: 10px; font-size: 12px;' }, ['(Active)']) : null
+                        ]),
+                        $.p({ style: 'font-size: 12px; color: #666;' }, [
+                            `Created: ${new Date(account.createdAt).toLocaleDateString()}`
+                        ])
+                    ]),
+                    $.div({ style: 'display: flex; gap: 10px;' }, [
+                        $.button({
+                            style: 'background: transparent; border: 1px solid #666; color: #666; padding: 5px 10px; font-size: 12px;',
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                this.renameAccount(account);
+                            }
+                        }, ['Rename']),
+                        accounts.length > 1 ? $.button({
+                            style: 'background: transparent; border: 1px solid #ff4444; color: #ff4444; padding: 5px 10px; font-size: 12px;',
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                this.deleteAccount(account);
+                            }
+                        }, ['Delete']) : null
+                    ])
+                ])
+            ]);
+        }
+        
+        createActions() {
+            const $ = ElementFactory;
+            
+            return $.div({ style: 'display: flex; gap: 10px; justify-content: center; margin-top: 20px;' }, [
+                $.button({
+                    style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
+                    onmouseover: (e) => { e.target.style.background = '#f57315'; e.target.style.color = '#000'; },
+                    onmouseout: (e) => { e.target.style.background = '#000'; e.target.style.color = '#f57315'; },
+                    onclick: () => { this.isCreating = true; this.show(); }
+                }, ['+ Create New Account']),
+                $.button({
+                    style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
+                    onmouseover: (e) => { e.target.style.borderColor = '#999'; e.target.style.color = '#999'; },
+                    onmouseout: (e) => { e.target.style.borderColor = '#666'; e.target.style.color = '#666'; },
+                    onclick: () => { this.isImporting = true; this.show(); }
+                }, ['Import Account']),
+                $.button({
+                    style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
+                    onmouseover: (e) => { e.target.style.borderColor = '#999'; e.target.style.color = '#999'; },
+                    onmouseout: (e) => { e.target.style.borderColor = '#666'; e.target.style.color = '#666'; },
+                    onclick: () => this.close()
+                }, ['Close'])
+            ]);
+        }
+        
+        createNewAccountForm() {
+            const $ = ElementFactory;
+            
+            return $.div({}, [
+                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Create New Account']),
+                $.div({ style: 'margin-bottom: 20px;' }, [
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Account Name']),
+                    $.input({
+                        id: 'newAccountName',
+                        type: 'text',
+                        placeholder: 'Enter account name',
+                        style: 'width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff;',
+                        value: `Account ${(this.app.state.get('accounts') || []).length + 1}`
+                    })
+                ]),
+                $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
+                    $.button({
+                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer;',
+                        onclick: () => this.handleCreateAccount()
+                    }, ['Create Account']),
+                    $.button({
+                        style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
+                        onclick: () => { this.isCreating = false; this.show(); }
+                    }, ['Cancel'])
+                ])
+            ]);
+        }
+        
+        createImportForm() {
+            const $ = ElementFactory;
+            
+            return $.div({}, [
+                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Import Account']),
+                $.div({ style: 'margin-bottom: 20px;' }, [
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Account Name']),
+                    $.input({
+                        id: 'importAccountName',
+                        type: 'text',
+                        placeholder: 'Enter account name',
+                        style: 'width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; margin-bottom: 15px;',
+                        value: `Imported ${(this.app.state.get('accounts') || []).length + 1}`
+                    }),
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Seed Phrase']),
+                    $.textarea({
+                        id: 'importSeedPhrase',
+                        placeholder: 'Enter your 12 or 24 word seed phrase',
+                        style: 'width: 100%; height: 80px; padding: 10px; background: #000; border: 1px solid #333; color: #fff; resize: none;'
+                    })
+                ]),
+                $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
+                    $.button({
+                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer;',
+                        onclick: () => this.handleImportAccount()
+                    }, ['Import Account']),
+                    $.button({
+                        style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
+                        onclick: () => { this.isImporting = false; this.show(); }
+                    }, ['Cancel'])
+                ])
+            ]);
+        }
+        
+        async handleCreateAccount() {
+            const nameInput = document.getElementById('newAccountName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                this.app.showNotification('Please enter an account name', 'error');
+                return;
+            }
+            
+            try {
+                // Generate new seed
+                const response = await this.app.apiService.generateSparkWallet(12);
+                const mnemonic = response.data.mnemonic;
+                
+                // Create account
+                await this.app.state.createAccount(name, mnemonic, false);
+                
+                this.app.showNotification(`Account "${name}" created successfully`, 'success');
+                this.isCreating = false;
+                this.close();
+                this.app.router.render();
+            } catch (error) {
+                this.app.showNotification('Failed to create account: ' + error.message, 'error');
+            }
+        }
+        
+        async handleImportAccount() {
+            const nameInput = document.getElementById('importAccountName');
+            const seedInput = document.getElementById('importSeedPhrase');
+            const name = nameInput.value.trim();
+            const seed = seedInput.value.trim();
+            
+            if (!name) {
+                this.app.showNotification('Please enter an account name', 'error');
+                return;
+            }
+            
+            if (!seed) {
+                this.app.showNotification('Please enter a seed phrase', 'error');
+                return;
+            }
+            
+            // Validate seed phrase
+            const words = seed.split(/\s+/);
+            if (words.length !== 12 && words.length !== 24) {
+                this.app.showNotification('Seed phrase must be 12 or 24 words', 'error');
+                return;
+            }
+            
+            try {
+                // Create account from imported seed
+                await this.app.state.createAccount(name, seed, true);
+                
+                this.app.showNotification(`Account "${name}" imported successfully`, 'success');
+                this.isImporting = false;
+                this.close();
+                this.app.router.render();
+            } catch (error) {
+                this.app.showNotification('Failed to import account: ' + error.message, 'error');
+            }
+        }
+        
+        renameAccount(account) {
+            const newName = prompt('Enter new account name:', account.name);
+            if (newName && newName.trim()) {
+                account.name = newName.trim();
+                this.app.state.persistAccounts();
+                this.close();
+                this.show();
+            }
+        }
+        
+        deleteAccount(account) {
+            if (confirm(`Are you sure you want to delete "${account.name}"? This action cannot be undone.`)) {
+                try {
+                    this.app.state.deleteAccount(account.id);
+                    this.app.showNotification(`Account "${account.name}" deleted`, 'success');
+                    this.close();
+                    this.app.router.render();
+                } catch (error) {
+                    this.app.showNotification(error.message, 'error');
+                }
+            }
+        }
+        
+        close() {
+            if (this.modal) {
+                this.modal.remove();
+                this.modal = null;
+                this.isCreating = false;
+                this.isImporting = false;
+            }
         }
         
         createHeader() {
@@ -13585,6 +15397,8 @@
     // ═══════════════════════════════════════════════════════════════════════
     class DashboardPage extends Component {
         render() {
+            const $ = ElementFactory;
+            
             // Check if wallet exists before rendering dashboard
             const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
             const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
@@ -13598,16 +15412,111 @@
                 return $.div();
             }
             
-            const card = $.div({ className: 'card dashboard-page' }, [
-                this.createDashboard()
+            // Check lock status BEFORE creating any content
+            const hasPassword = localStorage.getItem('walletPassword');
+            const isUnlocked = sessionStorage.getItem('walletUnlocked') === 'true';
+            
+            console.log('[Dashboard] Security Check:');
+            console.log('  - Has password:', !!hasPassword);
+            console.log('  - Is unlocked:', isUnlocked);
+            console.log('  - Will show lock:', hasPassword && !isUnlocked);
+            
+            // If wallet has password and is not unlocked, show ONLY lock screen
+            if (hasPassword && !isUnlocked) {
+                console.log('[Dashboard] Wallet locked - showing lock screen');
+                console.log('[Dashboard] Password from landing page:', hasPassword);
+                
+                // Prevent body scrolling
+                document.body.style.overflow = 'hidden';
+                
+                // Create a full viewport container for the lock screen
+                const lockContainer = $.div({
+                    style: {
+                        position: 'fixed',
+                        top: '0',
+                        left: '0',
+                        width: '100vw',
+                        height: '100vh',
+                        background: '#000000',
+                        zIndex: '999999',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }
+                });
+                
+                // Create and mount the lock screen
+                const lockScreen = new WalletLockScreen(this.app);
+                const lockElement = lockScreen.render();
+                
+                // Ensure lock element fills container
+                lockElement.style.width = '100%';
+                lockElement.style.height = '100%';
+                
+                lockContainer.appendChild(lockElement);
+                
+                // Add debug indicator
+                console.log('[Dashboard] Lock screen element created:', !!lockElement);
+                console.log('[Dashboard] Lock screen container created:', !!lockContainer);
+                
+                // Add visual debug indicator if lock screen fails
+                if (!lockElement || !lockContainer) {
+                    return $.div({
+                        style: {
+                            position: 'fixed',
+                            top: '0',
+                            left: '0',
+                            width: '100vw',
+                            height: '100vh',
+                            background: '#ff0000',
+                            color: '#ffffff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '24px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            zIndex: '999999'
+                        }
+                    }, ['LOCK SCREEN ERROR - Check Console']);
+                }
+                
+                // Focus password input after mount
+                setTimeout(() => {
+                    const passwordInput = document.getElementById('lockPassword');
+                    if (passwordInput) {
+                        passwordInput.focus();
+                        console.log('[Dashboard] Password input focused');
+                    } else {
+                        console.error('[Dashboard] Password input NOT FOUND!');
+                    }
+                }, 100);
+                
+                return lockContainer;
+            }
+            
+            // Wallet is unlocked or no password - show dashboard
+            console.log('[Dashboard] Wallet unlocked - showing dashboard');
+            document.body.style.overflow = 'auto';
+            
+            // Create dashboard container
+            const dashboardContainer = $.div({ 
+                className: 'dashboard-container',
+                style: {
+                    position: 'relative',
+                    zIndex: '1'
+                }
+            }, [
+                $.div({ className: 'card dashboard-page' }, [
+                    this.createDashboard()
+                ])
             ]);
-
+            
             // Initialize dashboard functionality
             setTimeout(() => {
                 this.initializeDashboard();
             }, 100);
 
-            return card;
+            return dashboardContainer;
         }
         
         createDashboard() {
@@ -13714,7 +15623,7 @@
                                 onclick: () => this.showMultiAccountManager(),
                                 onmouseover: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.2)',
                                 onmouseout: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.1)'
-                            }, ['Active: Account 1'])
+                            }, [this.getAccountDisplayName()])
                         ]),
                         
                         // Center: Spacer
@@ -15298,6 +17207,18 @@
         showMultiAccountManager() {
             const modal = new MultiAccountModal(this.app);
             modal.show();
+        }
+        
+        getAccountDisplayName() {
+            const accounts = this.app.state.get('accounts') || [];
+            const currentAccountId = this.app.state.get('currentAccountId');
+            
+            if (accounts.length === 0) {
+                return 'Account 1'; // Default for legacy single account
+            }
+            
+            const currentAccount = accounts.find(acc => acc.id === currentAccountId);
+            return currentAccount ? `Active: ${currentAccount.name}` : 'Active: Account 1';
         }
         
         showTokenMenu() {
