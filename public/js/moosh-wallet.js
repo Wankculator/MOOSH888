@@ -15481,9 +15481,23 @@
             const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
             const currentWallet = this.app.state.get('currentWallet') || {};
             
+            console.log('[Dashboard] Wallet check:');
+            console.log('  - sparkWallet:', sparkWallet);
+            console.log('  - sparkWallet.addresses:', sparkWallet.addresses);
+            console.log('  - generatedSeed length:', generatedSeed.length);
+            console.log('  - currentWallet:', currentWallet);
+            
             // If no wallet exists, redirect to home
-            if (!sparkWallet.addresses && !currentWallet.isInitialized && generatedSeed.length === 0) {
+            // Check multiple conditions to ensure wallet exists
+            const hasSparkWallet = sparkWallet && sparkWallet.addresses && (sparkWallet.addresses.bitcoin || sparkWallet.addresses.spark);
+            const hasSeed = Array.isArray(generatedSeed) && generatedSeed.length > 0;
+            const hasCurrentWallet = currentWallet && currentWallet.isInitialized;
+            
+            if (!hasSparkWallet && !hasSeed && !hasCurrentWallet) {
                 console.log('[Dashboard] No wallet found, redirecting to home');
+                console.log('  - hasSparkWallet:', hasSparkWallet);
+                console.log('  - hasSeed:', hasSeed);
+                console.log('  - hasCurrentWallet:', hasCurrentWallet);
                 this.app.showNotification('Please create or import a wallet first', 'warning');
                 this.app.router.navigate('home');
                 return $.div();
@@ -17635,36 +17649,12 @@
             console.log('[App] Continuing initialization after unlock');
             
             // Get the current hash from URL
-            const initialHash = window.location.hash.substring(1);
-            console.log('[App] Current hash after unlock:', initialHash);
+            const currentHash = window.location.hash.substring(1) || 'home';
+            console.log('[App] Current hash after unlock:', currentHash);
             
-            // If we're already on a valid route (like dashboard), just render it
-            if (initialHash && this.router.routes.has(initialHash)) {
-                console.log('[App] Rendering current route:', initialHash);
-                this.router.render();
-            } else {
-                // Check if we have a valid route
-                if (initialHash === 'dashboard') {
-                    const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
-                    const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
-                    const currentWallet = this.state.get('currentWallet') || {};
-                    
-                    // Check if wallet exists
-                    if (sparkWallet.addresses || currentWallet.isInitialized || generatedSeed.length > 0) {
-                        console.log('[App] Wallet found, navigating to dashboard');
-                        this.router.navigate('dashboard');
-                    } else {
-                        console.log('[App] No wallet found, redirecting to home');
-                        this.router.navigate('home');
-                    }
-                } else if (initialHash) {
-                    // For other routes, navigate normally
-                    this.router.navigate(initialHash);
-                } else {
-                    console.log('[App] No route specified, navigating to home');
-                    this.router.navigate('home');
-                }
-            }
+            // Simply navigate to the current route - the router will handle rendering
+            // This preserves whatever page the user was on
+            this.router.navigate(currentHash);
         }
 
         setupDocument() {
