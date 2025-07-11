@@ -97,7 +97,8 @@
       "Bash(# Kill old API server\npkill -f \"\"node.*api-server\"\" || true\nsleep 1\n\n# Start new API server\ncd \"\"/mnt/c/Users/sk84l/OneDrive/Desktop/MOOSH WALLET/src/server\"\" && node api-server.js > ../../api.log 2>&1 &\nsleep 3\n\necho \"\"API server restarted\"\"\n\n# Test it''s working\ncurl -s http://localhost:3001/health | python3 -m json.tool || echo \"\"Not ready yet\"\")",
       "Bash(# Kill and restart API server\npkill -f \"\"node.*api-server\"\" || true\nsleep 1\n\ncd \"\"/mnt/c/Users/sk84l/OneDrive/Desktop/MOOSH WALLET/src/server\"\" && node api-server.js > ../../api.log 2>&1 &\nsleep 3\n\necho \"\"API server restarted with nested segwit support\"\")",
       "Bash(./comprehensive-verification-test.sh:*)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "Bash(./cleanup-project.sh:*)"
     ],
     "deny": []
   }
