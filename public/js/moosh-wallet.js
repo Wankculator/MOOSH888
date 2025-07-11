@@ -2011,6 +2011,7 @@
         bindEvents() {
             window.addEventListener('hashchange', () => {
                 const hash = window.location.hash.substring(1);
+                console.log('[Router] Hash changed to:', hash);
                 if (hash) {
                     this.navigate(hash);
                 }
@@ -2019,6 +2020,7 @@
 
         navigate(pageId) {
             const currentPage = this.app.state.get('currentPage');
+            console.log('[Router] Navigating from', currentPage, 'to', pageId);
             
             if (pageId !== currentPage) {
                 const history = [...this.app.state.get('navigationHistory')];
@@ -4347,7 +4349,12 @@
             }, [
                 new Button(this.app, {
                     text: 'Open Wallet Dashboard',
-                    onClick: () => this.app.router.navigate('dashboard')
+                    onClick: () => {
+                        // Mark wallet as ready for dashboard
+                        localStorage.setItem('walletReady', 'true');
+                        this.app.state.set('walletReady', true);
+                        this.app.router.navigate('dashboard');
+                    }
                 }).render(),
                 new Button(this.app, {
                     text: 'Create Another Wallet',
@@ -4360,15 +4367,10 @@
         openWalletDashboard() {
             this.app.showNotification('Opening wallet dashboard...', 'success');
             
-            // Clear current content and render dashboard
-            const content = document.querySelector('.cursor-content');
-            if (!content) return;
-            
-            content.innerHTML = '';
-            content.appendChild(this.createDashboard());
-            
-            // Initialize dashboard controller
-            this.initializeDashboard();
+            // Mark wallet as ready and navigate properly through router
+            localStorage.setItem('walletReady', 'true');
+            this.app.state.set('walletReady', true);
+            this.app.router.navigate('dashboard');
         }
         
         createDashboard() {
@@ -6691,7 +6693,12 @@
             }, [
                 new Button(this.app, {
                     text: 'Open Wallet Dashboard',
-                    onClick: () => this.app.router.navigate('dashboard')
+                    onClick: () => {
+                        // Mark wallet as ready for dashboard
+                        localStorage.setItem('walletReady', 'true');
+                        this.app.state.set('walletReady', true);
+                        this.app.router.navigate('dashboard');
+                    }
                 }).render(),
                 new Button(this.app, {
                     text: 'Import Another Wallet',
@@ -6704,15 +6711,10 @@
         openWalletDashboard() {
             this.app.showNotification('Opening wallet dashboard...', 'success');
             
-            // Clear current content and render dashboard
-            const content = document.querySelector('.cursor-content');
-            if (!content) return;
-            
-            content.innerHTML = '';
-            content.appendChild(this.createDashboard());
-            
-            // Initialize dashboard controller
-            this.initializeDashboard();
+            // Mark wallet as ready and navigate properly through router
+            localStorage.setItem('walletReady', 'true');
+            this.app.state.set('walletReady', true);
+            this.app.router.navigate('dashboard');
         }
         
         createDashboard() {
@@ -8205,15 +8207,10 @@
         openWalletDashboard() {
             this.app.showNotification('Opening wallet dashboard...', 'success');
             
-            // Clear current content and render dashboard
-            const content = document.querySelector('.cursor-content');
-            if (!content) return;
-            
-            content.innerHTML = '';
-            content.appendChild(this.createDashboard());
-            
-            // Initialize dashboard controller
-            this.initializeDashboard();
+            // Mark wallet as ready and navigate properly through router
+            localStorage.setItem('walletReady', 'true');
+            this.app.state.set('walletReady', true);
+            this.app.router.navigate('dashboard');
         }
         
         createDashboard() {
@@ -13047,6 +13044,19 @@
     // ═══════════════════════════════════════════════════════════════════════
     class DashboardPage extends Component {
         render() {
+            // Check if wallet exists before rendering dashboard
+            const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+            const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
+            const currentWallet = this.app.state.get('currentWallet') || {};
+            
+            // If no wallet exists, redirect to home
+            if (!sparkWallet.addresses && !currentWallet.isInitialized && generatedSeed.length === 0) {
+                console.log('[Dashboard] No wallet found, redirecting to home');
+                this.app.showNotification('Please create or import a wallet first', 'warning');
+                this.app.router.navigate('home');
+                return $.div();
+            }
+            
             const card = $.div({ className: 'card dashboard-page' }, [
                 this.createDashboard()
             ]);
@@ -15037,8 +15047,26 @@
             const initialHash = window.location.hash.substring(1);
             console.log('[App] Initial hash:', initialHash);
             
+            // Check if we have a valid route
             if (initialHash && this.router.routes.has(initialHash)) {
-                this.router.navigate(initialHash);
+                // Special handling for dashboard - ensure wallet exists
+                if (initialHash === 'dashboard') {
+                    const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                    const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
+                    const currentWallet = this.state.get('currentWallet') || {};
+                    
+                    // Check if wallet exists
+                    if (sparkWallet.addresses || currentWallet.isInitialized || generatedSeed.length > 0) {
+                        console.log('[App] Wallet found, navigating to dashboard');
+                        this.router.navigate('dashboard');
+                    } else {
+                        console.log('[App] No wallet found, redirecting to home');
+                        this.router.navigate('home');
+                    }
+                } else {
+                    // For other routes, navigate normally
+                    this.router.navigate(initialHash);
+                }
             } else {
                 console.log('[App] Navigating to home...');
                 this.router.navigate('home');
