@@ -618,6 +618,50 @@
                     -ms-text-size-adjust: 100%;
                     touch-action: manipulation;
                     -webkit-tap-highlight-color: transparent;
+                    display: flex;
+                    flex-direction: column;
+                }
+                
+                /* App container should grow to push footer down */
+                .app-container {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                }
+                
+                /* Footer styles */
+                .app-footer {
+                    background: var(--bg-primary);
+                    color: var(--text-dim);
+                    padding: calc(20px * var(--scale-factor)) calc(var(--container-padding) * var(--scale-factor));
+                    text-align: center;
+                    font-size: calc(12px * var(--scale-factor));
+                    border-top: 1px solid var(--border-color);
+                    margin-top: auto;
+                    width: 100%;
+                }
+                
+                .app-footer p {
+                    margin: 0;
+                    line-height: 1.6;
+                }
+                
+                .app-footer .copyright {
+                    margin-bottom: calc(4px * var(--scale-factor));
+                }
+                
+                .app-footer .tagline {
+                    color: var(--text-primary);
+                    font-weight: 500;
+                }
+                
+                /* MOOSH mode footer */
+                body.moosh-mode .app-footer {
+                    border-top-color: #232b2b;
+                }
+                
+                body.moosh-mode .app-footer .tagline {
+                    color: #69fd97;
                 }
 
                 /* Typography */
@@ -781,8 +825,8 @@
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    position: sticky;
-                    top: calc(10px * var(--scale-factor));
+                    position: relative;
+                    margin-top: calc(10px * var(--scale-factor));
                     z-index: 1000;
                     box-sizing: border-box;
                 }
@@ -2405,6 +2449,24 @@
         }
 
         render() {
+            // Check if wallet is locked before rendering any page
+            const hasPassword = localStorage.getItem('walletPassword') !== null;
+            const isUnlocked = sessionStorage.getItem('walletUnlocked') === 'true';
+            
+            if (hasPassword && !isUnlocked) {
+                console.log('[Router] Wallet is locked, showing lock screen instead of page');
+                // Clear any existing lock screens
+                const existingLock = document.querySelector('.wallet-lock-overlay');
+                if (existingLock) {
+                    existingLock.remove();
+                }
+                // Show lock screen
+                const lockScreen = new WalletLockScreen(this.app);
+                const lockElement = lockScreen.render();
+                document.body.appendChild(lockElement);
+                return; // Don't render the requested page
+            }
+            
             const currentPage = this.app.state.get('currentPage');
             const PageClass = this.routes.get(currentPage);
             
@@ -2670,12 +2732,18 @@
                 // Show success notification
                 this.app.showNotification('Wallet unlocked successfully', 'success');
                 
-                // Force complete page re-render to show dashboard
-                // This ensures the dashboard renders fresh with unlocked state
-                this.app.router.render();
+                // Remove the lock screen overlay
+                const lockOverlay = document.querySelector('.wallet-lock-overlay');
+                if (lockOverlay) {
+                    lockOverlay.remove();
+                }
                 
                 // Reset body overflow
                 document.body.style.overflow = 'auto';
+                
+                // Continue with app initialization after unlock
+                // This completes the initialization that was interrupted by the lock screen
+                this.app.continueInitAfterUnlock();
             } else {
                 console.log('[Lock] Password incorrect');
                 // Failed attempt
@@ -5370,8 +5438,17 @@
                 this.createTitle(wordCount),
                 this.createWarningSection(),
                 this.createSeedDisplay(generatedSeed, wordCount),
-                this.createCopyButton(),
-                this.createActionButtons()
+                $.div({
+                    style: {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 'calc(16px * var(--scale-factor))',
+                        marginTop: 'calc(16px * var(--scale-factor))'
+                    }
+                }, [
+                    this.createCopyButton(),
+                    this.createActionButtons()
+                ])
             );
         }
         
@@ -5452,7 +5529,7 @@
             }, [
                 $.div({ 
                     className: 'feature-tagline',
-                    style: 'margin-bottom: calc(4px * var(--scale-factor));'
+                    style: 'margin-bottom: calc(4px * var(--scale-factor)); text-align: center;'
                 }, [
                     $.span({ className: 'text-dim ui-bracket', style: { fontSize: 'calc(9px * var(--scale-factor))' } }, ['<']),
                     ' CRITICAL SECURITY WARNING ',
@@ -17476,6 +17553,10 @@
         async init() {
             console.log('[App] Initializing MOOSH Wallet...');
             
+            // Clear unlock status on every page load/refresh to force lock
+            sessionStorage.removeItem('walletUnlocked');
+            console.log('[App] Cleared unlock status - wallet will be locked');
+            
             // Clear body and set up fonts
             this.setupDocument();
             console.log('[App] Document setup complete');
@@ -17504,6 +17585,19 @@
             // Load theme preference
             this.loadThemePreference();
             console.log('[App] Theme loaded');
+            
+            // Check if wallet is password protected and locked
+            const hasPassword = localStorage.getItem('walletPassword') !== null;
+            const isUnlocked = sessionStorage.getItem('walletUnlocked') === 'true';
+            
+            if (hasPassword && !isUnlocked) {
+                console.log('[App] Wallet is locked, showing lock screen');
+                // Show lock screen
+                const lockScreen = new WalletLockScreen(this);
+                const lockElement = lockScreen.render();
+                document.body.appendChild(lockElement);
+                return; // Don't continue with normal initialization
+            }
             
             // Initial render
             const initialHash = window.location.hash.substring(1);
@@ -17535,6 +17629,42 @@
             }
             
             console.log('[App] Initialization complete');
+        }
+
+        continueInitAfterUnlock() {
+            console.log('[App] Continuing initialization after unlock');
+            
+            // Get the current hash from URL
+            const initialHash = window.location.hash.substring(1);
+            console.log('[App] Current hash after unlock:', initialHash);
+            
+            // If we're already on a valid route (like dashboard), just render it
+            if (initialHash && this.router.routes.has(initialHash)) {
+                console.log('[App] Rendering current route:', initialHash);
+                this.router.render();
+            } else {
+                // Check if we have a valid route
+                if (initialHash === 'dashboard') {
+                    const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                    const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
+                    const currentWallet = this.state.get('currentWallet') || {};
+                    
+                    // Check if wallet exists
+                    if (sparkWallet.addresses || currentWallet.isInitialized || generatedSeed.length > 0) {
+                        console.log('[App] Wallet found, navigating to dashboard');
+                        this.router.navigate('dashboard');
+                    } else {
+                        console.log('[App] No wallet found, redirecting to home');
+                        this.router.navigate('home');
+                    }
+                } else if (initialHash) {
+                    // For other routes, navigate normally
+                    this.router.navigate(initialHash);
+                } else {
+                    console.log('[App] No route specified, navigating to home');
+                    this.router.navigate('home');
+                }
+            }
         }
 
         setupDocument() {
@@ -17575,6 +17705,20 @@
                 className: 'app-container'
             });
             document.body.appendChild(this.container);
+            
+            // Create and append footer
+            this.createFooter();
+        }
+        
+        createFooter() {
+            const $ = ElementFactory;
+            const footer = $.footer({ 
+                className: 'app-footer'
+            }, [
+                $.p({ className: 'copyright' }, ['© 2025 MOOSH Wallet Limited. All rights reserved.']),
+                $.p({ className: 'tagline' }, ['World\'s First AI-Powered Bitcoin Wallet'])
+            ]);
+            document.body.appendChild(footer);
         }
 
         createContentArea() {
