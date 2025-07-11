@@ -1349,6 +1349,11 @@
                 .blink {
                     animation: blink 1s infinite;
                 }
+                
+                @keyframes shimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
 
                 @keyframes mooshFlash {
                     0%, 70%, 100% {
@@ -2563,7 +2568,7 @@
         }
 
         render() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             this.element = $.div({ 
                 className: 'wallet-lock-overlay',
@@ -2819,7 +2824,7 @@
     // ═══════════════════════════════════════════════════════════════════════
     class Header extends Component {
         render() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const brandBox = this.createBrandBox();
             const navLinks = this.createNavLinks();
             
@@ -2839,7 +2844,7 @@
         }
 
         createBrandBox() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             return $.div({ className: 'brand-box' }, [
                 $.img({
                     src: '/04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
@@ -2875,7 +2880,7 @@
         }
 
         createNavLinks() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const currentPage = this.app.state.get('currentPage');
             const isDashboard = currentPage === 'dashboard';
             const hasPassword = localStorage.getItem('walletPassword');
@@ -2941,7 +2946,7 @@
         }
 
         createLockButton() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const isLocked = sessionStorage.getItem('walletUnlocked') !== 'true';
             
             const lockToggle = $.div({
@@ -2967,7 +2972,7 @@
         }
 
         createThemeToggle() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const toggle = $.div({
                 className: 'theme-toggle',
                 onclick: (e) => {
@@ -5305,10 +5310,19 @@
                     className: 'loading-container',
                     style: {
                         textAlign: 'center',
-                        padding: 'calc(40px * var(--scale-factor))',
-                        fontSize: 'calc(16px * var(--scale-factor))'
+                        padding: '0',
+                        marginTop: 'calc(-10px * var(--scale-factor))'
                     }
-                }, ['Generating secure wallet...'])
+                }, [
+                    this.createProgressBar(),
+                    $.div({
+                        style: {
+                            fontSize: 'calc(16px * var(--scale-factor))',
+                            marginTop: 'calc(20px * var(--scale-factor))',
+                            color: 'var(--text-primary)'
+                        }
+                    }, ['Generating secure wallet...'])
+                ])
             ]);
             
             return card;
@@ -5341,6 +5355,9 @@
             if (this.isGenerating) return;
             this.isGenerating = true;
             
+            // Start progress animation
+            this.animateProgress();
+            
             try {
                 // Always try to use real API first for proper seed generation
                 console.log('🔑 Generating wallet with', wordCount, 'words...');
@@ -5370,6 +5387,7 @@
                     });
                     
                     // Update the display
+                    this.completeProgress();
                     this.updateDisplay(generatedSeed, wordCount);
                 } else {
                     throw new Error('Invalid wallet data received');
@@ -5426,6 +5444,10 @@
                 console.error('BLOCKING LOCAL GENERATION - API ONLY MODE');
             } finally {
                 this.isGenerating = false;
+                // Clear progress interval if still running
+                if (this.progressInterval) {
+                    clearInterval(this.progressInterval);
+                }
             }
         }
         
@@ -5675,6 +5697,57 @@
                 ])
             ]);
         }
+        
+        createProgressBar() {
+            const $ = window.ElementFactory || ElementFactory;
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            const themeColor = isMooshMode ? '#69fd97' : '#f57315';
+            
+            return $.div({
+                style: {
+                    textAlign: 'center',
+                    marginBottom: 'calc(12px * var(--scale-factor))'
+                }
+            }, [
+                // Pixel blocks container
+                $.div({
+                    className: 'pixel-blocks-container',
+                    style: {
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 'calc(6px * var(--scale-factor))',
+                        marginBottom: 'calc(20px * var(--scale-factor))',
+                        marginTop: 'calc(5px * var(--scale-factor))'
+                    }
+                }, [
+                    // Create 10 square blocks
+                    ...Array(10).fill(null).map((_, index) => 
+                        $.div({
+                            className: `pixel-block pixel-block-${index}`,
+                            style: {
+                                width: 'calc(8px * var(--scale-factor))',
+                                height: 'calc(8px * var(--scale-factor))',
+                                background: '#333333',
+                                border: `1px solid ${themeColor}`,
+                                transition: 'all 0.3s ease',
+                                opacity: '0.3'
+                            }
+                        })
+                    )
+                ]),
+                // Percentage text
+                $.div({
+                    style: {
+                        fontSize: 'calc(14px * var(--scale-factor))',
+                        color: themeColor
+                    }
+                }, [
+                    $.span({ className: 'progress-text' }, ['Initializing... ']),
+                    $.span({ className: 'progress-percent' }, ['0%'])
+                ])
+            ]);
+        }
 
         createCopyButton() {
             return new Button(this.app, {
@@ -5802,6 +5875,80 @@
                     copyButton.style.background = originalBg;
                     copyButton.style.color = originalColor;
                 }, 1500);
+            }
+        }
+        
+        animateProgress() {
+            // Add a small delay to ensure DOM is ready
+            setTimeout(() => {
+                const progressPercent = document.querySelector('.progress-percent');
+                const pixelBlocks = document.querySelectorAll('.pixel-block');
+                const isMooshMode = document.body.classList.contains('moosh-mode');
+                const themeColor = isMooshMode ? '#69fd97' : '#f57315';
+                
+                if (!progressPercent) {
+                    console.error('[GenerateSeed] Progress percent element not found');
+                    return;
+                }
+                
+                console.log('[GenerateSeed] Starting progress animation');
+                let percent = 0;
+                const interval = setInterval(() => {
+                    if (percent < 95) {
+                        percent += Math.floor(Math.random() * 15) + 5; // Random increment between 5-20
+                        if (percent > 95) percent = 95;
+                        progressPercent.textContent = `${percent}%`;
+                        
+                        // Animate pixel blocks based on percentage
+                        const blocksToFill = Math.floor((percent / 100) * pixelBlocks.length);
+                        pixelBlocks.forEach((block, index) => {
+                            if (index < blocksToFill) {
+                                block.style.background = themeColor;
+                                block.style.opacity = '1';
+                                block.style.transform = 'scale(1.1)';
+                                setTimeout(() => {
+                                    block.style.transform = 'scale(1)';
+                                }, 200);
+                            }
+                        });
+                        
+                        console.log(`[GenerateSeed] Progress: ${percent}%`);
+                    } else {
+                        clearInterval(interval);
+                        // Will be set to 100% when generation completes
+                    }
+                }, 500);
+                
+                // Store interval ID to clear it when generation completes
+                this.progressInterval = interval;
+            }, 100); // 100ms delay to ensure DOM is ready
+        }
+        
+        completeProgress() {
+            const progressPercent = document.querySelector('.progress-percent');
+            const pixelBlocks = document.querySelectorAll('.pixel-block');
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            const themeColor = isMooshMode ? '#69fd97' : '#f57315';
+            
+            if (progressPercent) {
+                progressPercent.textContent = '100%';
+            }
+            
+            // Fill all blocks
+            pixelBlocks.forEach((block, index) => {
+                setTimeout(() => {
+                    block.style.background = themeColor;
+                    block.style.opacity = '1';
+                    block.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        block.style.transform = 'scale(1)';
+                    }, 200);
+                }, index * 50); // Stagger the animation
+            });
+            
+            if (this.progressInterval) {
+                clearInterval(this.progressInterval);
+                this.progressInterval = null;
             }
         }
     }
@@ -6504,7 +6651,7 @@
         }
         
         createDashboard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'wallet-dashboard-container' }, [
                 this.createDashboardHeader(),
@@ -6513,7 +6660,7 @@
         }
         
         createDashboardHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'terminal-box', style: 'margin-bottom: calc(24px * var(--scale-factor));' }, [
                 $.div({ className: 'terminal-header' }, [
@@ -6564,7 +6711,7 @@
         }
         
         createAccountSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const activeAccount = 'Account 1'; // Will be dynamic later
             
             return $.div({ className: 'account-selector' }, [
@@ -6579,7 +6726,7 @@
         }
         
         createHeaderButtons() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'header-buttons' }, [
                 $.button({
@@ -6609,7 +6756,7 @@
         }
         
         createDashboardContent() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'dashboard-content' }, [
                 this.createMainActionButtons()
@@ -6617,7 +6764,7 @@
         }
         
         createBalanceSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -6691,7 +6838,7 @@
         }
         
         createMiniBalance(label, amount) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             return $.div({
                 style: {
                     textAlign: 'center'
@@ -6715,7 +6862,7 @@
         }
         
         createTokenCard(name, amount, value) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card' }, [
                 $.div({ className: 'token-name' }, [name]),
@@ -6725,7 +6872,7 @@
         }
         
         createMainActionButtons() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'wallet-actions',
@@ -6770,8 +6917,7 @@
                 $.button({
                     className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
-                    onclick: () => this.showWalletSettings()
-,
+                    onclick: () => this.showWalletSettings(),
                     onmouseover: function() { this.style.background = 'var(--text-primary)'; this.style.color = 'var(--bg-primary)'; },
                     onmouseout: function() { this.style.background = '#000000'; this.style.color = 'var(--text-primary)'; }
                 }, ['Wallet Settings'])
@@ -6779,7 +6925,7 @@
         }
         
         createSparkProtocolSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: 'margin-top: 24px; padding-top: 24px; border-top: 1px solid #333333;'
@@ -6885,7 +7031,7 @@
         }
         
         createTransactionHistory() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -6948,7 +7094,7 @@
         }
         
         createEmptyTransactions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -6975,7 +7121,7 @@
         
         // Missing dashboard component methods
         createStatusBanner() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -7002,7 +7148,7 @@
         }
         
         createWalletTypeSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'terminal-box',
@@ -7074,7 +7220,7 @@
         }
         
         createStatsGrid() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'stats-grid',
@@ -7172,7 +7318,7 @@
         }
         
         createSparkProtocolSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'spark-protocol-section' }, [
                 $.div({ className: 'spark-header' }, [
@@ -7201,7 +7347,7 @@
         }
         
         createNetworkCard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card network-card' }, [
                 $.div({ className: 'token-name' }, ['Network']),
@@ -7419,7 +7565,7 @@
         
         // Modal Methods
         showSendModal() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Create modal overlay
             const overlay = $.div({ 
@@ -7550,7 +7696,7 @@
         }
         
         showReceiveModal() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Get current wallet address
             const currentAccount = this.app.state.getCurrentAccount();
@@ -7661,7 +7807,7 @@
         }
         
         showSettingsModal() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Create modal overlay
             const overlay = $.div({ 
@@ -7723,7 +7869,7 @@
         }
         
         createSettingsSection(title, items) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'settings-section' }, [
                 $.h3({ className: 'settings-section-title' }, [title]),
@@ -7732,7 +7878,7 @@
         }
         
         createSettingItem(label, type, value, options = []) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'setting-item' }, [
                 $.label({ className: 'setting-label' }, [label]),
@@ -7749,7 +7895,7 @@
         }
         
         createPasswordChangeSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'setting-item' }, [
                 $.button({
@@ -7760,7 +7906,7 @@
         }
         
         createSeedPhraseSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'setting-item danger-zone' }, [
                 $.button({
@@ -7774,7 +7920,7 @@
         }
         
         createExportSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'setting-item' }, [
                 $.button({
@@ -7785,7 +7931,7 @@
         }
         
         createDeleteWalletSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'setting-item danger-zone' }, [
                 $.button({
@@ -7799,7 +7945,7 @@
         }
         
         showSeedPhraseModal() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // First show password verification modal
             const passwordOverlay = $.div({ 
@@ -7870,7 +8016,7 @@
         }
         
         async displaySeedPhrase() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             let seedPhrase = localStorage.getItem('seedPhrase');
             
             if (!seedPhrase) {
@@ -7991,7 +8137,7 @@
         }
         
         createFeeOption(id, label, time, rate, selected = false) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.label({ className: 'fee-option' }, [
                 $.input({
@@ -8043,7 +8189,7 @@
         }
         
         createQRCode(data) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const size = 200; // QR code size
             
             // Create canvas for QR code
@@ -8855,7 +9001,7 @@
         }
         
         createDashboard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'wallet-dashboard-container' }, [
                 this.createDashboardHeader(),
@@ -8864,7 +9010,7 @@
         }
         
         createDashboardHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'terminal-box', style: 'margin-bottom: calc(24px * var(--scale-factor));' }, [
                 $.div({ className: 'terminal-header' }, [
@@ -8915,7 +9061,7 @@
         }
         
         createAccountSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const activeAccount = 'Account 1'; // Will be dynamic later
             
             return $.div({ className: 'account-selector' }, [
@@ -8930,7 +9076,7 @@
         }
         
         createHeaderButtons() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'header-buttons' }, [
                 $.button({
@@ -8960,7 +9106,7 @@
         }
         
         createDashboardContent() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'dashboard-content' }, [
                 this.createMainActionButtons()
@@ -8968,7 +9114,7 @@
         }
         
         createBalanceSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -9042,7 +9188,7 @@
         }
         
         createMiniBalance(label, amount) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             return $.div({
                 style: {
                     textAlign: 'center'
@@ -9066,7 +9212,7 @@
         }
         
         createTokenCard(name, amount, value) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card' }, [
                 $.div({ className: 'token-name' }, [name]),
@@ -9076,7 +9222,7 @@
         }
         
         createMainActionButtons() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'wallet-actions',
@@ -9109,13 +9255,183 @@
                 $.button({
                     className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
-                    onclick: () => this.showWalletSettings()
+                    onclick: () => {
+                        console.log('[WalletSettings] Button clicked, this context:', this);
+                        console.log('[WalletSettings] showWalletSettings exists:', !!this.showWalletSettings);
+                        
+                        // Try multiple approaches to show wallet settings
+                        if (this.showWalletSettings && typeof this.showWalletSettings === 'function') {
+                            console.log('[WalletSettings] Using this.showWalletSettings');
+                            this.showWalletSettings();
+                        } else if (window.DashboardPage && window.DashboardPage.showWalletSettingsStatic) {
+                            console.log('[WalletSettings] Using static method');
+                            window.DashboardPage.showWalletSettingsStatic(window.mooshWallet);
+                        } else {
+                            console.log('[WalletSettings] Direct modal creation');
+                            // Direct approach - show password verification then settings
+                            const showPasswordModal = () => {
+                                const $ = window.ElementFactory;
+                                const passwordOverlay = $.div({ 
+                                    className: 'modal-overlay',
+                                    style: {
+                                        position: 'fixed',
+                                        top: '0',
+                                        left: '0',
+                                        right: '0',
+                                        bottom: '0',
+                                        background: 'rgba(0, 0, 0, 0.8)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        zIndex: '10000'
+                                    },
+                                    onclick: (e) => {
+                                        if (e.target.className === 'modal-overlay') {
+                                            e.currentTarget.remove();
+                                        }
+                                    }
+                                }, [
+                                    $.div({
+                                        className: 'modal-container',
+                                        style: {
+                                            background: '#000000',
+                                            border: '2px solid #ffffff',
+                                            borderRadius: '0',
+                                            padding: '30px',
+                                            minWidth: '400px',
+                                            maxWidth: '90%'
+                                        }
+                                    }, [
+                                        $.h3({
+                                            style: {
+                                                color: '#ffffff',
+                                                marginBottom: '20px',
+                                                fontSize: '18px'
+                                            }
+                                        }, ['Password Required']),
+                                        
+                                        $.p({
+                                            style: {
+                                                color: '#888888',
+                                                marginBottom: '20px',
+                                                fontSize: '14px'
+                                            }
+                                        }, ['Enter your wallet password to access settings']),
+                                        
+                                        $.input({
+                                            type: 'password',
+                                            id: 'settingsPasswordInput',
+                                            placeholder: 'Enter password',
+                                            style: {
+                                                width: '100%',
+                                                padding: '12px',
+                                                background: '#000000',
+                                                border: '1px solid #ffffff',
+                                                color: '#ffffff',
+                                                fontSize: '14px',
+                                                borderRadius: '0',
+                                                marginBottom: '10px'
+                                            },
+                                            onkeydown: (e) => {
+                                                if (e.key === 'Enter') {
+                                                    const enteredPassword = e.target.value;
+                                                    const storedPassword = localStorage.getItem('walletPassword');
+                                                    if (enteredPassword === storedPassword) {
+                                                        passwordOverlay.remove();
+                                                        const modal = new WalletSettingsModal(window.mooshWallet);
+                                                        modal.show();
+                                                    } else {
+                                                        const errorMsg = document.getElementById('passwordErrorMsg');
+                                                        if (errorMsg) {
+                                                            errorMsg.textContent = 'Incorrect password';
+                                                            errorMsg.style.display = 'block';
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }),
+                                        
+                                        $.div({
+                                            id: 'passwordErrorMsg',
+                                            style: {
+                                                color: '#ff4444',
+                                                fontSize: '12px',
+                                                marginTop: '10px',
+                                                display: 'none'
+                                            }
+                                        }),
+                                        
+                                        $.div({ 
+                                            style: {
+                                                display: 'flex',
+                                                gap: '10px',
+                                                marginTop: '20px',
+                                                justifyContent: 'flex-end'
+                                            }
+                                        }, [
+                                            $.button({
+                                                style: {
+                                                    padding: '10px 20px',
+                                                    background: '#000000',
+                                                    border: '1px solid #666666',
+                                                    color: '#ffffff',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '0'
+                                                },
+                                                onclick: () => passwordOverlay.remove()
+                                            }, ['Cancel']),
+                                            
+                                            $.button({
+                                                style: {
+                                                    padding: '10px 20px',
+                                                    background: '#ffffff',
+                                                    border: '1px solid #ffffff',
+                                                    color: '#000000',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '0'
+                                                },
+                                                onclick: () => {
+                                                    const passwordInput = document.getElementById('settingsPasswordInput');
+                                                    const errorMsg = document.getElementById('passwordErrorMsg');
+                                                    const enteredPassword = passwordInput.value;
+                                                    const storedPassword = localStorage.getItem('walletPassword');
+                                                    
+                                                    if (!enteredPassword) {
+                                                        errorMsg.textContent = 'Please enter a password';
+                                                        errorMsg.style.display = 'block';
+                                                        return;
+                                                    }
+                                                    
+                                                    if (enteredPassword === storedPassword) {
+                                                        passwordOverlay.remove();
+                                                        const modal = new WalletSettingsModal(window.mooshWallet);
+                                                        modal.show();
+                                                    } else {
+                                                        errorMsg.textContent = 'Incorrect password';
+                                                        errorMsg.style.display = 'block';
+                                                    }
+                                                }
+                                            }, ['Verify'])
+                                        ])
+                                    ])
+                                ]);
+                                
+                                document.body.appendChild(passwordOverlay);
+                                setTimeout(() => {
+                                    const input = document.getElementById('settingsPasswordInput');
+                                    if (input) input.focus();
+                                }, 100);
+                            };
+                            
+                            showPasswordModal();
+                        }
+                    }
                 }, ['Wallet Settings'])
             ]);
         }
         
         createSparkProtocolSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: 'margin-top: 24px; padding-top: 24px; border-top: 1px solid #333333;'
@@ -9221,7 +9537,7 @@
         }
         
         createTransactionHistory() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -9284,7 +9600,7 @@
         }
         
         createEmptyTransactions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -9311,7 +9627,7 @@
         
         // Missing dashboard component methods
         createStatusBanner() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -9338,7 +9654,7 @@
         }
         
         createWalletTypeSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'terminal-box',
@@ -9410,7 +9726,7 @@
         }
         
         createStatsGrid() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'stats-grid',
@@ -9508,7 +9824,7 @@
         }
         
         createSparkProtocolSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'spark-protocol-section' }, [
                 $.div({ className: 'spark-header' }, [
@@ -9537,7 +9853,7 @@
         }
         
         createNetworkCard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card network-card' }, [
                 $.div({ className: 'token-name' }, ['Network']),
@@ -9759,6 +10075,12 @@
     // ═══════════════════════════════════════════════════════════════════════
     class WalletDetailsPage extends Component {
         render() {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Get wallet type from URL params
+            const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+            const selectedType = urlParams.get('type') || 'taproot';
+            
             const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
             
             // Get the real wallet data from localStorage or state
@@ -9769,18 +10091,101 @@
             const allAddresses = this.getRealWalletAddresses(sparkWallet, currentWallet);
             const privateKeys = this.getRealPrivateKeys(sparkWallet, currentWallet);
             
+            // Filter to show only the selected wallet type
+            const filteredAddresses = this.filterByWalletType(allAddresses, selectedType);
+            const filteredPrivateKeys = this.filterPrivateKeysByType(privateKeys, selectedType);
+            
             const card = $.div({ className: 'card' }, [
-                this.createTitle(),
-                this.createAddressesSection(allAddresses),
-                this.createPrivateKeysSection(privateKeys),
+                this.createTitle(selectedType),
+                this.createAddressesSection(filteredAddresses, selectedType),
+                this.createPrivateKeysSection(filteredPrivateKeys, selectedType),
                 this.createRecoveryPhraseSection(generatedSeed),
                 this.createActionButtons()
             ]);
 
             return card;
         }
+        
+        filterByWalletType(addresses, type) {
+            // Handle object format from getRealWalletAddresses
+            if (!Array.isArray(addresses)) {
+                // Convert object to filtered result based on type
+                const typeToKey = {
+                    'taproot': 'taproot',
+                    'nativeSegWit': 'segwit',
+                    'nestedSegWit': 'nestedSegwit',
+                    'legacy': 'legacy',
+                    'spark': 'spark'
+                };
+                
+                const key = typeToKey[type];
+                const address = addresses[key] || 'Not available';
+                
+                return {
+                    [key]: address
+                };
+            }
+            
+            // Legacy array support
+            const typeMapping = {
+                'taproot': 'Taproot',
+                'nativeSegWit': 'Native SegWit',
+                'nestedSegWit': 'Nested SegWit',
+                'legacy': 'Legacy',
+                'spark': 'Spark Protocol'
+            };
+            
+            const targetLabel = typeMapping[type];
+            return addresses.filter(addr => addr.label === targetLabel);
+        }
+        
+        filterPrivateKeysByType(privateKeys, type) {
+            // Handle object format from getRealPrivateKeys
+            if (!Array.isArray(privateKeys)) {
+                // Convert object to filtered result based on type
+                if (type === 'spark') {
+                    return privateKeys.spark ? { spark: privateKeys.spark } : {};
+                } else {
+                    // For Bitcoin types, use the appropriate key
+                    const typeToKey = {
+                        'taproot': 'taproot',
+                        'nativeSegWit': 'segwit',
+                        'nestedSegWit': 'nestedSegwit',
+                        'legacy': 'legacy'
+                    };
+                    
+                    const key = typeToKey[type];
+                    const keyData = privateKeys[key] || privateKeys.bitcoin;
+                    
+                    return keyData ? { bitcoin: keyData } : {};
+                }
+            }
+            
+            // Legacy array support
+            const typeMapping = {
+                'taproot': 'Taproot',
+                'nativeSegWit': 'Native SegWit',
+                'nestedSegWit': 'Nested SegWit',
+                'legacy': 'Legacy',
+                'spark': 'Spark Protocol'
+            };
+            
+            const targetLabel = typeMapping[type];
+            return privateKeys.filter(key => key.label === targetLabel);
+        }
 
-        createTitle() {
+        createTitle(selectedType) {
+            const $ = window.ElementFactory || ElementFactory;
+            const typeNames = {
+                'taproot': 'Bitcoin Taproot',
+                'nativeSegWit': 'Bitcoin Native SegWit',
+                'nestedSegWit': 'Bitcoin Nested SegWit',
+                'legacy': 'Bitcoin Legacy',
+                'spark': 'Spark Protocol'
+            };
+            
+            const walletTypeName = typeNames[selectedType] || 'Bitcoin Taproot';
+            
             return $.div({
                 style: {
                     textAlign: 'center',
@@ -9831,11 +10236,18 @@
                         this.style.color = 'var(--text-dim)';
                         this.style.opacity = '0.8';
                     }
-                }, ['Your complete wallet information'])
+                }, [`${walletTypeName} Account Details`])
             ]);
         }
 
-        createAddressesSection(allAddresses) {
+        createAddressesSection(allAddresses, selectedType) {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Handle both array and object formats
+            const addressRows = Array.isArray(allAddresses) 
+                ? allAddresses.map(addr => this.createAddressRow(addr.label, addr.address))
+                : Object.entries(allAddresses).map(([type, address]) => this.createAddressRow(type, address));
+            
             return $.div({
                 style: {
                     background: '#000000',
@@ -9858,13 +10270,12 @@
                     ' BITCOIN ADDRESSES ',
                     $.span({ className: 'text-dim ui-bracket', style: { fontSize: 'calc(9px * var(--scale-factor))' } }, ['/>'])
                 ]),
-                ...Object.entries(allAddresses).map(([type, address]) => 
-                    this.createAddressRow(type, address)
-                )
+                ...addressRows
             ]);
         }
 
         createAddressRow(type, address) {
+            const $ = window.ElementFactory || ElementFactory;
             return $.div({
                 style: {
                     marginBottom: 'calc(16px * var(--scale-factor))',
@@ -9904,49 +10315,71 @@
             ]);
         }
 
-        createPrivateKeysSection(privateKeys) {
+        createPrivateKeysSection(privateKeys, selectedType) {
+            const $ = window.ElementFactory || ElementFactory;
             const keyRows = [];
             
-            // Add Spark private key if available
-            if (privateKeys.spark && privateKeys.spark.hex !== 'Not available') {
-                keyRows.push(
-                    $.div({ style: { marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['SPARK PRIVATE KEY']),
-                    this.createPrivateKeyRow('HEX', privateKeys.spark.hex)
-                );
-            }
-            
-            // Add Bitcoin private keys if available
-            if (privateKeys.bitcoin && (privateKeys.bitcoin.hex !== 'Not available' || privateKeys.bitcoin.wif !== 'Not available')) {
-                keyRows.push(
-                    $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['BITCOIN PRIVATE KEY']),
-                    this.createPrivateKeyRow('HEX', privateKeys.bitcoin.hex),
-                    this.createPrivateKeyRow('WIF', privateKeys.bitcoin.wif)
-                );
-            }
-            
-            // Add additional format-specific keys if available
-            ['segwit', 'taproot', 'legacy'].forEach(format => {
-                if (privateKeys[format] && (privateKeys[format].hex !== 'Not available' || privateKeys[format].wif !== 'Not available')) {
+            // Handle both array and object formats
+            if (Array.isArray(privateKeys)) {
+                // Array format - filtered keys
+                privateKeys.forEach(keyData => {
+                    if (keyData.spark && keyData.spark.hex !== 'Not available') {
+                        keyRows.push(
+                            $.div({ style: { marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['SPARK PRIVATE KEY']),
+                            this.createPrivateKeyRow('HEX', keyData.spark.hex)
+                        );
+                    }
+                    if (keyData.bitcoin && (keyData.bitcoin.hex !== 'Not available' || keyData.bitcoin.wif !== 'Not available')) {
+                        keyRows.push(
+                            $.div({ style: { marginTop: keyRows.length > 0 ? 'calc(16px * var(--scale-factor))' : '0', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [`${keyData.label.toUpperCase()} PRIVATE KEY`]),
+                            this.createPrivateKeyRow('HEX', keyData.bitcoin.hex),
+                            this.createPrivateKeyRow('WIF', keyData.bitcoin.wif)
+                        );
+                    }
+                });
+            } else {
+                // Object format - legacy support
+                // Add Spark private key if available
+                if (privateKeys.spark && privateKeys.spark.hex !== 'Not available') {
                     keyRows.push(
-                        $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [format.toUpperCase() + ' PRIVATE KEY']),
-                        this.createPrivateKeyRow(format.toUpperCase() + '-HEX', privateKeys[format].hex),
-                        this.createPrivateKeyRow(format.toUpperCase() + '-WIF', privateKeys[format].wif)
+                        $.div({ style: { marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['SPARK PRIVATE KEY']),
+                        this.createPrivateKeyRow('HEX', privateKeys.spark.hex)
                     );
                 }
-            });
-            
-            // Add extended keys if available
-            if (privateKeys.xpub) {
-                keyRows.push(
-                    $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#00CC66', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['EXTENDED PUBLIC KEY']),
-                    this.createPrivateKeyRow('XPUB', privateKeys.xpub)
-                );
-            }
-            if (privateKeys.xpriv) {
-                keyRows.push(
-                    $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF4444', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['EXTENDED PRIVATE KEY']),
-                    this.createPrivateKeyRow('XPRIV', privateKeys.xpriv)
-                );
+                
+                // Add Bitcoin private keys if available
+                if (privateKeys.bitcoin && (privateKeys.bitcoin.hex !== 'Not available' || privateKeys.bitcoin.wif !== 'Not available')) {
+                    keyRows.push(
+                        $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['BITCOIN PRIVATE KEY']),
+                        this.createPrivateKeyRow('HEX', privateKeys.bitcoin.hex),
+                        this.createPrivateKeyRow('WIF', privateKeys.bitcoin.wif)
+                    );
+                }
+                
+                // Add additional format-specific keys if available
+                ['segwit', 'taproot', 'legacy'].forEach(format => {
+                    if (privateKeys[format] && (privateKeys[format].hex !== 'Not available' || privateKeys[format].wif !== 'Not available')) {
+                        keyRows.push(
+                            $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [format.toUpperCase() + ' PRIVATE KEY']),
+                            this.createPrivateKeyRow(format.toUpperCase() + '-HEX', privateKeys[format].hex),
+                            this.createPrivateKeyRow(format.toUpperCase() + '-WIF', privateKeys[format].wif)
+                        );
+                    }
+                });
+                
+                // Add extended keys if available
+                if (privateKeys.xpub) {
+                    keyRows.push(
+                        $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#00CC66', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['EXTENDED PUBLIC KEY']),
+                        this.createPrivateKeyRow('XPUB', privateKeys.xpub)
+                    );
+                }
+                if (privateKeys.xpriv) {
+                    keyRows.push(
+                        $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF4444', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['EXTENDED PRIVATE KEY']),
+                        this.createPrivateKeyRow('XPRIV', privateKeys.xpriv)
+                    );
+                }
             }
             
             // If no keys available, show fallback
@@ -9992,6 +10425,7 @@
         }
 
         createPrivateKeyRow(type, key) {
+            const $ = window.ElementFactory || ElementFactory;
             const overlayId = `${type.toLowerCase()}KeyOverlay`;
             const displayId = `${type.toLowerCase()}KeyDisplay`;
             
@@ -10075,6 +10509,7 @@
         }
 
         createRecoveryPhraseSection(generatedSeed) {
+            const $ = window.ElementFactory || ElementFactory;
             return $.div({
                 style: {
                     background: '#000000',
@@ -10123,6 +10558,7 @@
         }
 
         createActionButtons() {
+            const $ = window.ElementFactory || ElementFactory;
             return $.div({
                 style: {
                     display: 'flex',
@@ -10241,67 +10677,88 @@
         
         getRealWalletAddresses(sparkWallet, currentWallet) {
             // Get real addresses from stored wallet data
-            const sparkAddress = sparkWallet.addresses?.spark || currentWallet.sparkAddress || 'Not available';
-            const bitcoinAddress = sparkWallet.addresses?.bitcoin || currentWallet.bitcoinAddress || 'Not available';
+            const addresses = {};
             
-            // Check if we have additional bitcoin addresses from the API
-            const bitcoinAddresses = sparkWallet.bitcoinAddresses || {};
+            // Priority: sparkWallet > currentWallet
+            if (sparkWallet && sparkWallet.addresses) {
+                addresses.spark = sparkWallet.addresses.spark || 'Not available';
+                addresses.bitcoin = sparkWallet.addresses.bitcoin || 'Not available';
+                
+                // Check for additional bitcoin addresses in different formats
+                if (sparkWallet.bitcoinAddresses) {
+                    addresses.taproot = sparkWallet.bitcoinAddresses.taproot || addresses.bitcoin;
+                    addresses.segwit = sparkWallet.bitcoinAddresses.segwit || addresses.bitcoin;
+                    addresses.nestedSegwit = sparkWallet.bitcoinAddresses.nestedSegwit || 'Not available';
+                    addresses.legacy = sparkWallet.bitcoinAddresses.legacy || 'Not available';
+                } else {
+                    // Infer from bitcoin address format
+                    if (addresses.bitcoin.startsWith('bc1p') || addresses.bitcoin.startsWith('tb1p')) {
+                        addresses.taproot = addresses.bitcoin;
+                    } else if (addresses.bitcoin.startsWith('bc1q') || addresses.bitcoin.startsWith('tb1q')) {
+                        addresses.segwit = addresses.bitcoin;
+                    }
+                }
+            } else if (currentWallet) {
+                addresses.spark = currentWallet.sparkAddress || 'Not available';
+                addresses.bitcoin = currentWallet.bitcoinAddress || 'Not available';
+                addresses.taproot = currentWallet.addresses?.taproot || addresses.bitcoin;
+                addresses.segwit = currentWallet.addresses?.segwit || addresses.bitcoin;
+                addresses.nestedSegwit = currentWallet.addresses?.nestedSegwit || 'Not available';
+                addresses.legacy = currentWallet.addresses?.legacy || 'Not available';
+            }
             
-            // Return all available addresses
-            return {
-                'spark': sparkAddress,
-                'taproot': bitcoinAddresses.taproot || (bitcoinAddress.startsWith('bc1p') ? bitcoinAddress : 'Not available'),
-                'native-segwit': bitcoinAddresses.segwit || (bitcoinAddress.startsWith('bc1q') ? bitcoinAddress : 'Not available'),
-                'nested-segwit': bitcoinAddresses.nestedSegwit || 'Not available',
-                'legacy': bitcoinAddresses.legacy || 'Not available'
-            };
+            return addresses;
         }
         
         getRealPrivateKeys(sparkWallet, currentWallet) {
             // Get real private keys from stored wallet data
-            const privateKeys = sparkWallet.privateKeys || currentWallet.privateKeys || {};
-            const allPrivateKeys = sparkWallet.allPrivateKeys || {};
+            const keys = {};
             
-            // Prepare all available private key data
-            const keyData = {
-                spark: {
-                    hex: privateKeys.spark?.hex || 'Not available'
-                },
-                bitcoin: {
-                    hex: privateKeys.bitcoin?.hex || 'Not available',
-                    wif: privateKeys.bitcoin?.wif || 'Not available'
+            // Priority: sparkWallet > currentWallet
+            if (sparkWallet && sparkWallet.privateKeys) {
+                const privateKeys = sparkWallet.privateKeys;
+                const allPrivateKeys = sparkWallet.allPrivateKeys || {};
+                
+                // Spark key
+                if (privateKeys.spark?.hex) {
+                    keys.spark = { hex: privateKeys.spark.hex };
                 }
-            };
+                
+                // Bitcoin keys - check multiple sources
+                if (privateKeys.bitcoin) {
+                    keys.bitcoin = {
+                        hex: privateKeys.bitcoin.hex || 'Not available',
+                        wif: privateKeys.bitcoin.wif || 'Not available'
+                    };
+                    
+                    // Use the same key for all Bitcoin types if specific ones not provided
+                    keys.taproot = allPrivateKeys.taproot || keys.bitcoin;
+                    keys.segwit = allPrivateKeys.segwit || keys.bitcoin;
+                    keys.nestedSegwit = allPrivateKeys.nestedSegwit || keys.bitcoin;
+                    keys.legacy = allPrivateKeys.legacy || keys.bitcoin;
+                }
+            } else if (currentWallet && currentWallet.privateKeys) {
+                const privateKeys = currentWallet.privateKeys;
+                
+                if (privateKeys.spark?.hex) {
+                    keys.spark = { hex: privateKeys.spark.hex };
+                }
+                
+                if (privateKeys.bitcoin) {
+                    keys.bitcoin = {
+                        hex: privateKeys.bitcoin.hex || 'Not available',
+                        wif: privateKeys.bitcoin.wif || 'Not available'
+                    };
+                    
+                    // Use the same key for all Bitcoin types
+                    keys.taproot = keys.bitcoin;
+                    keys.segwit = keys.bitcoin;
+                    keys.nestedSegwit = keys.bitcoin;
+                    keys.legacy = keys.bitcoin;
+                }
+            }
             
-            // Add additional bitcoin format keys if available
-            if (allPrivateKeys.segwit) {
-                keyData.segwit = {
-                    hex: allPrivateKeys.segwit.hex || 'Not available',
-                    wif: allPrivateKeys.segwit.wif || 'Not available'
-                };
-            }
-            if (allPrivateKeys.taproot) {
-                keyData.taproot = {
-                    hex: allPrivateKeys.taproot.hex || 'Not available',
-                    wif: allPrivateKeys.taproot.wif || 'Not available'
-                };
-            }
-            if (allPrivateKeys.legacy) {
-                keyData.legacy = {
-                    hex: allPrivateKeys.legacy.hex || 'Not available',
-                    wif: allPrivateKeys.legacy.wif || 'Not available'
-                };
-            }
-            
-            // Also include xpub/xpriv if available
-            if (sparkWallet.xpub) {
-                keyData.xpub = sparkWallet.xpub;
-            }
-            if (sparkWallet.xpriv) {
-                keyData.xpriv = sparkWallet.xpriv;
-            }
-            
-            return keyData;
+            return keys;
         }
         
         generateAllWalletAddresses() {
@@ -10356,7 +10813,7 @@
         }
         
         createDashboard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Use the same card styling as other pages
             return $.div({ className: 'card' }, [
@@ -10370,7 +10827,7 @@
         }
         
         createQuickActions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -10388,7 +10845,7 @@
         }
         
         createActionButton(label, icon, onClick) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.button({
                 style: {
@@ -10430,7 +10887,7 @@
         }
         
         createDashboardTitle() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -10487,7 +10944,7 @@
         }
         
         createDashboardHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -10559,7 +11016,7 @@
         }
         
         createAccountSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const activeAccount = 'Account 1'; // Will be dynamic later
             
             return $.div({ className: 'account-selector' }, [
@@ -10574,7 +11031,7 @@
         }
         
         createHeaderButtons() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'header-buttons' }, [
                 $.button({
@@ -10604,7 +11061,7 @@
         }
         
         createDashboardContent() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'dashboard-content' }, [
                 this.createMainActionButtons()
@@ -10612,7 +11069,7 @@
         }
         
         createBalanceSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -10686,7 +11143,7 @@
         }
         
         createMiniBalance(label, amount) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             return $.div({
                 style: {
                     textAlign: 'center'
@@ -10710,7 +11167,7 @@
         }
         
         createTokenCard(name, amount, value) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card' }, [
                 $.div({ className: 'token-name' }, [name]),
@@ -10720,7 +11177,7 @@
         }
         
         createMainActionButtons() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'wallet-actions',
@@ -10753,13 +11210,183 @@
                 $.button({
                     className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
-                    onclick: () => this.showWalletSettings()
+                    onclick: () => {
+                        console.log('[WalletSettings] Button clicked, this context:', this);
+                        console.log('[WalletSettings] showWalletSettings exists:', !!this.showWalletSettings);
+                        
+                        // Try multiple approaches to show wallet settings
+                        if (this.showWalletSettings && typeof this.showWalletSettings === 'function') {
+                            console.log('[WalletSettings] Using this.showWalletSettings');
+                            this.showWalletSettings();
+                        } else if (window.DashboardPage && window.DashboardPage.showWalletSettingsStatic) {
+                            console.log('[WalletSettings] Using static method');
+                            window.DashboardPage.showWalletSettingsStatic(window.mooshWallet);
+                        } else {
+                            console.log('[WalletSettings] Direct modal creation');
+                            // Direct approach - show password verification then settings
+                            const showPasswordModal = () => {
+                                const $ = window.ElementFactory;
+                                const passwordOverlay = $.div({ 
+                                    className: 'modal-overlay',
+                                    style: {
+                                        position: 'fixed',
+                                        top: '0',
+                                        left: '0',
+                                        right: '0',
+                                        bottom: '0',
+                                        background: 'rgba(0, 0, 0, 0.8)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        zIndex: '10000'
+                                    },
+                                    onclick: (e) => {
+                                        if (e.target.className === 'modal-overlay') {
+                                            e.currentTarget.remove();
+                                        }
+                                    }
+                                }, [
+                                    $.div({
+                                        className: 'modal-container',
+                                        style: {
+                                            background: '#000000',
+                                            border: '2px solid #ffffff',
+                                            borderRadius: '0',
+                                            padding: '30px',
+                                            minWidth: '400px',
+                                            maxWidth: '90%'
+                                        }
+                                    }, [
+                                        $.h3({
+                                            style: {
+                                                color: '#ffffff',
+                                                marginBottom: '20px',
+                                                fontSize: '18px'
+                                            }
+                                        }, ['Password Required']),
+                                        
+                                        $.p({
+                                            style: {
+                                                color: '#888888',
+                                                marginBottom: '20px',
+                                                fontSize: '14px'
+                                            }
+                                        }, ['Enter your wallet password to access settings']),
+                                        
+                                        $.input({
+                                            type: 'password',
+                                            id: 'settingsPasswordInput',
+                                            placeholder: 'Enter password',
+                                            style: {
+                                                width: '100%',
+                                                padding: '12px',
+                                                background: '#000000',
+                                                border: '1px solid #ffffff',
+                                                color: '#ffffff',
+                                                fontSize: '14px',
+                                                borderRadius: '0',
+                                                marginBottom: '10px'
+                                            },
+                                            onkeydown: (e) => {
+                                                if (e.key === 'Enter') {
+                                                    const enteredPassword = e.target.value;
+                                                    const storedPassword = localStorage.getItem('walletPassword');
+                                                    if (enteredPassword === storedPassword) {
+                                                        passwordOverlay.remove();
+                                                        const modal = new WalletSettingsModal(window.mooshWallet);
+                                                        modal.show();
+                                                    } else {
+                                                        const errorMsg = document.getElementById('passwordErrorMsg');
+                                                        if (errorMsg) {
+                                                            errorMsg.textContent = 'Incorrect password';
+                                                            errorMsg.style.display = 'block';
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }),
+                                        
+                                        $.div({
+                                            id: 'passwordErrorMsg',
+                                            style: {
+                                                color: '#ff4444',
+                                                fontSize: '12px',
+                                                marginTop: '10px',
+                                                display: 'none'
+                                            }
+                                        }),
+                                        
+                                        $.div({ 
+                                            style: {
+                                                display: 'flex',
+                                                gap: '10px',
+                                                marginTop: '20px',
+                                                justifyContent: 'flex-end'
+                                            }
+                                        }, [
+                                            $.button({
+                                                style: {
+                                                    padding: '10px 20px',
+                                                    background: '#000000',
+                                                    border: '1px solid #666666',
+                                                    color: '#ffffff',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '0'
+                                                },
+                                                onclick: () => passwordOverlay.remove()
+                                            }, ['Cancel']),
+                                            
+                                            $.button({
+                                                style: {
+                                                    padding: '10px 20px',
+                                                    background: '#ffffff',
+                                                    border: '1px solid #ffffff',
+                                                    color: '#000000',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '0'
+                                                },
+                                                onclick: () => {
+                                                    const passwordInput = document.getElementById('settingsPasswordInput');
+                                                    const errorMsg = document.getElementById('passwordErrorMsg');
+                                                    const enteredPassword = passwordInput.value;
+                                                    const storedPassword = localStorage.getItem('walletPassword');
+                                                    
+                                                    if (!enteredPassword) {
+                                                        errorMsg.textContent = 'Please enter a password';
+                                                        errorMsg.style.display = 'block';
+                                                        return;
+                                                    }
+                                                    
+                                                    if (enteredPassword === storedPassword) {
+                                                        passwordOverlay.remove();
+                                                        const modal = new WalletSettingsModal(window.mooshWallet);
+                                                        modal.show();
+                                                    } else {
+                                                        errorMsg.textContent = 'Incorrect password';
+                                                        errorMsg.style.display = 'block';
+                                                    }
+                                                }
+                                            }, ['Verify'])
+                                        ])
+                                    ])
+                                ]);
+                                
+                                document.body.appendChild(passwordOverlay);
+                                setTimeout(() => {
+                                    const input = document.getElementById('settingsPasswordInput');
+                                    if (input) input.focus();
+                                }, 100);
+                            };
+                            
+                            showPasswordModal();
+                        }
+                    }
                 }, ['Wallet Settings'])
             ]);
         }
         
         createSparkProtocolSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: 'margin-top: 24px; padding-top: 24px; border-top: 1px solid #333333;'
@@ -10865,7 +11492,7 @@
         }
         
         createTransactionHistory() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -10928,7 +11555,7 @@
         }
         
         createEmptyTransactions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -10955,7 +11582,7 @@
         
         // Missing dashboard component methods
         createStatusBanner() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -10982,7 +11609,7 @@
         }
         
         createWalletTypeSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'terminal-box',
@@ -11054,7 +11681,7 @@
         }
         
         createStatsGrid() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'stats-grid',
@@ -11152,7 +11779,7 @@
         }
         
         createSparkProtocolSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'spark-protocol-section' }, [
                 $.div({ className: 'spark-header' }, [
@@ -11181,7 +11808,7 @@
         }
         
         createNetworkCard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card network-card' }, [
                 $.div({ className: 'token-name' }, ['Network']),
@@ -11977,8 +12604,214 @@
         }
         
         showWalletSettings() {
-            const modal = new WalletSettingsModal(this.app);
-            modal.show();
+            console.log('[DashboardPage] showWalletSettings called');
+            // First verify password before showing settings
+            this.showPasswordVerification(() => {
+                console.log('[DashboardPage] Password verified, showing settings modal');
+                // Password verified, show settings modal
+                const modal = new WalletSettingsModal(this.app);
+                modal.show();
+            });
+        }
+        
+        // Static method to show wallet settings from anywhere
+        static showWalletSettingsStatic(app) {
+            console.log('[DashboardPage] showWalletSettingsStatic called');
+            const dashboard = new DashboardPage(app);
+            dashboard.showWalletSettings();
+        }
+        
+        showPasswordVerification(onSuccess) {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Get current theme
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            const themeColor = isMooshMode ? '#69fd97' : '#f57315';
+            const borderColor = isMooshMode ? '#232b2b' : '#333333';
+            
+            // Create password verification modal
+            const passwordOverlay = $.div({ 
+                className: 'modal-overlay',
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    right: '0',
+                    bottom: '0',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: '10000'
+                },
+                onclick: (e) => {
+                    if (e.target.className === 'modal-overlay') {
+                        e.currentTarget.remove();
+                    }
+                }
+            }, [
+                $.div({ 
+                    className: 'modal-container password-modal',
+                    style: {
+                        background: '#000000',
+                        border: `2px solid ${themeColor}`,
+                        borderRadius: '0',
+                        padding: '24px',
+                        width: '90%',
+                        maxWidth: '400px'
+                    }
+                }, [
+                    $.div({ 
+                        className: 'modal-header',
+                        style: {
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '20px'
+                        }
+                    }, [
+                        $.h2({ 
+                            className: 'modal-title',
+                            style: {
+                                color: themeColor,
+                                fontSize: '18px',
+                                margin: '0'
+                            }
+                        }, ['Password Required']),
+                        $.button({
+                            className: 'modal-close',
+                            style: {
+                                background: 'none',
+                                border: 'none',
+                                color: themeColor,
+                                fontSize: '24px',
+                                cursor: 'pointer',
+                                padding: '0',
+                                width: '30px',
+                                height: '30px'
+                            },
+                            onclick: () => passwordOverlay.remove()
+                        }, ['×'])
+                    ]),
+                    
+                    $.div({ 
+                        className: 'modal-body',
+                        style: { padding: '20px 0' }
+                    }, [
+                        $.p({
+                            style: {
+                                color: '#888888',
+                                marginBottom: '20px',
+                                fontSize: '14px'
+                            }
+                        }, ['Enter your wallet password to access settings']),
+                        
+                        $.input({
+                            type: 'password',
+                            id: 'settingsPasswordInput',
+                            placeholder: 'Enter password',
+                            style: {
+                                width: '100%',
+                                padding: '12px',
+                                background: '#000000',
+                                border: `2px solid ${themeColor}`,
+                                color: themeColor,
+                                fontSize: '14px',
+                                borderRadius: '0',
+                                outline: 'none'
+                            },
+                            onkeydown: (e) => {
+                                if (e.key === 'Enter') {
+                                    this.verifyPasswordForSettings(passwordOverlay, onSuccess);
+                                }
+                            }
+                        }),
+                        
+                        $.div({
+                            id: 'passwordErrorMsg',
+                            style: {
+                                color: '#ff4444',
+                                fontSize: '12px',
+                                marginTop: '10px',
+                                display: 'none'
+                            }
+                        })
+                    ]),
+                    
+                    $.div({ 
+                        className: 'modal-footer',
+                        style: {
+                            display: 'flex',
+                            gap: '10px',
+                            marginTop: '20px'
+                        }
+                    }, [
+                        $.button({
+                            className: 'btn btn-secondary',
+                            style: {
+                                flex: '1',
+                                padding: '12px',
+                                background: '#000000',
+                                border: `2px solid ${themeColor}`,
+                                color: themeColor,
+                                borderRadius: '0',
+                                cursor: 'pointer'
+                            },
+                            onclick: () => passwordOverlay.remove()
+                        }, ['Cancel']),
+                        $.button({
+                            className: 'btn btn-primary',
+                            style: {
+                                flex: '1',
+                                padding: '12px',
+                                background: themeColor,
+                                border: `2px solid ${themeColor}`,
+                                color: '#000000',
+                                borderRadius: '0',
+                                cursor: 'pointer',
+                                fontWeight: '600'
+                            },
+                            onclick: () => this.verifyPasswordForSettings(passwordOverlay, onSuccess)
+                        }, ['Verify'])
+                    ])
+                ])
+            ]);
+            
+            document.body.appendChild(passwordOverlay);
+            
+            // Focus password input
+            setTimeout(() => {
+                const input = document.getElementById('settingsPasswordInput');
+                if (input) input.focus();
+            }, 100);
+        }
+        
+        verifyPasswordForSettings(modalElement, onSuccess) {
+            const passwordInput = document.getElementById('settingsPasswordInput');
+            const errorMsg = document.getElementById('passwordErrorMsg');
+            
+            if (!passwordInput) return;
+            
+            const enteredPassword = passwordInput.value;
+            const storedPassword = localStorage.getItem('walletPassword');
+            
+            if (!enteredPassword) {
+                errorMsg.textContent = 'Please enter a password';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            if (enteredPassword === storedPassword) {
+                // Success - close modal and call success callback
+                modalElement.remove();
+                onSuccess();
+            } else {
+                // Failed - show error
+                errorMsg.textContent = 'Incorrect password';
+                errorMsg.style.display = 'block';
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
         }
         
         showStablecoinSwap() {
@@ -12023,7 +12856,7 @@
         }
         
         show() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const accounts = this.app.state.get('accounts') || [];
             const currentAccountId = this.app.state.get('currentAccountId');
             
@@ -12075,7 +12908,7 @@
         }
         
         createAccountList(accounts, currentAccountId) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             if (accounts.length === 0) {
                 return $.div({ style: 'text-align: center; padding: 40px; color: #666;' }, [
@@ -12090,7 +12923,7 @@
         }
         
         createAccountItem(account, isActive) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -12147,7 +12980,7 @@
         }
         
         createActions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ style: 'display: flex; gap: 10px; justify-content: center; margin-top: 20px;' }, [
                 $.button({
@@ -12172,7 +13005,7 @@
         }
         
         createNewAccountForm() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({}, [
                 $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Create New Account']),
@@ -12200,7 +13033,7 @@
         }
         
         createImportForm() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({}, [
                 $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Import Account']),
@@ -12328,7 +13161,7 @@
         }
         
         createHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -12368,7 +13201,7 @@
         }
         
         createAccountList() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const accounts = this.app.state.get('accounts');
             const activeIndex = this.app.state.get('activeAccountIndex');
             
@@ -12489,7 +13322,7 @@
         }
         
         createActions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -12615,7 +13448,7 @@
         }
         
         async show() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Fetch transactions for current account
             await this.fetchTransactions();
@@ -12654,7 +13487,7 @@
         }
         
         createHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -12694,7 +13527,7 @@
         }
         
         createFilterSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -12732,7 +13565,7 @@
         }
         
         createTransactionList() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             if (this.transactions.length === 0) {
                 return $.div({
@@ -12839,7 +13672,7 @@
         }
         
         createActions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -12936,7 +13769,7 @@
         }
         
         async show() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Fetch latest prices
             await this.fetchPrices();
@@ -12974,7 +13807,7 @@
         }
         
         createHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -13014,7 +13847,7 @@
         }
         
         createTokenList() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -13114,7 +13947,7 @@
         }
         
         createActions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -13201,7 +14034,7 @@
         }
         
         show() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Check if we're in MOOSH mode
             const isMooshMode = document.body.classList.contains('moosh-mode');
@@ -13263,7 +14096,7 @@
         }
         
         createHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const isMobile = window.innerWidth <= 768;
             
             return $.div({ 
@@ -13394,7 +14227,7 @@
         }
         
         createSwapInterface() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const isMobile = window.innerWidth <= 768;
             
             return $.div({ 
@@ -13491,7 +14324,7 @@
         }
         
         createFooter() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const canSwap = this.fromAmount && parseFloat(this.fromAmount) > 0;
             const hasBalance = this.getTokenBalance(this.fromToken) >= parseFloat(this.fromAmount || 0);
             const isMobile = window.innerWidth <= 768;
@@ -13932,7 +14765,7 @@
         }
         
         createTokenSection(type) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const isFrom = type === 'from';
             const token = isFrom ? this.fromToken : this.toToken;
             const amount = isFrom ? this.fromAmount : this.toAmount;
@@ -14165,7 +14998,7 @@
         }
         
         createTokenSelector(type) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const token = type === 'from' ? this.fromToken : this.toToken;
             const balance = this.getTokenBalance(token);
             const isMobile = window.innerWidth <= 768;
@@ -14305,7 +15138,7 @@
         }
         
         createTransactionDetails() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const rate = this.getExchangeRate();
             const fee = this.fromAmount ? (parseFloat(this.fromAmount) * 0.003).toFixed(8) : '0.00';
             const priceImpact = this.calculatePriceImpact();
@@ -14399,7 +15232,7 @@
         }
         
         createDetailRow(label, value, valueColor = 'var(--text-primary)', isImportant = false, tooltip = '') {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const isMobile = window.innerWidth <= 768;
             
             return $.div({
@@ -14457,7 +15290,7 @@
         }
         
         createSettingsPanel() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -14648,27 +15481,475 @@
         }
         
         show() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
+            console.log('[WalletSettingsModal] show() called');
             
-            this.modal = $.div({ className: 'modal-overlay' }, [
-                $.div({ className: 'modal-container settings-modal' }, [
-                    this.createHeader(),
-                    this.createSettingsTabs(),
-                    this.createFooter()
+            // Get current theme
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            const themeColor = isMooshMode ? '#69fd97' : '#f57315';
+            const borderColor = isMooshMode ? '#232b2b' : '#333333';
+            
+            this.modal = $.div({ 
+                className: 'modal-overlay',
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    right: '0',
+                    bottom: '0',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: '10000'
+                }
+            }, [
+                $.div({ 
+                    className: 'terminal-box settings-terminal',
+                    style: {
+                        background: '#000000',
+                        border: `2px solid ${themeColor}`,
+                        borderRadius: '0',
+                        width: '90%',
+                        maxWidth: '800px',
+                        maxHeight: '80vh',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        fontFamily: 'monospace'
+                    }
+                }, [
+                    this.createTerminalHeader(themeColor),
+                    this.createTerminalContent(themeColor, borderColor)
                 ])
             ]);
             
-            document.body.appendChild(this.modal);
-            this.addStyles();
+            // Close on overlay click
+            this.modal.onclick = (e) => {
+                if (e.target === this.modal) {
+                    this.close();
+                }
+            };
             
-            // Show the modal by adding the 'show' class
+            document.body.appendChild(this.modal);
+            
+            // Show with fade-in
             setTimeout(() => {
-                this.modal.classList.add('show');
+                this.modal.style.opacity = '1';
             }, 10);
         }
         
+        createTerminalHeader(themeColor) {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            return $.div({
+                style: {
+                    background: '#000000',
+                    borderBottom: `2px solid ${themeColor}`,
+                    padding: '15px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }
+            }, [
+                $.div({
+                    style: {
+                        color: themeColor,
+                        fontSize: '14px',
+                        fontFamily: 'monospace'
+                    }
+                }, ['~/moosh/wallet/settings $ ls -la accounts/']),
+                $.button({
+                    style: {
+                        background: 'transparent',
+                        border: 'none',
+                        color: themeColor,
+                        fontSize: '20px',
+                        cursor: 'pointer',
+                        padding: '0 5px'
+                    },
+                    onclick: () => this.close()
+                }, ['×'])
+            ]);
+        }
+        
+        createTerminalContent(themeColor, borderColor) {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Get wallet data from storage
+            const sparkWallet = this.app.state.get('sparkWallet') || JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+            const currentWallet = this.app.state.get('currentWallet') || {};
+            
+            // Get real addresses using the WalletDetailsPage method
+            const walletDetailsPage = new WalletDetailsPage(this.app);
+            const addresses = walletDetailsPage.getRealWalletAddresses(sparkWallet, currentWallet);
+            
+            // Create wallet types with real addresses
+            const walletTypes = [
+                { 
+                    value: 'spark', 
+                    label: 'Spark Protocol', 
+                    address: addresses.spark || 'Not generated',
+                    type: 'Lightning', 
+                    permission: 'drwxr-xr-x',
+                    icon: '⚡'
+                },
+                { 
+                    value: 'taproot', 
+                    label: 'Bitcoin Taproot', 
+                    address: addresses.taproot || 'Not generated',
+                    type: 'Primary', 
+                    permission: 'drwxr-xr-x',
+                    icon: '₿'
+                },
+                { 
+                    value: 'nativeSegWit', 
+                    label: 'Native SegWit', 
+                    address: addresses.segwit || 'Not generated',
+                    type: 'BIP84', 
+                    permission: 'drwxr-xr-x',
+                    icon: '₿'
+                },
+                { 
+                    value: 'nestedSegWit', 
+                    label: 'Nested SegWit', 
+                    address: addresses.nestedSegwit || 'Not generated',
+                    type: 'BIP49', 
+                    permission: 'drwxr-xr-x',
+                    icon: '₿'
+                },
+                { 
+                    value: 'legacy', 
+                    label: 'Bitcoin Legacy', 
+                    address: addresses.legacy || 'Not generated',
+                    type: 'BIP44', 
+                    permission: 'drwxr-xr-x',
+                    icon: '₿'
+                }
+            ];
+            
+            return $.div({
+                style: {
+                    padding: '20px',
+                    overflowY: 'auto',
+                    flex: '1'
+                }
+            }, [
+                $.div({
+                    style: {
+                        color: '#888',
+                        fontSize: '12px',
+                        marginBottom: '20px',
+                        fontFamily: 'monospace'
+                    }
+                }, [`total ${walletTypes.length} wallets`]),
+                
+                ...walletTypes.map((wallet, index) => 
+                    $.div({
+                        className: 'terminal-account-item',
+                        style: {
+                            color: themeColor,
+                            fontSize: '14px',
+                            padding: '10px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontFamily: 'monospace',
+                            marginBottom: '5px',
+                            borderLeft: `3px solid transparent`
+                        },
+                        onmouseover: (e) => {
+                            e.currentTarget.style.background = `${themeColor}20`;
+                            e.currentTarget.style.borderLeft = `3px solid ${themeColor}`;
+                        },
+                        onmouseout: (e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.borderLeft = '3px solid transparent';
+                        },
+                        onclick: () => this.viewAccountDetails(wallet.value)
+                    }, [
+                        $.div({
+                            style: {
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                flexWrap: 'wrap'
+                            }
+                        }, [
+                            $.span({ style: { color: '#888', marginRight: '10px', minWidth: '100px' } }, [wallet.permission]),
+                            $.span({ style: { color: '#888', marginRight: '10px', minWidth: '20px' } }, ['1']),
+                            $.span({ style: { color: '#888', marginRight: '10px', minWidth: '50px' } }, ['moosh']),
+                            $.span({ style: { color: '#888', marginRight: '10px', minWidth: '50px' } }, ['moosh']),
+                            $.span({ style: { color: '#888', marginRight: '10px', minWidth: '50px' } }, ['4096']),
+                            $.span({ style: { color: '#888', marginRight: '10px', minWidth: '60px' } }, [new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toLowerCase()]),
+                            $.span({ style: { color: '#888', marginRight: '10px', minWidth: '50px' } }, [new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })]),
+                            $.span({ style: { color: themeColor, fontWeight: 'bold' } }, [`${wallet.value}/`]),
+                            $.span({ style: { color: '#666', marginLeft: '10px' } }, [`[${wallet.label}]`])
+                        ]),
+                        $.div({
+                            style: {
+                                color: '#666',
+                                fontSize: '11px',
+                                marginTop: '8px',
+                                paddingLeft: '40px',
+                                fontFamily: 'monospace',
+                                wordBreak: 'break-all',
+                                lineHeight: '1.4'
+                            }
+                        }, [
+                            $.span({ style: { color: themeColor } }, [wallet.icon]),
+                            $.span({ style: { marginLeft: '8px' } }, [wallet.address])
+                        ])
+                    ])
+                ),
+                
+                $.div({
+                    style: {
+                        marginTop: '30px',
+                        paddingTop: '20px',
+                        borderTop: `1px solid ${borderColor}`,
+                        color: '#888',
+                        fontSize: '12px',
+                        fontFamily: 'monospace'
+                    }
+                }, [
+                    $.div({}, [`~/moosh/wallet/settings $ echo "Click on any wallet to view full details and private keys"`]),
+                    $.div({ style: { marginTop: '10px', color: themeColor } }, ['█'])
+                ])
+            ]);
+        }
+        
+        viewAccountDetails(walletType) {
+            console.log('[WalletSettingsModal] Navigating to wallet details for:', walletType);
+            this.close();
+            if (this.app && this.app.router) {
+                this.app.router.navigate(`wallet-details?type=${walletType}`);
+            } else {
+                window.location.hash = `#wallet-details?type=${walletType}`;
+            }
+        }
+        
+        close() {
+            if (this.modal) {
+                this.modal.style.opacity = '0';
+                setTimeout(() => {
+                    if (this.modal && this.modal.parentNode) {
+                        this.modal.parentNode.removeChild(this.modal);
+                    }
+                }, 300);
+            }
+        }
+        
+        addStyles() {
+            if (document.getElementById('wallet-settings-styles')) return;
+            
+            const style = document.createElement('style');
+            style.id = 'wallet-settings-styles';
+            style.textContent = `
+                /* Wallet Settings Modal Styles - MOOSH Theme */
+                .settings-modal {
+                    background: #000000 !important;
+                    border: 2px solid #f57315 !important;
+                    border-radius: 0 !important;
+                    color: #ffffff !important;
+                    max-width: 800px !important;
+                    width: 90% !important;
+                    max-height: 90vh !important;
+                    overflow: hidden !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                }
+                
+                .settings-modal .modal-header {
+                    background: #000000 !important;
+                    border-bottom: 2px solid #f57315 !important;
+                    padding: 20px !important;
+                    display: flex !important;
+                    justify-content: space-between !important;
+                    align-items: center !important;
+                }
+                
+                .settings-modal .modal-title {
+                    color: #f57315 !important;
+                    font-size: 24px !important;
+                    margin: 0 !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                }
+                
+                .settings-modal .modal-close {
+                    background: transparent !important;
+                    border: none !important;
+                    color: #f57315 !important;
+                    font-size: 28px !important;
+                    cursor: pointer !important;
+                    padding: 0 !important;
+                    width: 32px !important;
+                    height: 32px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    transition: all 0.2s ease !important;
+                }
+                
+                .settings-modal .modal-close:hover {
+                    color: #ffffff !important;
+                    transform: rotate(90deg) !important;
+                }
+                
+                .settings-modal .settings-content {
+                    flex: 1 !important;
+                    overflow: hidden !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                }
+                
+                .settings-modal .settings-tabs {
+                    background: #000000 !important;
+                    border-bottom: 1px solid #333333 !important;
+                    padding: 0 20px !important;
+                    display: flex !important;
+                    gap: 0 !important;
+                }
+                
+                .settings-modal .settings-tab {
+                    background: transparent !important;
+                    border: none !important;
+                    border-bottom: 3px solid transparent !important;
+                    color: #888888 !important;
+                    padding: 15px 20px !important;
+                    font-size: 14px !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    position: relative !important;
+                }
+                
+                .settings-modal .settings-tab:hover {
+                    color: #ffffff !important;
+                }
+                
+                .settings-modal .settings-tab.active {
+                    color: #f57315 !important;
+                    border-bottom-color: #f57315 !important;
+                }
+                
+                .settings-modal .settings-panel {
+                    flex: 1 !important;
+                    overflow-y: auto !important;
+                    padding: 20px !important;
+                    background: #000000 !important;
+                }
+                
+                .settings-modal .settings-section {
+                    padding: 20px !important;
+                    background: #000000 !important;
+                }
+                
+                .settings-modal .settings-subtitle {
+                    color: #f57315 !important;
+                    font-size: 20px !important;
+                    margin: 0 0 10px 0 !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                }
+                
+                .settings-modal .modal-footer {
+                    background: #000000 !important;
+                    border-top: 1px solid #333333 !important;
+                    padding: 20px !important;
+                    display: flex !important;
+                    justify-content: flex-end !important;
+                    gap: 10px !important;
+                }
+                
+                .settings-modal .btn {
+                    padding: 10px 20px !important;
+                    border: 2px solid #f57315 !important;
+                    background: #000000 !important;
+                    color: #f57315 !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    border-radius: 0 !important;
+                }
+                
+                .settings-modal .btn:hover {
+                    background: #f57315 !important;
+                    color: #000000 !important;
+                }
+                
+                .settings-modal .btn-primary {
+                    background: #f57315 !important;
+                    color: #000000 !important;
+                }
+                
+                .settings-modal .btn-primary:hover {
+                    background: #000000 !important;
+                    color: #f57315 !important;
+                }
+                
+                /* Account items styling */
+                .settings-modal .account-item {
+                    border: 2px solid #333333 !important;
+                    background: #000000 !important;
+                    margin-bottom: 10px !important;
+                }
+                
+                .settings-modal .account-item:hover {
+                    border-color: #f57315 !important;
+                    box-shadow: 0 0 10px rgba(245, 115, 21, 0.3) !important;
+                }
+                
+                /* Scrollbar styling */
+                .settings-modal .settings-panel::-webkit-scrollbar {
+                    width: 8px !important;
+                }
+                
+                .settings-modal .settings-panel::-webkit-scrollbar-track {
+                    background: #111111 !important;
+                }
+                
+                .settings-modal .settings-panel::-webkit-scrollbar-thumb {
+                    background: #333333 !important;
+                    border-radius: 0 !important;
+                }
+                
+                .settings-modal .settings-panel::-webkit-scrollbar-thumb:hover {
+                    background: #f57315 !important;
+                }
+                
+                /* Settings inputs */
+                .settings-modal select,
+                .settings-modal input {
+                    background: #000000 !important;
+                    border: 1px solid #333333 !important;
+                    color: #ffffff !important;
+                    padding: 8px 12px !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                    border-radius: 0 !important;
+                    width: 100% !important;
+                }
+                
+                .settings-modal select:focus,
+                .settings-modal input:focus {
+                    border-color: #f57315 !important;
+                    outline: none !important;
+                }
+                
+                .settings-modal .setting-item {
+                    margin-bottom: 20px !important;
+                }
+                
+                .settings-modal .setting-label {
+                    display: block !important;
+                    margin-bottom: 8px !important;
+                    color: #888888 !important;
+                    font-size: 13px !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
         createHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'modal-header' }, [
                 $.h2({ className: 'modal-title' }, ['⚙ Wallet Settings']),
@@ -14680,8 +15961,8 @@
         }
         
         createSettingsTabs() {
-            const $ = ElementFactory;
-            const tabs = ['General', 'Security', 'Network', 'Advanced'];
+            const $ = window.ElementFactory || ElementFactory;
+            const tabs = ['Accounts', 'General', 'Security', 'Network', 'Advanced'];
             
             return $.div({ className: 'settings-content' }, [
                 $.div({ className: 'settings-tabs' }, 
@@ -14693,13 +15974,82 @@
                     )
                 ),
                 $.div({ className: 'settings-panel', id: 'settings-panel' }, [
-                    this.createGeneralSettings()
+                    this.createAccountsSettings()
                 ])
             ]);
         }
         
+        createAccountsSettings() {
+            const $ = window.ElementFactory || ElementFactory;
+            const walletTypes = [
+                { value: 'taproot', label: 'Bitcoin Taproot', prefix: 'bc1p...', type: 'Primary' },
+                { value: 'nativeSegWit', label: 'Bitcoin Native SegWit', prefix: 'bc1q...', type: 'BIP84' },
+                { value: 'nestedSegWit', label: 'Bitcoin Nested SegWit', prefix: '3...', type: 'BIP49' },
+                { value: 'legacy', label: 'Bitcoin Legacy', prefix: '1...', type: 'BIP44' },
+                { value: 'spark', label: 'Spark Protocol', prefix: 'sp1...', type: 'Lightning' }
+            ];
+            
+            return $.div({ className: 'settings-section' }, [
+                $.h3({ className: 'settings-subtitle' }, ['Wallet Accounts']),
+                $.p({ 
+                    style: 'color: #888888; margin-bottom: 20px; font-size: 14px;' 
+                }, ['Click on any account to view its details, including seed phrase and private keys.']),
+                
+                $.div({ 
+                    className: 'accounts-list',
+                    style: 'display: flex; flex-direction: column; gap: 12px;'
+                }, walletTypes.map(wallet => 
+                    $.div({
+                        className: 'account-item',
+                        style: {
+                            background: '#000000',
+                            border: '2px solid #333333',
+                            borderRadius: '0',
+                            padding: '20px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            marginBottom: '12px'
+                        },
+                        onclick: () => this.viewAccountDetails(wallet.value),
+                        onmouseover: function() {
+                            this.style.borderColor = '#f57315';
+                            this.style.background = '#111111';
+                            this.style.boxShadow = '0 0 10px rgba(245, 115, 21, 0.3)';
+                        },
+                        onmouseout: function() {
+                            this.style.borderColor = '#333333';
+                            this.style.background = '#000000';
+                            this.style.boxShadow = 'none';
+                        }
+                    }, [
+                        $.div({ style: 'display: flex; justify-content: space-between; align-items: center;' }, [
+                            $.div({}, [
+                                $.h4({ 
+                                    style: 'color: #f57315; margin: 0 0 6px 0; font-size: 18px; font-family: "JetBrains Mono", monospace;' 
+                                }, [wallet.label]),
+                                $.p({ 
+                                    style: 'color: #888888; margin: 0; font-size: 14px; font-family: "JetBrains Mono", monospace;' 
+                                }, [`${wallet.prefix} • ${wallet.type}`])
+                            ]),
+                            $.div({ 
+                                style: 'color: #f57315; font-size: 24px; font-weight: bold;' 
+                            }, ['→'])
+                        ])
+                    ])
+                ))
+            ]);
+        }
+        
+        viewAccountDetails(walletType) {
+            // Close settings modal
+            this.close();
+            
+            // Navigate to wallet details page with the selected wallet type
+            window.location.hash = `#wallet-details?type=${walletType}`;
+        }
+        
         createGeneralSettings() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'settings-section' }, [
                 $.h3({ className: 'settings-subtitle' }, ['General Settings']),
@@ -14750,7 +16100,7 @@
         }
         
         createSecuritySettings() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'settings-section' }, [
                 $.h3({ className: 'settings-subtitle' }, ['Security Settings']),
@@ -14782,7 +16132,7 @@
         }
         
         createNetworkSettings() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'settings-section' }, [
                 $.h3({ className: 'settings-subtitle' }, ['Network Settings']),
@@ -14822,7 +16172,7 @@
         }
         
         createAdvancedSettings() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'settings-section' }, [
                 $.h3({ className: 'settings-subtitle' }, ['Advanced Settings']),
@@ -14864,7 +16214,7 @@
         }
         
         createFooter() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'modal-footer' }, [
                 $.button({
@@ -14895,6 +16245,9 @@
             let content;
             
             switch(tabName) {
+                case 'Accounts':
+                    content = this.createAccountsSettings();
+                    break;
                 case 'General':
                     content = this.createGeneralSettings();
                     break;
@@ -14931,6 +16284,18 @@
         saveSettings() {
             this.app.showNotification('Settings saved successfully!', 'success');
             this.close();
+        }
+        
+        close() {
+            if (this.modal) {
+                this.modal.classList.remove('show');
+                setTimeout(() => {
+                    if (this.modal && this.modal.parentNode) {
+                        this.modal.parentNode.removeChild(this.modal);
+                        this.modal = null;
+                    }
+                }, 300);
+            }
         }
         
         addStyles() {
@@ -15049,7 +16414,7 @@
         }
         
         show() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             this.modal = $.div({ className: 'modal-backdrop' }, [
                 $.div({ className: 'modal', style: 'max-width: 500px;' }, [
@@ -15066,7 +16431,7 @@
         }
         
         createHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'modal-header' }, [
                 $.h2({ className: 'modal-title' }, ['Send Lightning Payment']),
@@ -15078,7 +16443,7 @@
         }
         
         createContent() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'modal-content' }, [
                 // Terminal-style header
@@ -15136,7 +16501,7 @@
         }
         
         createFooter() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'modal-footer' }, [
                 $.button({
@@ -15186,7 +16551,7 @@
         }
         
         show() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             this.modal = $.div({ className: 'modal-backdrop' }, [
                 $.div({ className: 'modal', style: 'max-width: 500px;' }, [
@@ -15203,7 +16568,7 @@
         }
         
         createHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'modal-header' }, [
                 $.h2({ className: 'modal-title' }, ['Receive Payment']),
@@ -15215,7 +16580,7 @@
         }
         
         createContent() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'modal-content' }, [
                 // Terminal-style header
@@ -15317,7 +16682,7 @@
         }
         
         createFooter() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'modal-footer' }, [
                 $.button({
@@ -15474,7 +16839,7 @@
     // ═══════════════════════════════════════════════════════════════════════
     class DashboardPage extends Component {
         render() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Check if wallet exists before rendering dashboard
             const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
@@ -15611,7 +16976,7 @@
         }
         
         createDashboard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'wallet-dashboard-container' }, [
                 this.createDashboardHeader(),
@@ -15620,7 +16985,7 @@
         }
         
         createDashboardHeader() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             // Get current responsive breakpoint
             const breakpoint = ResponsiveUtils.getBreakpoint();
@@ -15835,13 +17200,65 @@
                                 title: 'Toggle Balance Visibility'
                             }, [this.app.state.get('isBalanceHidden') ? 'Show' : 'Hide'])
                         ])
+                    ]),
+                    
+                    // Wallet address display
+                    $.div({
+                        id: 'walletAddressDisplay',
+                        style: {
+                            marginTop: '12px',
+                            padding: '8px 12px',
+                            background: 'rgba(245, 115, 21, 0.05)',
+                            border: '1px solid rgba(245, 115, 21, 0.2)',
+                            borderRadius: '0',
+                            fontSize: '12px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            color: 'var(--text-dim)',
+                            textAlign: 'center',
+                            wordBreak: 'break-all',
+                            lineHeight: '1.4'
+                        }
+                    }, [
+                        $.span({ style: { color: 'var(--text-primary)', fontWeight: '500' } }, ['Active Address: ']),
+                        $.span({ id: 'currentWalletAddress' }, [this.getCurrentWalletAddress()])
                     ])
                 ])
             ]);
         }
         
+        getCurrentWalletAddress() {
+            // Get the selected wallet type
+            const selectedType = this.app.state.get('selectedWalletType') || 'taproot';
+            
+            // Get wallet data from localStorage
+            const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+            const currentWallet = this.app.state.get('currentWallet') || {};
+            
+            // Map wallet types to their addresses
+            const addressMap = {
+                'taproot': currentWallet.taprootAddress || sparkWallet.addresses?.taproot || '',
+                'nativeSegWit': currentWallet.bitcoinAddress || sparkWallet.addresses?.bitcoin || '',
+                'nestedSegWit': currentWallet.nestedSegWitAddress || sparkWallet.addresses?.nestedSegWit || '',
+                'legacy': currentWallet.legacyAddress || sparkWallet.addresses?.legacy || '',
+                'spark': currentWallet.sparkAddress || sparkWallet.addresses?.spark || ''
+            };
+            
+            // Return the selected address or fallback
+            const selectedAddress = addressMap[selectedType];
+            if (selectedAddress) {
+                return selectedAddress;
+            }
+            
+            // Fallback to any available address
+            if (sparkWallet && sparkWallet.addresses) {
+                return sparkWallet.addresses.bitcoin || sparkWallet.addresses.spark || 'No address found';
+            }
+            
+            return 'No wallet address found';
+        }
+        
         createAccountSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const activeAccount = 'Account 1'; // Will be dynamic later
             
             return $.div({ className: 'account-selector' }, [
@@ -15856,7 +17273,7 @@
         }
         
         createHeaderButtons() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'header-buttons' }, [
                 $.button({
@@ -15886,7 +17303,7 @@
         }
         
         createDashboardContent() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'dashboard-content' }, [
                 this.createPriceTicker(),
@@ -15901,7 +17318,7 @@
         }
         
         createBalanceSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'balance-section' }, [
                 // Primary balance
@@ -15929,7 +17346,7 @@
         }
         
         createTokenCard(name, amount, value) {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card' }, [
                 $.div({ className: 'token-name' }, [name]),
@@ -15939,7 +17356,7 @@
         }
         
         createMainActionButtons() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'wallet-actions',
@@ -15972,13 +17389,183 @@
                 $.button({
                     className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
-                    onclick: () => this.showWalletSettings()
+                    onclick: () => {
+                        console.log('[WalletSettings] Button clicked, this context:', this);
+                        console.log('[WalletSettings] showWalletSettings exists:', !!this.showWalletSettings);
+                        
+                        // Try multiple approaches to show wallet settings
+                        if (this.showWalletSettings && typeof this.showWalletSettings === 'function') {
+                            console.log('[WalletSettings] Using this.showWalletSettings');
+                            this.showWalletSettings();
+                        } else if (window.DashboardPage && window.DashboardPage.showWalletSettingsStatic) {
+                            console.log('[WalletSettings] Using static method');
+                            window.DashboardPage.showWalletSettingsStatic(window.mooshWallet);
+                        } else {
+                            console.log('[WalletSettings] Direct modal creation');
+                            // Direct approach - show password verification then settings
+                            const showPasswordModal = () => {
+                                const $ = window.ElementFactory;
+                                const passwordOverlay = $.div({ 
+                                    className: 'modal-overlay',
+                                    style: {
+                                        position: 'fixed',
+                                        top: '0',
+                                        left: '0',
+                                        right: '0',
+                                        bottom: '0',
+                                        background: 'rgba(0, 0, 0, 0.8)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        zIndex: '10000'
+                                    },
+                                    onclick: (e) => {
+                                        if (e.target.className === 'modal-overlay') {
+                                            e.currentTarget.remove();
+                                        }
+                                    }
+                                }, [
+                                    $.div({
+                                        className: 'modal-container',
+                                        style: {
+                                            background: '#000000',
+                                            border: '2px solid #ffffff',
+                                            borderRadius: '0',
+                                            padding: '30px',
+                                            minWidth: '400px',
+                                            maxWidth: '90%'
+                                        }
+                                    }, [
+                                        $.h3({
+                                            style: {
+                                                color: '#ffffff',
+                                                marginBottom: '20px',
+                                                fontSize: '18px'
+                                            }
+                                        }, ['Password Required']),
+                                        
+                                        $.p({
+                                            style: {
+                                                color: '#888888',
+                                                marginBottom: '20px',
+                                                fontSize: '14px'
+                                            }
+                                        }, ['Enter your wallet password to access settings']),
+                                        
+                                        $.input({
+                                            type: 'password',
+                                            id: 'settingsPasswordInput',
+                                            placeholder: 'Enter password',
+                                            style: {
+                                                width: '100%',
+                                                padding: '12px',
+                                                background: '#000000',
+                                                border: '1px solid #ffffff',
+                                                color: '#ffffff',
+                                                fontSize: '14px',
+                                                borderRadius: '0',
+                                                marginBottom: '10px'
+                                            },
+                                            onkeydown: (e) => {
+                                                if (e.key === 'Enter') {
+                                                    const enteredPassword = e.target.value;
+                                                    const storedPassword = localStorage.getItem('walletPassword');
+                                                    if (enteredPassword === storedPassword) {
+                                                        passwordOverlay.remove();
+                                                        const modal = new WalletSettingsModal(window.mooshWallet);
+                                                        modal.show();
+                                                    } else {
+                                                        const errorMsg = document.getElementById('passwordErrorMsg');
+                                                        if (errorMsg) {
+                                                            errorMsg.textContent = 'Incorrect password';
+                                                            errorMsg.style.display = 'block';
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }),
+                                        
+                                        $.div({
+                                            id: 'passwordErrorMsg',
+                                            style: {
+                                                color: '#ff4444',
+                                                fontSize: '12px',
+                                                marginTop: '10px',
+                                                display: 'none'
+                                            }
+                                        }),
+                                        
+                                        $.div({ 
+                                            style: {
+                                                display: 'flex',
+                                                gap: '10px',
+                                                marginTop: '20px',
+                                                justifyContent: 'flex-end'
+                                            }
+                                        }, [
+                                            $.button({
+                                                style: {
+                                                    padding: '10px 20px',
+                                                    background: '#000000',
+                                                    border: '1px solid #666666',
+                                                    color: '#ffffff',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '0'
+                                                },
+                                                onclick: () => passwordOverlay.remove()
+                                            }, ['Cancel']),
+                                            
+                                            $.button({
+                                                style: {
+                                                    padding: '10px 20px',
+                                                    background: '#ffffff',
+                                                    border: '1px solid #ffffff',
+                                                    color: '#000000',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '0'
+                                                },
+                                                onclick: () => {
+                                                    const passwordInput = document.getElementById('settingsPasswordInput');
+                                                    const errorMsg = document.getElementById('passwordErrorMsg');
+                                                    const enteredPassword = passwordInput.value;
+                                                    const storedPassword = localStorage.getItem('walletPassword');
+                                                    
+                                                    if (!enteredPassword) {
+                                                        errorMsg.textContent = 'Please enter a password';
+                                                        errorMsg.style.display = 'block';
+                                                        return;
+                                                    }
+                                                    
+                                                    if (enteredPassword === storedPassword) {
+                                                        passwordOverlay.remove();
+                                                        const modal = new WalletSettingsModal(window.mooshWallet);
+                                                        modal.show();
+                                                    } else {
+                                                        errorMsg.textContent = 'Incorrect password';
+                                                        errorMsg.style.display = 'block';
+                                                    }
+                                                }
+                                            }, ['Verify'])
+                                        ])
+                                    ])
+                                ]);
+                                
+                                document.body.appendChild(passwordOverlay);
+                                setTimeout(() => {
+                                    const input = document.getElementById('settingsPasswordInput');
+                                    if (input) input.focus();
+                                }, 100);
+                            };
+                            
+                            showPasswordModal();
+                        }
+                    }
                 }, ['Wallet Settings'])
             ]);
         }
         
         createSparkProtocolSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: 'margin-top: 24px; padding-top: 24px; border-top: 1px solid #333333;'
@@ -16084,7 +17671,7 @@
         }
         
         createTransactionHistory() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -16147,7 +17734,7 @@
         }
         
         createEmptyTransactions() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -16174,7 +17761,7 @@
         
         // Missing dashboard component methods
         createStatusBanner() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: {
@@ -16201,7 +17788,7 @@
         }
         
         createWalletTypeSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'terminal-box',
@@ -16273,7 +17860,7 @@
         }
         
         createStatsGrid() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'stats-grid',
@@ -16371,7 +17958,7 @@
         }
         
         createSparkProtocolSection() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'spark-protocol-section' }, [
                 $.div({ className: 'spark-header' }, [
@@ -16400,7 +17987,7 @@
         }
         
         createNetworkCard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card network-card' }, [
                 $.div({ className: 'token-name' }, ['Network']),
@@ -16952,7 +18539,7 @@
         }
         
         createStatusBanner() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -16984,7 +18571,7 @@
         }
         
         createWalletTypeSelector() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 className: 'terminal-box',
@@ -17036,7 +18623,7 @@
         }
         
         createSelectedWalletDisplay() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 id: 'selected-wallet-display',
@@ -17102,7 +18689,7 @@
         }
         
         createNetworkCard() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ className: 'token-card' }, [
                 $.div({ className: 'token-name' }, ['Network Status']),
@@ -17121,7 +18708,7 @@
         }
         
         createSparkProtocolFeatures() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({
                 style: {
@@ -17241,7 +18828,7 @@
                 return;
             }
             
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             listElement.innerHTML = '';
             
             transactions.forEach(tx => {
@@ -17274,12 +18861,41 @@
             }
         }
         
-        switchWalletType() {
-            const selector = document.getElementById('wallet-type-selector');
+        switchWalletType(event) {
+            const selector = event ? event.target : document.getElementById('walletTypeSelector') || document.getElementById('wallet-type-selector');
             if (selector) {
                 const walletType = selector.value;
-                this.app.showNotification(`Switched to ${walletType} wallet`, 'success');
-                // TODO: Update address display based on wallet type
+                
+                // Save selected wallet type to state
+                this.app.state.set('selectedWalletType', walletType);
+                
+                // Update the address display
+                this.updateAddressDisplay();
+                
+                // Show notification
+                const walletNames = {
+                    'taproot': 'Bitcoin Taproot',
+                    'nativeSegWit': 'Bitcoin Native SegWit',
+                    'nestedSegWit': 'Bitcoin Nested SegWit',
+                    'legacy': 'Bitcoin Legacy',
+                    'spark': 'Spark Protocol'
+                };
+                this.app.showNotification(`Switched to ${walletNames[walletType] || walletType} wallet`, 'success');
+            }
+        }
+        
+        updateAddressDisplay() {
+            // Update the main address display under the buttons
+            const currentAddressElement = document.getElementById('currentWalletAddress');
+            if (currentAddressElement) {
+                currentAddressElement.textContent = this.getCurrentWalletAddress();
+            }
+            
+            // Also update the address in the wallet selector display if it exists
+            const selectedAddressElement = document.getElementById('selected-wallet-address') || 
+                                         document.getElementById('selectedWalletAddress');
+            if (selectedAddressElement) {
+                selectedAddressElement.textContent = this.getCurrentWalletAddress();
             }
         }
         
@@ -17327,7 +18943,7 @@
         
         // New dashboard features
         createPriceTicker() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'price-ticker',
@@ -17353,7 +18969,7 @@
         }
         
         createQuickActionsBar() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'terminal-box',
@@ -17411,7 +19027,7 @@
         }
         
         createWalletHealthIndicator() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'terminal-box',
@@ -17457,7 +19073,7 @@
         }
         
         createRecentActivityFeed() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 className: 'terminal-box',
@@ -17506,7 +19122,7 @@
         }
         
         createKeyboardShortcutHint() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             
             return $.div({ 
                 style: 'text-align: center; margin-top: 20px; padding: 16px; background: rgba(245, 115, 21, 0.05); border: 1px solid rgba(245, 115, 21, 0.2); border-radius: 0;'
@@ -17701,7 +19317,7 @@
         }
         
         createFooter() {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const footer = $.footer({ 
                 className: 'app-footer'
             }, [
@@ -17732,7 +19348,7 @@
         }
 
         showNotification(message, type = 'info') {
-            const $ = ElementFactory;
+            const $ = window.ElementFactory || ElementFactory;
             const notification = $.div({ className: 'notification' });
             notification.textContent = message;
             
@@ -17828,5 +19444,8 @@
 
     // Expose to global scope for debugging
     window.mooshWallet = app;
+    window.ElementFactory = ElementFactory;
+    window.WalletSettingsModal = WalletSettingsModal;
+    window.DashboardPage = DashboardPage;
 
 })(window);
