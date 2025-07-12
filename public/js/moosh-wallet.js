@@ -6300,45 +6300,46 @@
         createInstructions() {
             return $.div({
                 style: {
-                    background: 'rgba(245, 115, 21, 0.1)',
-                    border: '2px solid var(--text-primary)',
+                    background: '#000000',
+                    border: '2px solid #F57315',
                     borderRadius: '0',
                     padding: 'calc(20px * var(--scale-factor))',
-                    marginBottom: 'calc(24px * var(--scale-factor))'
+                    marginBottom: 'calc(24px * var(--scale-factor))',
+                    fontFamily: "'JetBrains Mono', monospace"
                 }
             }, [
                 $.div({
                     style: {
-                        color: 'var(--text-primary)',
+                        color: '#F57315',
                         fontWeight: '600',
-                        marginBottom: 'calc(12px * var(--scale-factor))',
-                        fontSize: 'calc(16px * var(--scale-factor))',
-                        textAlign: 'center'
+                        marginBottom: 'calc(16px * var(--scale-factor))',
+                        fontSize: 'calc(14px * var(--scale-factor))',
+                        textAlign: 'center',
+                        letterSpacing: '0.05em'
                     }
                 }, [
-                    $.span({ className: 'text-dim ui-bracket', style: { fontSize: 'calc(9px * var(--scale-factor))' } }, ['<']),
+                    $.span({ style: { color: '#666666', fontSize: 'calc(10px * var(--scale-factor))' } }, ['<']),
                     ' RECOVERY PHRASE IMPORT ',
-                    $.span({ className: 'text-dim ui-bracket', style: { fontSize: 'calc(9px * var(--scale-factor))' } }, ['/>'])
+                    $.span({ style: { color: '#666666', fontSize: 'calc(10px * var(--scale-factor))' } }, ['/>'])
                 ]),
                 $.div({
                     style: {
                         fontSize: 'calc(12px * var(--scale-factor))',
-                        lineHeight: '1.5',
-                        textAlign: 'center',
-                        color: 'var(--text-secondary)'
+                        lineHeight: '1.8',
+                        color: '#CCCCCC'
                     }
                 }, [
-                    $.div({ style: { marginBottom: 'calc(8px * var(--scale-factor))' } }, [
-                        $.span({ style: { color: '#00FF00' } }, ['[SYSTEM]']),
-                        ' Recovery phrase import protocol initiated'
+                    $.div({ style: { marginBottom: 'calc(10px * var(--scale-factor))' } }, [
+                        $.span({ style: { color: '#00FF00', fontWeight: '600' } }, ['[SYSTEM]']),
+                        $.span({ style: { color: '#888888' } }, [' Recovery phrase import protocol initiated'])
                     ]),
-                    $.div({ style: { marginBottom: 'calc(8px * var(--scale-factor))' } }, [
-                        $.span({ style: { color: '#FF9900' } }, ['[FORMAT]']),
-                        ' Supported: BIP39 12-word or 24-word mnemonics'
+                    $.div({ style: { marginBottom: 'calc(10px * var(--scale-factor))' } }, [
+                        $.span({ style: { color: '#F57315', fontWeight: '600' } }, ['[FORMAT]']),
+                        $.span({ style: { color: '#888888' } }, [' Supported: BIP39 12-word or 24-word mnemonics'])
                     ]),
                     $.div({}, [
-                        $.span({ style: { color: '#00D4FF' } }, ['[INPUT]']),
-                        ' Enter words separated by spaces in exact order'
+                        $.span({ style: { color: '#00D4FF', fontWeight: '600' } }, ['[INPUT]']),
+                        $.span({ style: { color: '#888888' } }, [' Enter words separated by spaces in exact order'])
                     ])
                 ])
             ]);
@@ -6348,7 +6349,7 @@
             return $.div({
                 style: {
                     background: '#000000',
-                    border: '2px solid var(--text-primary)',
+                    border: '2px solid #00FF00',
                     borderRadius: '0',
                     padding: 'calc(24px * var(--scale-factor))',
                     marginBottom: 'calc(24px * var(--scale-factor))'
@@ -6356,16 +6357,18 @@
             }, [
                 $.div({
                     style: {
-                        color: 'var(--text-primary)',
+                        color: '#00FF00',
                         fontWeight: '600',
                         marginBottom: 'calc(16px * var(--scale-factor))',
-                        fontSize: 'calc(14px * var(--scale-factor))',
-                        textAlign: 'center'
+                        fontSize: 'calc(13px * var(--scale-factor))',
+                        textAlign: 'center',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        letterSpacing: '0.05em'
                     }
                 }, [
-                    $.span({ className: 'text-dim ui-bracket', style: { fontSize: 'calc(9px * var(--scale-factor))' } }, ['<']),
-                    ' Enter Recovery Phrase ',
-                    $.span({ className: 'text-dim ui-bracket', style: { fontSize: 'calc(9px * var(--scale-factor))' } }, ['/>'])
+                    $.span({ style: { color: '#666666', fontSize: 'calc(10px * var(--scale-factor))' } }, ['<']),
+                    ' ENTER RECOVERY PHRASE ',
+                    $.span({ style: { color: '#666666', fontSize: 'calc(10px * var(--scale-factor))' } }, ['/>'])
                 ]),
                 $.div({ id: 'textImportMode' }, [
                     $.textarea({
@@ -6374,14 +6377,26 @@
                         style: {
                             width: '100%',
                             height: 'calc(120px * var(--scale-factor))',
-                            background: 'var(--bg-primary)',
-                            border: '1px solid var(--border-color)',
-                            color: 'var(--text-primary)',
+                            background: '#000000',
+                            border: '2px solid #333333',
+                            color: '#F57315',
                             fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: 'calc(14px * var(--scale-factor))',
+                            fontSize: 'calc(13px * var(--scale-factor))',
                             padding: 'calc(16px * var(--scale-factor))',
                             resize: 'vertical',
-                            lineHeight: '1.5'
+                            lineHeight: '1.6',
+                            outline: 'none',
+                            transition: 'border-color 0.2s ease',
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: '#F57315 #000000'
+                        },
+                        onfocus: function() {
+                            this.style.borderColor = '#F57315';
+                            this.style.boxShadow = '0 0 0 1px #F57315';
+                        },
+                        onblur: function() {
+                            this.style.borderColor = '#333333';
+                            this.style.boxShadow = 'none';
                         },
                         autocomplete: 'off',
                         autocorrect: 'off',
@@ -8332,6 +8347,40 @@
             const style = document.createElement('style');
             style.id = 'modal-styles';
             style.textContent = `
+                /* Custom Scrollbar Styles */
+                textarea::-webkit-scrollbar,
+                .modal-container::-webkit-scrollbar,
+                *::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+                
+                textarea::-webkit-scrollbar-track,
+                .modal-container::-webkit-scrollbar-track,
+                *::-webkit-scrollbar-track {
+                    background: #000000;
+                    border: 1px solid #333333;
+                }
+                
+                textarea::-webkit-scrollbar-thumb,
+                .modal-container::-webkit-scrollbar-thumb,
+                *::-webkit-scrollbar-thumb {
+                    background: #F57315;
+                    border-radius: 0;
+                }
+                
+                textarea::-webkit-scrollbar-thumb:hover,
+                .modal-container::-webkit-scrollbar-thumb:hover,
+                *::-webkit-scrollbar-thumb:hover {
+                    background: #FF9900;
+                }
+                
+                /* Firefox Scrollbar */
+                * {
+                    scrollbar-width: thin;
+                    scrollbar-color: #F57315 #000000;
+                }
+                
                 /* Modal Overlay */
                 .modal-overlay {
                     position: fixed;
