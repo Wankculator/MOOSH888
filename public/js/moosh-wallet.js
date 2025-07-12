@@ -6330,7 +6330,7 @@
                     }
                 }, [
                     $.div({ style: { marginBottom: 'calc(10px * var(--scale-factor))' } }, [
-                        $.span({ style: { color: '#00FF00', fontWeight: '600' } }, ['[SYSTEM]']),
+                        $.span({ style: { color: '#F57315', fontWeight: '600' } }, ['[SYSTEM]']),
                         $.span({ style: { color: '#888888' } }, [' Recovery phrase import protocol initiated'])
                     ]),
                     $.div({ style: { marginBottom: 'calc(10px * var(--scale-factor))' } }, [
@@ -6357,7 +6357,7 @@
             }, [
                 $.div({
                     style: {
-                        color: '#00FF00',
+                        color: '#F57315',
                         fontWeight: '600',
                         marginBottom: 'calc(16px * var(--scale-factor))',
                         fontSize: 'calc(13px * var(--scale-factor))',
