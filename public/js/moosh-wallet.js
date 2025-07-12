@@ -13621,17 +13621,30 @@
             }
         }
         
-        createNewAccount() {
-            // Generate new mnemonic
-            const mnemonic = this.generateMnemonic();
-            const name = `Account ${this.app.state.get('accounts').length + 1}`;
-            
-            this.app.state.addAccount(name, mnemonic);
-            this.app.showNotification(`Created new account: ${name}`, 'success');
-            this.close();
-            
-            // Navigate to dashboard
-            this.app.router.navigate('dashboard');
+        async createNewAccount() {
+            try {
+                // Generate new seed via API
+                const response = await this.app.apiService.generateSparkWallet(12);
+                
+                if (!response || !response.data || !response.data.mnemonic) {
+                    throw new Error('Failed to generate wallet');
+                }
+                
+                const mnemonic = response.data.mnemonic;
+                const name = `Account ${(this.app.state.get('accounts') || []).length + 1}`;
+                
+                // Create account using the correct method
+                await this.app.state.createAccount(name, mnemonic, false);
+                
+                this.app.showNotification(`Created new account: ${name}`, 'success');
+                this.close();
+                
+                // Navigate to dashboard
+                this.app.router.navigate('dashboard');
+            } catch (error) {
+                console.error('[MultiAccountModal] Failed to create account:', error);
+                this.app.showNotification('Failed to create account: ' + error.message, 'error');
+            }
         }
         
         generateMnemonic() {
