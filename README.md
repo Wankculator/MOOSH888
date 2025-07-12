@@ -79,7 +79,7 @@ MOOSH-WALLET/
 - `public/js/moosh-wallet.js` - Main frontend application
 - `src/server/api-server.js` - REST API endpoints
 - `src/server/services/walletService.js` - Core wallet functionality
-- `CLAUDE.md` - Development guidelines
+- `AI_DEVELOPMENT_GUIDELINES.md` - Development guidelines for AI assistants
 
 ### Testing Seed Generation
 ```bash
@@ -107,11 +107,14 @@ node test-seed-generation.cjs
 
 ## Contributing
 
-Please read `CLAUDE.md` for development guidelines and best practices.
+Please read `AI_DEVELOPMENT_GUIDELINES.md` for development guidelines and best practices when working with AI assistants.
 
 ## Important Documentation
 
+- `/docs/SEED_GENERATION_IMPLEMENTATION_GUIDE.md` - Complete seed generation implementation guide
 - `/docs/SEED_GENERATION_CRITICAL_PATH.md` - Critical seed generation flow
+- `/AI_DEVELOPMENT_GUIDELINES.md` - Guidelines for AI-assisted development
+- `/05_DOCUMENTATION/MASTER_PROMPT_NEEDED.md` - Comprehensive AI assistant prompt
 - `/docs/NAVIGATION_FIX_SUMMARY.md` - Recent navigation fixes
 - `/docs/DEVELOPER_GUIDE.md` - Development guidelines
 
@@ -124,7 +127,7 @@ Please read `CLAUDE.md` for development guidelines and best practices.
 For issues, please check:
 1. `/docs/` folder for documentation
 2. GitHub Issues
-3. `CLAUDE.md` for development help
+3. `AI_DEVELOPMENT_GUIDELINES.md` for AI-assisted development help
 
 ---
 

@@ -2300,6 +2300,10 @@
                 // Convert wordCount to strength: 12 words = 128 bits, 24 words = 256 bits
                 const strength = wordCount === 24 ? 256 : 128;
                 
+                // Create AbortController for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for SDK
+                
                 const response = await fetch(`${this.baseURL}/api/spark/generate-wallet`, {
                     method: 'POST',
                     headers: {
@@ -2308,8 +2312,11 @@
                     body: JSON.stringify({ 
                         strength: strength,
                         network: 'MAINNET' 
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -2318,6 +2325,10 @@
                 const data = await response.json();
                 return data;
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error('Spark wallet generation timed out after 20 seconds');
+                    throw new Error('Request timeout - seed generation is taking longer than expected');
+                }
                 console.error('Failed to generate Spark wallet:', error);
                 throw error;
             }
@@ -2422,13 +2433,18 @@
 
         navigate(pageId) {
             const currentPage = this.app.state.get('currentPage');
+            const currentPageFull = this.app.state.get('currentPageFull');
             console.log('[Router] Navigating from', currentPage, 'to', pageId);
             
-            if (pageId !== currentPage) {
+            // Extract the page name without query parameters for routing
+            const pageNameOnly = pageId.split('?')[0];
+            
+            if (pageId !== currentPageFull) {
                 const history = [...this.app.state.get('navigationHistory')];
                 history.push(pageId);
                 this.app.state.update({
-                    currentPage: pageId,
+                    currentPage: pageNameOnly, // Store only the page name for routing
+                    currentPageFull: pageId,    // Store full page with params for reference
                     navigationHistory: history
                 });
             }
@@ -6136,8 +6152,8 @@
                             localStorage.setItem('walletVerified', 'false');
                             this.app.state.set('walletVerified', false);
                             
-                            // Navigate to wallet details to show the generated wallet
-                            this.app.router.navigate('wallet-details');
+                            // Navigate to wallet details to show ALL generated wallets
+                            this.app.router.navigate('wallet-details?type=all');
                         } else {
                             // If no wallet data exists, show error
                             this.app.showNotification('No wallet data found. Please generate a new wallet.', 'error');
@@ -10077,9 +10093,9 @@
         render() {
             const $ = window.ElementFactory || ElementFactory;
             
-            // Get wallet type from URL params
+            // Get wallet type from URL params, default to 'all' to show all wallets
             const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-            const selectedType = urlParams.get('type') || 'taproot';
+            const selectedType = urlParams.get('type') || 'all';
             
             const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
             
@@ -10087,18 +10103,26 @@
             const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
             const currentWallet = this.app.state.get('currentWallet') || {};
             
+            // Debug logging
+            console.log('[WalletDetails] Selected type:', selectedType);
+            console.log('[WalletDetails] SparkWallet from localStorage:', sparkWallet);
+            console.log('[WalletDetails] CurrentWallet from state:', currentWallet);
+            console.log('[WalletDetails] Generated seed:', generatedSeed);
+            
             // Use the real addresses from the API
             const allAddresses = this.getRealWalletAddresses(sparkWallet, currentWallet);
             const privateKeys = this.getRealPrivateKeys(sparkWallet, currentWallet);
             
-            // Filter to show only the selected wallet type
-            const filteredAddresses = this.filterByWalletType(allAddresses, selectedType);
-            const filteredPrivateKeys = this.filterPrivateKeysByType(privateKeys, selectedType);
+            console.log('[WalletDetails] All addresses:', allAddresses);
+            console.log('[WalletDetails] Private keys:', privateKeys);
+            
+            // Show ALL addresses and private keys, not filtered
+            console.log('[WalletDetails] Showing all addresses and keys');
             
             const card = $.div({ className: 'card' }, [
-                this.createTitle(selectedType),
-                this.createAddressesSection(filteredAddresses, selectedType),
-                this.createPrivateKeysSection(filteredPrivateKeys, selectedType),
+                this.createTitle('All Wallets'), // Changed title
+                this.createAddressesSection(allAddresses, 'all'), // Show all addresses
+                this.createPrivateKeysSection(privateKeys, 'all'), // Show all private keys
                 this.createRecoveryPhraseSection(generatedSeed),
                 this.createActionButtons()
             ]);
@@ -10181,10 +10205,11 @@
                 'nativeSegWit': 'Bitcoin Native SegWit',
                 'nestedSegWit': 'Bitcoin Nested SegWit',
                 'legacy': 'Bitcoin Legacy',
-                'spark': 'Spark Protocol'
+                'spark': 'Spark Protocol',
+                'all': 'All Generated Wallets'
             };
             
-            const walletTypeName = typeNames[selectedType] || 'Bitcoin Taproot';
+            const walletTypeName = typeNames[selectedType] || 'All Generated Wallets';
             
             return $.div({
                 style: {
@@ -10267,7 +10292,7 @@
                     }
                 }, [
                     $.span({ className: 'text-dim ui-bracket', style: { fontSize: 'calc(9px * var(--scale-factor))' } }, ['<']),
-                    ' BITCOIN ADDRESSES ',
+                    ' ALL WALLET ADDRESSES ',
                     $.span({ className: 'text-dim ui-bracket', style: { fontSize: 'calc(9px * var(--scale-factor))' } }, ['/>'])
                 ]),
                 ...addressRows
@@ -10356,16 +10381,21 @@
                     );
                 }
                 
-                // Add additional format-specific keys if available
-                ['segwit', 'taproot', 'legacy'].forEach(format => {
-                    if (privateKeys[format] && (privateKeys[format].hex !== 'Not available' || privateKeys[format].wif !== 'Not available')) {
-                        keyRows.push(
-                            $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [format.toUpperCase() + ' PRIVATE KEY']),
-                            this.createPrivateKeyRow(format.toUpperCase() + '-HEX', privateKeys[format].hex),
-                            this.createPrivateKeyRow(format.toUpperCase() + '-WIF', privateKeys[format].wif)
-                        );
-                    }
-                });
+                // Add all other private keys when showing all
+                if (selectedType === 'all') {
+                    // Check all possible key types
+                    const keyTypes = ['segwit', 'taproot', 'legacy', 'nestedSegwit'];
+                    keyTypes.forEach(format => {
+                        if (privateKeys[format] && (privateKeys[format].hex !== 'Not available' || privateKeys[format].wif !== 'Not available')) {
+                            const formatName = this.getAddressTypeName(format);
+                            keyRows.push(
+                                $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [formatName.toUpperCase() + ' PRIVATE KEY']),
+                                this.createPrivateKeyRow(`${format}-HEX`, privateKeys[format].hex),
+                                this.createPrivateKeyRow(`${format}-WIF`, privateKeys[format].wif)
+                            );
+                        }
+                    });
+                }
                 
                 // Add extended keys if available
                 if (privateKeys.xpub) {
@@ -10426,8 +10456,10 @@
 
         createPrivateKeyRow(type, key) {
             const $ = window.ElementFactory || ElementFactory;
-            const overlayId = `${type.toLowerCase()}KeyOverlay`;
-            const displayId = `${type.toLowerCase()}KeyDisplay`;
+            // Generate unique IDs using timestamp and random number
+            const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const overlayId = `${type.toLowerCase().replace(/[^a-z0-9]/g, '')}KeyOverlay_${uniqueId}`;
+            const displayId = `${type.toLowerCase().replace(/[^a-z0-9]/g, '')}KeyDisplay_${uniqueId}`;
             
             return $.div({
                 style: {
@@ -10462,7 +10494,9 @@
                         }
                     }, [key]),
                     $.div({
-                        id: overlayId,
+                        className: 'key-overlay',
+                        'data-overlay-id': overlayId,
+                        'data-display-id': displayId,
                         style: {
                             position: 'absolute',
                             top: '0',
@@ -10479,7 +10513,17 @@
                             fontWeight: '600',
                             transition: 'opacity 0.3s ease'
                         },
-                        onclick: () => this.togglePrivateKeyVisibility(type)
+                        onclick: (e) => {
+                            const overlay = e.currentTarget;
+                            const displayId = overlay.getAttribute('data-display-id');
+                            if (overlay.style.display === 'none' || overlay.style.display === '') {
+                                overlay.style.display = 'flex';
+                                this.app.showNotification(`${type} private key hidden`, 'success');
+                            } else {
+                                overlay.style.display = 'none';
+                                this.app.showNotification(`${type} private key revealed`, 'success');
+                            }
+                        }
                     }, [`Click to Reveal ${type} Key`])
                 ]),
                 $.button({
@@ -10503,7 +10547,18 @@
                         fontSize: 'calc(10px * var(--scale-factor))',
                         cursor: 'pointer'
                     },
-                    onclick: () => this.togglePrivateKeyVisibility(type)
+                    onclick: () => {
+                        const overlay = document.querySelector(`[data-overlay-id="${overlayId}"]`);
+                        if (overlay) {
+                            if (overlay.style.display === 'none' || overlay.style.display === '') {
+                                overlay.style.display = 'flex';
+                                this.app.showNotification(`${type} private key hidden`, 'success');
+                            } else {
+                                overlay.style.display = 'none';
+                                this.app.showNotification(`${type} private key revealed`, 'success');
+                            }
+                        }
+                    }
                 }, ['Reveal'])
             ]);
         }
@@ -10607,13 +10662,16 @@
         
         getAddressTypeName(type) {
             const names = {
-                'spark': 'Spark Protocol',
-                'taproot': 'Taproot (P2TR)',
-                'native-segwit': 'Native SegWit (P2WPKH)',
-                'nested-segwit': 'Nested SegWit (P2SH)',
-                'legacy': 'Legacy (P2PKH)'
+                'spark': 'Spark Protocol (Lightning)',
+                'taproot': 'Bitcoin Taproot (P2TR)',
+                'segwit': 'Bitcoin SegWit (P2WPKH)', 
+                'nestedSegwit': 'Bitcoin Nested SegWit (P2SH)',
+                'legacy': 'Bitcoin Legacy (P2PKH)',
+                'bitcoin': 'Bitcoin SegWit', // Default bitcoin address
+                'native-segwit': 'Bitcoin Native SegWit (P2WPKH)',
+                'nested-segwit': 'Bitcoin Nested SegWit (P2SH)'
             };
-            return names[type] || 'Spark Protocol';
+            return names[type] || type.toUpperCase();
         }
         
         copyToClipboard(text, successMessage) {
@@ -10719,6 +10777,9 @@
                 const privateKeys = sparkWallet.privateKeys;
                 const allPrivateKeys = sparkWallet.allPrivateKeys || {};
                 
+                console.log('[getRealPrivateKeys] sparkWallet.privateKeys:', privateKeys);
+                console.log('[getRealPrivateKeys] sparkWallet.allPrivateKeys:', allPrivateKeys);
+                
                 // Spark key
                 if (privateKeys.spark?.hex) {
                     keys.spark = { hex: privateKeys.spark.hex };
@@ -10731,11 +10792,19 @@
                         wif: privateKeys.bitcoin.wif || 'Not available'
                     };
                     
-                    // Use the same key for all Bitcoin types if specific ones not provided
-                    keys.taproot = allPrivateKeys.taproot || keys.bitcoin;
-                    keys.segwit = allPrivateKeys.segwit || keys.bitcoin;
-                    keys.nestedSegwit = allPrivateKeys.nestedSegwit || keys.bitcoin;
-                    keys.legacy = allPrivateKeys.legacy || keys.bitcoin;
+                    // Check allPrivateKeys for specific keys
+                    if (allPrivateKeys.taproot) {
+                        keys.taproot = allPrivateKeys.taproot;
+                    }
+                    if (allPrivateKeys.segwit) {
+                        keys.segwit = allPrivateKeys.segwit;
+                    }
+                    if (allPrivateKeys.nestedSegwit) {
+                        keys.nestedSegwit = allPrivateKeys.nestedSegwit;
+                    }
+                    if (allPrivateKeys.legacy) {
+                        keys.legacy = allPrivateKeys.legacy;
+                    }
                 }
             } else if (currentWallet && currentWallet.privateKeys) {
                 const privateKeys = currentWallet.privateKeys;
@@ -10758,6 +10827,7 @@
                 }
             }
             
+            console.log('[getRealPrivateKeys] Final keys object:', keys);
             return keys;
         }
         
@@ -19231,12 +19301,13 @@
             
             // Initial render
             const initialHash = window.location.hash.substring(1);
+            const initialPageName = initialHash.split('?')[0]; // Extract page name without params
             console.log('[App] Initial hash:', initialHash);
             
             // Check if we have a valid route
-            if (initialHash && this.router.routes.has(initialHash)) {
+            if (initialPageName && this.router.routes.has(initialPageName)) {
                 // Special handling for dashboard - ensure wallet exists
-                if (initialHash === 'dashboard') {
+                if (initialPageName === 'dashboard') {
                     const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
                     const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
                     const currentWallet = this.state.get('currentWallet') || {};

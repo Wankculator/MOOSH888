@@ -100,7 +100,8 @@
       "Bash(pgrep:*)",
       "Bash(./cleanup-project.sh:*)",
       "Bash(sudo apt-get:*)",
-      "Bash(sudo apt-get install:*)"
+      "Bash(sudo apt-get install:*)",
+      "Bash(time curl:*)"
     ],
     "deny": []
   }

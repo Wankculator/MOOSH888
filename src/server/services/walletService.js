@@ -8,9 +8,17 @@ import { HDKey } from '@scure/bip32';
 import * as bitcoin from 'bitcoinjs-lib';
 import * as ecc from 'tiny-secp256k1';
 import crypto from 'crypto';
+import { createRequire } from 'module';
+
+// Create require function for CommonJS modules
+const require = createRequire(import.meta.url);
+const ECPairFactory = require('ecpair').ECPairFactory;
 
 // Initialize ECC library for bitcoinjs-lib
 bitcoin.initEccLib(ecc);
+
+// Initialize ECPair factory
+const ECPair = ECPairFactory(ecc);
 
 /**
  * Generate a BIP39 mnemonic
@@ -73,11 +81,14 @@ function generateSegwitAddress(root, network) {
         network 
     });
     
+    // Create ECPair from private key for WIF encoding
+    const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey), { network });
+    
     return {
         address,
         publicKey: Buffer.from(child.publicKey).toString('hex'),
         privateKey: Buffer.from(child.privateKey).toString('hex'),
-        wif: Buffer.from(child.privateKey).toString('hex'), // WIF conversion would require additional deps
+        wif: keyPair.toWIF(), // Proper WIF encoding
         path
     };
 }
@@ -97,11 +108,14 @@ function generateTaprootAddress(root, network) {
         network 
     });
     
+    // Create ECPair from private key for WIF encoding
+    const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey), { network });
+    
     return {
         address,
         publicKey: Buffer.from(child.publicKey).toString('hex'),
         privateKey: Buffer.from(child.privateKey).toString('hex'),
-        wif: Buffer.from(child.privateKey).toString('hex'), // WIF conversion would require additional deps
+        wif: keyPair.toWIF(), // Proper WIF encoding
         path
     };
 }
@@ -117,11 +131,14 @@ function generateLegacyAddress(root, network) {
         network 
     });
     
+    // Create ECPair from private key for WIF encoding
+    const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey), { network });
+    
     return {
         address,
         publicKey: Buffer.from(child.publicKey).toString('hex'),
         privateKey: Buffer.from(child.privateKey).toString('hex'),
-        wif: Buffer.from(child.privateKey).toString('hex'), // WIF conversion would require additional deps
+        wif: keyPair.toWIF(), // Proper WIF encoding
         path
     };
 }
@@ -144,11 +161,14 @@ function generateNestedSegwitAddress(root, network) {
         network 
     });
     
+    // Create ECPair from private key for WIF encoding
+    const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey), { network });
+    
     return {
         address,
         publicKey: Buffer.from(child.publicKey).toString('hex'),
         privateKey: Buffer.from(child.privateKey).toString('hex'),
-        wif: Buffer.from(child.privateKey).toString('hex'),
+        wif: keyPair.toWIF(), // Proper WIF encoding
         path
     };
 }
