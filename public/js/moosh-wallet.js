@@ -6338,7 +6338,7 @@
                         $.span({ style: { color: '#888888' } }, [' Supported: BIP39 12-word or 24-word mnemonics'])
                     ]),
                     $.div({}, [
-                        $.span({ style: { color: '#00D4FF', fontWeight: '600' } }, ['[INPUT]']),
+                        $.span({ style: { color: '#F57315', fontWeight: '600' } }, ['[INPUT]']),
                         $.span({ style: { color: '#888888' } }, [' Enter words separated by spaces in exact order'])
                     ])
                 ])
@@ -6349,7 +6349,7 @@
             return $.div({
                 style: {
                     background: '#000000',
-                    border: '2px solid #00FF00',
+                    border: '2px solid #F57315',
                     borderRadius: '0',
                     padding: 'calc(24px * var(--scale-factor))',
                     marginBottom: 'calc(24px * var(--scale-factor))'
@@ -8982,9 +8982,7 @@
                         animation: 'pulse 2s infinite',
                         textAlign: 'center'
                     }
-                }, [
-                    $.span({ style: { fontFamily: "'JetBrains Mono', monospace" } }, ['[OK]'])
-                ]),
+                }, []),
                 $.div({
                     style: {
                         fontSize: 'calc(14px * var(--scale-factor))',
@@ -8995,7 +8993,7 @@
                     }
                 }, [
                     $.div({ style: { marginBottom: 'calc(8px * var(--scale-factor))' } }, [
-                        $.span({ style: { color: '#00FF00' } }, ['[SUCCESS]']),
+                        $.span({ style: { color: '#F57315' } }, ['[SUCCESS]']),
                         ' Wallet import completed successfully'
                     ]),
                     $.div({ style: { color: '#888888', fontSize: 'calc(12px * var(--scale-factor))' } }, [
