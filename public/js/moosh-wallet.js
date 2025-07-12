@@ -7524,7 +7524,7 @@
                 const btcPrice = priceData.usd || 0;
                 
                 // Get current account
-                const currentAccount = this.app.state.get('currentAccount');
+                const currentAccount = this.app.state.getCurrentAccount();
                 if (currentAccount && currentAccount.addresses) {
                     // Fetch balance for the current address type
                     const walletType = this.app.state.get('selectedWalletType') || 'taproot';
@@ -10073,7 +10073,7 @@
                 const btcPrice = priceData.usd || 0;
                 
                 // Get current account
-                const currentAccount = this.app.state.get('currentAccount');
+                const currentAccount = this.app.state.getCurrentAccount();
                 if (currentAccount && currentAccount.addresses) {
                     // Fetch balance for the current address type
                     const walletType = this.app.state.get('selectedWalletType') || 'taproot';
@@ -12082,7 +12082,7 @@
                 const btcPrice = priceData.usd || 0;
                 
                 // Get current account
-                const currentAccount = this.app.state.get('currentAccount');
+                const currentAccount = this.app.state.getCurrentAccount();
                 if (currentAccount && currentAccount.addresses) {
                     // Fetch balance for the current address type
                     const walletType = this.app.state.get('selectedWalletType') || 'taproot';
@@ -12682,11 +12682,22 @@
             const accounts = this.app.state.get('accounts') || [];
             const currentAccountId = this.app.state.get('currentAccountId');
             
+            console.log('[Dashboard] Getting account display name - accounts:', accounts.length, 'currentId:', currentAccountId);
+            
             if (accounts.length === 0) {
-                return 'Account 1'; // Default for legacy single account
+                // Check if we have a legacy wallet without multi-account support
+                const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                const hasLegacyWallet = sparkWallet.addresses || this.app.state.get('currentWallet')?.isInitialized;
+                
+                if (hasLegacyWallet) {
+                    return 'Account 1'; // Default for legacy single account
+                }
+                return 'No Account';
             }
             
             const currentAccount = accounts.find(acc => acc.id === currentAccountId);
+            console.log('[Dashboard] Current account:', currentAccount);
+            
             return currentAccount ? `Active: ${currentAccount.name}` : 'Active: Account 1';
         }
         
@@ -13096,12 +13107,41 @@
                 onmouseout: (e) => {
                     if (!isActive) e.currentTarget.style.borderColor = '#333';
                 },
-                onclick: () => {
+                onclick: async () => {
                     if (!isActive) {
-                        this.app.state.switchAccount(account.id);
-                        this.app.showNotification(`Switched to ${account.name}`, 'success');
-                        this.close();
-                        this.app.router.render();
+                        // Switch account
+                        const switched = this.app.state.switchAccount(account.id);
+                        
+                        if (switched) {
+                            this.app.showNotification(`Switched to ${account.name}`, 'success');
+                            
+                            // Clear any cached data for proper refresh
+                            this.app.state.set('walletData', {
+                                addresses: {},
+                                balances: {},
+                                transactions: []
+                            });
+                            
+                            // Close modal
+                            this.close();
+                            
+                            // Force full page re-render to update all components
+                            this.app.router.render();
+                            
+                            // If on dashboard, trigger balance refresh
+                            if (this.app.state.get('currentPage') === 'dashboard') {
+                                setTimeout(() => {
+                                    // Trigger balance refresh if dashboard is loaded
+                                    const dashboardPage = document.querySelector('.dashboard-page');
+                                    if (dashboardPage) {
+                                        console.log('[MultiAccountModal] Triggering dashboard refresh after account switch');
+                                        // The dashboard will automatically fetch new balances on render
+                                    }
+                                }, 100);
+                            }
+                        } else {
+                            this.app.showNotification('Failed to switch account', 'error');
+                        }
                     }
                 }
             }, [
@@ -18261,7 +18301,7 @@
                 const btcPrice = priceData.usd || 0;
                 
                 // Get current account
-                const currentAccount = this.app.state.get('currentAccount');
+                const currentAccount = this.app.state.getCurrentAccount();
                 if (currentAccount && currentAccount.addresses) {
                     // Fetch balance for the current address type
                     const walletType = this.app.state.get('selectedWalletType') || 'taproot';
@@ -19076,11 +19116,22 @@
             const accounts = this.app.state.get('accounts') || [];
             const currentAccountId = this.app.state.get('currentAccountId');
             
+            console.log('[Dashboard] Getting account display name - accounts:', accounts.length, 'currentId:', currentAccountId);
+            
             if (accounts.length === 0) {
-                return 'Account 1'; // Default for legacy single account
+                // Check if we have a legacy wallet without multi-account support
+                const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                const hasLegacyWallet = sparkWallet.addresses || this.app.state.get('currentWallet')?.isInitialized;
+                
+                if (hasLegacyWallet) {
+                    return 'Account 1'; // Default for legacy single account
+                }
+                return 'No Account';
             }
             
             const currentAccount = accounts.find(acc => acc.id === currentAccountId);
+            console.log('[Dashboard] Current account:', currentAccount);
+            
             return currentAccount ? `Active: ${currentAccount.name}` : 'Active: Account 1';
         }
         
