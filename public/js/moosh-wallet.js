@@ -13183,13 +13183,29 @@
                     style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
                     onmouseover: (e) => { e.target.style.background = '#f57315'; e.target.style.color = '#000'; },
                     onmouseout: (e) => { e.target.style.background = '#000'; e.target.style.color = '#f57315'; },
-                    onclick: () => { this.isCreating = true; this.show(); }
+                    onclick: () => { 
+                        this.isCreating = true; 
+                        this.isImporting = false;
+                        // Remove existing modal first
+                        if (this.modal) {
+                            this.modal.remove();
+                        }
+                        this.show(); 
+                    }
                 }, ['+ Create New Account']),
                 $.button({
                     style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
                     onmouseover: (e) => { e.target.style.borderColor = '#999'; e.target.style.color = '#999'; },
                     onmouseout: (e) => { e.target.style.borderColor = '#666'; e.target.style.color = '#666'; },
-                    onclick: () => { this.isImporting = true; this.show(); }
+                    onclick: () => { 
+                        this.isImporting = true; 
+                        this.isCreating = false;
+                        // Remove existing modal first
+                        if (this.modal) {
+                            this.modal.remove();
+                        }
+                        this.show(); 
+                    }
                 }, ['Import Account']),
                 $.button({
                     style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
@@ -13217,7 +13233,9 @@
                 ]),
                 $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
                     $.button({
-                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer;',
+                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
+                        onmouseover: (e) => { e.target.style.background = '#f57315'; e.target.style.color = '#000'; },
+                        onmouseout: (e) => { e.target.style.background = '#000'; e.target.style.color = '#f57315'; },
                         onclick: () => this.handleCreateAccount()
                     }, ['Create Account']),
                     $.button({
@@ -13263,8 +13281,17 @@
         }
         
         async handleCreateAccount() {
+            console.log('[MultiAccountModal] handleCreateAccount called');
+            
             const nameInput = document.getElementById('newAccountName');
+            if (!nameInput) {
+                console.error('[MultiAccountModal] Name input not found!');
+                this.app.showNotification('Error: Name input not found', 'error');
+                return;
+            }
+            
             const name = nameInput.value.trim();
+            console.log('[MultiAccountModal] Account name:', name);
             
             if (!name) {
                 this.app.showNotification('Please enter an account name', 'error');
@@ -13272,9 +13299,19 @@
             }
             
             try {
+                this.app.showNotification('Generating new wallet...', 'info');
+                console.log('[MultiAccountModal] Calling generateSparkWallet...');
+                
                 // Generate new seed
                 const response = await this.app.apiService.generateSparkWallet(12);
+                console.log('[MultiAccountModal] Generate response:', response);
+                
+                if (!response || !response.data || !response.data.mnemonic) {
+                    throw new Error('Invalid response from wallet generation');
+                }
+                
                 const mnemonic = response.data.mnemonic;
+                console.log('[MultiAccountModal] Generated mnemonic length:', mnemonic.split(' ').length);
                 
                 // Create account
                 await this.app.state.createAccount(name, mnemonic, false);
@@ -13284,6 +13321,7 @@
                 this.close();
                 this.app.router.render();
             } catch (error) {
+                console.error('[MultiAccountModal] Create account error:', error);
                 this.app.showNotification('Failed to create account: ' + error.message, 'error');
             }
         }
