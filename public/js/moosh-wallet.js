@@ -5290,7 +5290,7 @@
             this.app.state.set('walletPassword', password);
             this.app.state.set('walletType', 'import');
             
-            this.app.showNotification('Importing MOOSH Wallet...', 'success');
+            this.app.showNotification('[SYSTEM] Initializing wallet import protocol...', 'success');
             
             setTimeout(() => {
                 this.app.router.navigate('import-seed');
@@ -6293,7 +6293,7 @@
                         fontSize: 'calc(14px * var(--scale-factor))',
                         marginBottom: 'calc(16px * var(--scale-factor))'
                     }
-                }, [`Enter your ${wordCount}-word recovery phrase`])
+                }, [`Import ${wordCount || '12/24'}-Word Recovery Phrase`])
             ]);
         }
 
@@ -6327,7 +6327,20 @@
                         textAlign: 'center',
                         color: 'var(--text-secondary)'
                     }
-                }, ['Enter your recovery phrase words in the correct order. Each word should be separated by a space.'])
+                }, [
+                    $.div({ style: { marginBottom: 'calc(8px * var(--scale-factor))' } }, [
+                        $.span({ style: { color: '#00FF00' } }, ['[SYSTEM]']),
+                        ' Recovery phrase import protocol initiated'
+                    ]),
+                    $.div({ style: { marginBottom: 'calc(8px * var(--scale-factor))' } }, [
+                        $.span({ style: { color: '#FF9900' } }, ['[FORMAT]']),
+                        ' Supported: BIP39 12-word or 24-word mnemonics'
+                    ]),
+                    $.div({}, [
+                        $.span({ style: { color: '#00D4FF' } }, ['[INPUT]']),
+                        ' Enter words separated by spaces in exact order'
+                    ])
+                ])
             ]);
         }
 
@@ -6357,7 +6370,7 @@
                 $.div({ id: 'textImportMode' }, [
                     $.textarea({
                         id: 'seedTextarea',
-                        placeholder: `Enter your ${wordCount}-word recovery phrase here...`,
+                        placeholder: `Enter your 12 or 24-word BIP39 recovery phrase...\n\nExample format:\nword1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12`,
                         style: {
                             width: '100%',
                             height: 'calc(120px * var(--scale-factor))',
@@ -6422,30 +6435,45 @@
         async importWalletFromSeed() {
             const seedText = document.getElementById('seedTextarea').value.trim();
             const seedWords = seedText.split(/\s+/).filter(word => word.length > 0);
-            const selectedMnemonic = this.app.state.get('selectedMnemonic');
             const errorDiv = document.getElementById('importError');
             const successDiv = document.getElementById('importSuccess');
             
-            // Validate seed phrase
-            if (seedWords.length !== selectedMnemonic) {
-                errorDiv.textContent = `Please enter exactly ${selectedMnemonic} words.`;
+            // Auto-detect word count and validate
+            if (seedWords.length !== 12 && seedWords.length !== 24) {
+                errorDiv.innerHTML = `<span style="color: #FF0000">[ERROR]</span> Invalid word count: ${seedWords.length}<br><span style="color: #888888">[EXPECTED]</span> 12 or 24 words for BIP39 compliance`;
                 errorDiv.style.display = 'block';
                 successDiv.style.display = 'none';
-                this.app.showNotification('Invalid word count', 'error');
+                this.app.showNotification('[ERROR] Invalid word count - Expected 12 or 24 words', 'error');
                 return;
             }
             
+            // Update state with detected word count
+            this.app.state.set('selectedMnemonic', seedWords.length);
+            
             if (!this.validateMnemonic(seedWords)) {
-                errorDiv.textContent = 'Invalid recovery phrase. Please check your words.';
+                errorDiv.innerHTML = `<span style="color: #FF0000">[ERROR]</span> Invalid BIP39 mnemonic<br><span style="color: #888888">[REASON]</span> One or more words not in BIP39 wordlist`;
                 errorDiv.style.display = 'block';
                 successDiv.style.display = 'none';
-                this.app.showNotification('Invalid seed phrase', 'error');
+                this.app.showNotification('[ERROR] Invalid BIP39 mnemonic phrase', 'error');
                 return;
             }
+            
+            // Show processing status
+            errorDiv.style.display = 'none';
+            successDiv.innerHTML = `<span style="color: #00FF00">[PROCESSING]</span> Validating seed entropy...<br><span style="color: #888888">[WORDS]</span> ${seedWords.length} words detected`;
+            successDiv.style.display = 'block';
             
             // Try to import through Spark API
             try {
                 const mnemonic = seedWords.join(' ');
+                
+                // Update status
+                setTimeout(() => {
+                    if (successDiv) {
+                        successDiv.innerHTML = `<span style="color: #00FF00">[PROCESSING]</span> Deriving HD wallet paths...<br><span style="color: #888888">[PROTOCOL]</span> BIP32/BIP44/BIP84/BIP86`;
+                    }
+                }, 500);
+                
                 const response = await this.app.apiService.importSparkWallet(mnemonic);
                 
                 if (response && response.success && response.data) {
@@ -6463,12 +6491,12 @@
                         isInitialized: true
                     });
                     
-                    this.app.showNotification('Wallet imported successfully!', 'success');
+                    this.app.showNotification('[SUCCESS] Wallet import completed • HD keys derived', 'success');
                 } else {
                     // Fallback to local storage
                     localStorage.setItem('importedSeed', JSON.stringify(seedWords));
                     this.app.state.set('generatedSeed', seedWords);
-                    this.app.showNotification('Importing wallet...', 'success');
+                    this.app.showNotification('[PROCESSING] Deriving HD wallet from seed...', 'success');
                 }
             } catch (error) {
                 console.warn('Failed to import via Spark API:', error);
@@ -8905,15 +8933,26 @@
                         animation: 'pulse 2s infinite',
                         textAlign: 'center'
                     }
-                }, ['✓']),
-                $.p({
+                }, [
+                    $.span({ style: { fontFamily: "'JetBrains Mono', monospace" } }, ['[OK]'])
+                ]),
+                $.div({
                     style: {
-                        fontSize: 'calc(16px * var(--scale-factor))',
+                        fontSize: 'calc(14px * var(--scale-factor))',
                         color: 'var(--text-secondary)',
                         marginBottom: 'calc(24px * var(--scale-factor))',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        fontFamily: "'JetBrains Mono', monospace"
                     }
-                }, ['Your MOOSH Wallet has been successfully imported!'])
+                }, [
+                    $.div({ style: { marginBottom: 'calc(8px * var(--scale-factor))' } }, [
+                        $.span({ style: { color: '#00FF00' } }, ['[SUCCESS]']),
+                        ' Wallet import completed successfully'
+                    ]),
+                    $.div({ style: { color: '#888888', fontSize: 'calc(12px * var(--scale-factor))' } }, [
+                        `[CHECKSUM] Validated • [DERIVATION] HD wallet initialized • [STATUS] Ready`
+                    ])
+                ])
             ]);
         }
 
