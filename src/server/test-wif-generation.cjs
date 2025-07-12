@@ -53,9 +53,9 @@ function validateWIFFormat(data, seedType) {
     if (data.privateKeys && data.privateKeys.bitcoin && data.privateKeys.bitcoin.wif) {
         const wif = data.privateKeys.bitcoin.wif;
         const isValidWIF = isWIFFormat(wif);
-        const isHexFormat = isHexFormat(wif);
+        const isHex = isHexFormat(wif);
         
-        console.log(`Main Bitcoin WIF: ${wif.substring(0, 10)}... (${isValidWIF ? '✅ Valid WIF' : isHexFormat ? '❌ HEX Format' : '❌ Invalid'})`);
+        console.log(`Main Bitcoin WIF: ${wif.substring(0, 10)}... (${isValidWIF ? '✅ Valid WIF' : isHex ? '❌ HEX Format' : '❌ Invalid'})`);
     }
     
     // Check all private keys
@@ -64,9 +64,9 @@ function validateWIFFormat(data, seedType) {
             if (keyData && keyData.wif) {
                 const wif = keyData.wif;
                 const isValidWIF = isWIFFormat(wif);
-                const isHexFormat = isHexFormat(wif);
+                const isHex = isHexFormat(wif);
                 
-                console.log(`${type} WIF: ${wif.substring(0, 10)}... (${isValidWIF ? '✅ Valid WIF' : isHexFormat ? '❌ HEX Format' : '❌ Invalid'})`);
+                console.log(`${type} WIF: ${wif.substring(0, 10)}... (${isValidWIF ? '✅ Valid WIF' : isHex ? '❌ HEX Format' : '❌ Invalid'})`);
             }
         });
     }

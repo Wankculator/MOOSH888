@@ -102,6 +102,22 @@ WIF: L4pRhanBquAVRUeh4c3nBd8hymsWEF9SoDzrF1zz2H1EAPW5jZeF (Proper WIF format)
 - Import form border: Orange (#F57315)
 - Removed unnecessary [OK] indicator
 
+### 4. Theme-Aware UI Implementation ✅
+
+**Dynamic Color System**:
+- All hardcoded colors replaced with CSS variables
+- Orange (#F57315) in original theme → `var(--text-primary)`
+- Green (#00FF00) in moosh mode → `var(--text-keyword)`
+- Theme automatically switches based on mode selection
+
+**Updated Elements**:
+- Terminal tags: `var(--text-primary)`
+- Form borders: `var(--text-primary)`
+- Textarea text color: `var(--text-primary)`
+- Scrollbar colors: `var(--text-primary)`
+- Processing messages: `var(--text-keyword)`
+- Focus states: `var(--text-primary)`
+
 ## 📁 Files Modified
 
 1. `/src/server/services/walletService.js` - WIF encoding implementation

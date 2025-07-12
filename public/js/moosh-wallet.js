@@ -6301,7 +6301,7 @@
             return $.div({
                 style: {
                     background: '#000000',
-                    border: '2px solid #F57315',
+                    border: '2px solid var(--text-primary)',
                     borderRadius: '0',
                     padding: 'calc(20px * var(--scale-factor))',
                     marginBottom: 'calc(24px * var(--scale-factor))',
@@ -6310,7 +6310,7 @@
             }, [
                 $.div({
                     style: {
-                        color: '#F57315',
+                        color: 'var(--text-primary)',
                         fontWeight: '600',
                         marginBottom: 'calc(16px * var(--scale-factor))',
                         fontSize: 'calc(14px * var(--scale-factor))',
@@ -6330,15 +6330,15 @@
                     }
                 }, [
                     $.div({ style: { marginBottom: 'calc(10px * var(--scale-factor))' } }, [
-                        $.span({ style: { color: '#F57315', fontWeight: '600' } }, ['[SYSTEM]']),
+                        $.span({ style: { color: 'var(--text-primary)', fontWeight: '600' } }, ['[SYSTEM]']),
                         $.span({ style: { color: '#888888' } }, [' Recovery phrase import protocol initiated'])
                     ]),
                     $.div({ style: { marginBottom: 'calc(10px * var(--scale-factor))' } }, [
-                        $.span({ style: { color: '#F57315', fontWeight: '600' } }, ['[FORMAT]']),
+                        $.span({ style: { color: 'var(--text-primary)', fontWeight: '600' } }, ['[FORMAT]']),
                         $.span({ style: { color: '#888888' } }, [' Supported: BIP39 12-word or 24-word mnemonics'])
                     ]),
                     $.div({}, [
-                        $.span({ style: { color: '#F57315', fontWeight: '600' } }, ['[INPUT]']),
+                        $.span({ style: { color: 'var(--text-primary)', fontWeight: '600' } }, ['[INPUT]']),
                         $.span({ style: { color: '#888888' } }, [' Enter words separated by spaces in exact order'])
                     ])
                 ])
@@ -6349,7 +6349,7 @@
             return $.div({
                 style: {
                     background: '#000000',
-                    border: '2px solid #F57315',
+                    border: '2px solid var(--text-primary)',
                     borderRadius: '0',
                     padding: 'calc(24px * var(--scale-factor))',
                     marginBottom: 'calc(24px * var(--scale-factor))'
@@ -6357,7 +6357,7 @@
             }, [
                 $.div({
                     style: {
-                        color: '#F57315',
+                        color: 'var(--text-primary)',
                         fontWeight: '600',
                         marginBottom: 'calc(16px * var(--scale-factor))',
                         fontSize: 'calc(13px * var(--scale-factor))',
@@ -6379,7 +6379,7 @@
                             height: 'calc(120px * var(--scale-factor))',
                             background: '#000000',
                             border: '2px solid #333333',
-                            color: '#F57315',
+                            color: 'var(--text-primary)',
                             fontFamily: "'JetBrains Mono', monospace",
                             fontSize: 'calc(13px * var(--scale-factor))',
                             padding: 'calc(16px * var(--scale-factor))',
@@ -6388,11 +6388,11 @@
                             outline: 'none',
                             transition: 'border-color 0.2s ease',
                             scrollbarWidth: 'thin',
-                            scrollbarColor: '#F57315 #000000'
+                            scrollbarColor: 'var(--text-primary) #000000'
                         },
                         onfocus: function() {
-                            this.style.borderColor = '#F57315';
-                            this.style.boxShadow = '0 0 0 1px #F57315';
+                            this.style.borderColor = 'var(--text-primary)';
+                            this.style.boxShadow = '0 0 0 1px var(--text-primary)';
                         },
                         onblur: function() {
                             this.style.borderColor = '#333333';
@@ -6475,7 +6475,7 @@
             
             // Show processing status
             errorDiv.style.display = 'none';
-            successDiv.innerHTML = `<span style="color: #00FF00">[PROCESSING]</span> Validating seed entropy...<br><span style="color: #888888">[WORDS]</span> ${seedWords.length} words detected`;
+            successDiv.innerHTML = `<span style="color: var(--text-keyword)">[PROCESSING]</span> Validating seed entropy...<br><span style="color: #888888">[WORDS]</span> ${seedWords.length} words detected`;
             successDiv.style.display = 'block';
             
             // Try to import through Spark API
@@ -6485,7 +6485,7 @@
                 // Update status
                 setTimeout(() => {
                     if (successDiv) {
-                        successDiv.innerHTML = `<span style="color: #00FF00">[PROCESSING]</span> Deriving HD wallet paths...<br><span style="color: #888888">[PROTOCOL]</span> BIP32/BIP44/BIP84/BIP86`;
+                        successDiv.innerHTML = `<span style="color: var(--text-keyword)">[PROCESSING]</span> Deriving HD wallet paths...<br><span style="color: #888888">[PROTOCOL]</span> BIP32/BIP44/BIP84/BIP86`;
                     }
                 }, 500);
                 
@@ -8365,7 +8365,7 @@
                 textarea::-webkit-scrollbar-thumb,
                 .modal-container::-webkit-scrollbar-thumb,
                 *::-webkit-scrollbar-thumb {
-                    background: #F57315;
+                    background: var(--text-primary);
                     border-radius: 0;
                 }
                 
@@ -8378,7 +8378,7 @@
                 /* Firefox Scrollbar */
                 * {
                     scrollbar-width: thin;
-                    scrollbar-color: #F57315 #000000;
+                    scrollbar-color: var(--text-primary) #000000;
                 }
                 
                 /* Modal Overlay */
@@ -8993,7 +8993,7 @@
                     }
                 }, [
                     $.div({ style: { marginBottom: 'calc(8px * var(--scale-factor))' } }, [
-                        $.span({ style: { color: '#F57315' } }, ['[SUCCESS]']),
+                        $.span({ style: { color: 'var(--text-primary)' } }, ['[SUCCESS]']),
                         ' Wallet import completed successfully'
                     ]),
                     $.div({ style: { color: '#888888', fontSize: 'calc(12px * var(--scale-factor))' } }, [
@@ -10574,7 +10574,7 @@
                         style: {
                             fontFamily: "'JetBrains Mono', monospace",
                             fontSize: 'calc(11px * var(--scale-factor))',
-                            color: '#F57315',
+                            color: 'var(--text-primary)',
                             wordBreak: 'break-all',
                             lineHeight: '1.4'
                         }
