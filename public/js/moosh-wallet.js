@@ -2004,12 +2004,60 @@
         switchAccount(accountId) {
             const account = this.state.accounts.find(a => a.id === accountId);
             if (account) {
+                console.log('[StateManager] Switching to account:', account.name);
+                
+                // Update state
                 this.set('currentAccountId', accountId);
                 account.lastUsed = Date.now();
                 this.persistAccounts();
+                
+                // Force UI update immediately
+                this.updateAccountIndicators(account);
+                
+                // Emit event for any listeners
+                this.emit('accountSwitched', account);
+                
+                // Force dashboard refresh if on dashboard page
+                if (this.state.currentPage === 'dashboard' && window.MooshWallet?.router) {
+                    console.log('[StateManager] Forcing dashboard refresh...');
+                    setTimeout(() => {
+                        window.MooshWallet.router.navigate('dashboard', { forceRefresh: true });
+                    }, 0);
+                }
+                
                 return true;
             }
             return false;
+        }
+        
+        updateAccountIndicators(account) {
+            console.log(`[StateManager] Updating all indicators to: ${account.name}`);
+            
+            // Update all account indicators in the UI immediately
+            const indicators = document.querySelectorAll('#currentAccountIndicator, .account-indicator, [data-account-name]');
+            indicators.forEach(indicator => {
+                if (indicator) {
+                    const oldText = indicator.textContent;
+                    indicator.textContent = `Active: ${account.name}`;
+                    console.log(`[StateManager] Updated indicator from "${oldText}" to "${indicator.textContent}"`);
+                }
+            });
+            
+            // Update dropdown button
+            const dropdownBtn = document.querySelector('#accountDropdownButton span:first-child');
+            if (dropdownBtn) {
+                dropdownBtn.textContent = `Account: ${account.name}`;
+            }
+            
+            // Also try to update any elements that might have the account name
+            const elementsWithAccountText = document.querySelectorAll('*');
+            elementsWithAccountText.forEach(el => {
+                if (el.textContent && el.textContent.match(/^Active: .+$/) && el.children.length === 0) {
+                    el.textContent = `Active: ${account.name}`;
+                }
+            });
+            
+            console.log(`[StateManager] Updated ${indicators.length} account indicators`);
         }
         
         getCurrentAccount() {
@@ -2534,7 +2582,7 @@
             });
         }
 
-        navigate(pageId) {
+        navigate(pageId, options = {}) {
             const currentPage = this.app.state.get('currentPage');
             const currentPageFull = this.app.state.get('currentPageFull');
             console.log('[Router] Navigating from', currentPage, 'to', pageId);
@@ -2542,7 +2590,8 @@
             // Extract the page name without query parameters for routing
             const pageNameOnly = pageId.split('?')[0];
             
-            if (pageId !== currentPageFull) {
+            // Force refresh option for same page navigation
+            if (options.forceRefresh || pageId !== currentPageFull) {
                 const history = [...this.app.state.get('navigationHistory')];
                 history.push(pageId);
                 this.app.state.update({
@@ -13366,7 +13415,9 @@
                 },
                 onclick: async () => {
                     if (!isActive) {
-                        // Switch account
+                        console.log(`[MultiAccountModal] Switching to account: ${account.name}`);
+                        
+                        // Switch account using enhanced method
                         const switched = this.app.state.switchAccount(account.id);
                         
                         if (switched) {
@@ -13379,12 +13430,10 @@
                                 transactions: []
                             });
                             
-                            // Close modal
+                            // Close modal immediately
                             this.close();
                             
-                            // Force full page re-render to update all components
-                            this.app.router.render();
-                            
+                            // The enhanced switchAccount already handles UI updates
                             // If on dashboard, trigger balance refresh
                             if (this.app.state.get('currentPage') === 'dashboard') {
                                 setTimeout(() => {
@@ -19441,10 +19490,57 @@
             // Start data loading
             setTimeout(() => {
                 this.loadWalletData();
+                // Initial live data update
+                this.updateLiveData();
+                // Initialize wallet type selector and display
+                this.initializeWalletTypeSelector();
             }, 500);
             
             // Start auto-refresh (every 30 seconds)
             this.startAutoRefresh();
+            
+            // Set up periodic updates for live data
+            this.startLiveDataUpdates();
+        }
+        
+        initializeWalletTypeSelector() {
+            // Get the selected wallet type from state or localStorage
+            const selectedType = this.app.state.get('selectedWalletType') || 
+                               localStorage.getItem('selectedWalletType') || 
+                               'taproot';
+            
+            // Ensure it's saved in state
+            this.app.state.set('selectedWalletType', selectedType);
+            
+            // Update the selector if it exists
+            const selector = document.getElementById('wallet-type-selector') || 
+                           document.getElementById('walletTypeSelector');
+            if (selector) {
+                selector.value = selectedType;
+            }
+            
+            // Update the address display
+            this.updateAddressDisplay();
+        }
+        
+        startLiveDataUpdates() {
+            // Clear any existing intervals
+            if (this.priceInterval) clearInterval(this.priceInterval);
+            if (this.mempoolInterval) clearInterval(this.mempoolInterval);
+            
+            // Update price every 30 seconds
+            this.priceInterval = setInterval(() => {
+                this.updateLiveData();
+            }, 30000);
+            
+            // Update mempool data every 60 seconds
+            this.mempoolInterval = setInterval(() => {
+                this.updateMempoolData();
+            }, 60000);
+            
+            // Store intervals for cleanup
+            this.app.state.set('priceUpdateInterval', this.priceInterval);
+            this.app.state.set('mempoolUpdateInterval', this.mempoolInterval);
         }
         
         startAutoRefresh() {
@@ -19466,6 +19562,16 @@
             if (this.refreshInterval) {
                 clearInterval(this.refreshInterval);
                 this.refreshInterval = null;
+            }
+            
+            // Also clear live data intervals
+            if (this.priceInterval) {
+                clearInterval(this.priceInterval);
+                this.priceInterval = null;
+            }
+            if (this.mempoolInterval) {
+                clearInterval(this.mempoolInterval);
+                this.mempoolInterval = null;
             }
         }
         
@@ -19819,7 +19925,10 @@
         createWalletTypeSelector() {
             const $ = window.ElementFactory || ElementFactory;
             
-            return $.div({
+            // Get the currently selected wallet type from state
+            const selectedWalletType = this.app.state.get('selectedWalletType') || 'taproot';
+            
+            const selectorElement = $.div({
                 className: 'terminal-box',
                 style: { marginBottom: 'calc(20px * var(--scale-factor))' }
             }, [
@@ -19856,16 +19965,28 @@
                                 fontSize: 'calc(12px * var(--scale-factor))'
                             }
                         }, [
-                            $.create('option', { value: 'taproot' }, ['Bitcoin Taproot (bc1p...) - Primary']),
-                            $.create('option', { value: 'nativeSegWit' }, ['Bitcoin Native SegWit (bc1q...) - BIP84']),
-                            $.create('option', { value: 'nestedSegWit' }, ['Bitcoin Nested SegWit (3...) - BIP49']),
-                            $.create('option', { value: 'legacy' }, ['Bitcoin Legacy (1...) - BIP44']),
-                            $.create('option', { value: 'spark' }, ['Spark Protocol (sp1...) - Lightning'])
+                            $.create('option', { value: 'taproot', selected: selectedWalletType === 'taproot' }, ['Bitcoin Taproot (bc1p...) - Primary']),
+                            $.create('option', { value: 'nativeSegWit', selected: selectedWalletType === 'nativeSegWit' }, ['Bitcoin Native SegWit (bc1q...) - BIP84']),
+                            $.create('option', { value: 'nestedSegWit', selected: selectedWalletType === 'nestedSegWit' }, ['Bitcoin Nested SegWit (3...) - BIP49']),
+                            $.create('option', { value: 'legacy', selected: selectedWalletType === 'legacy' }, ['Bitcoin Legacy (1...) - BIP44']),
+                            $.create('option', { value: 'spark', selected: selectedWalletType === 'spark' }, ['Spark Protocol (sp1...) - Lightning'])
                         ])
                     ]),
                     this.createSelectedWalletDisplay()
                 ])
             ]);
+            
+            // Set the selector value after it's rendered
+            setTimeout(() => {
+                const selector = document.getElementById('wallet-type-selector');
+                if (selector) {
+                    selector.value = selectedWalletType;
+                    // Update the display immediately
+                    this.updateAddressDisplay();
+                }
+            }, 0);
+            
+            return selectorElement;
         }
         
         createSelectedWalletDisplay() {
@@ -20112,11 +20233,25 @@
             if (selector) {
                 const walletType = selector.value;
                 
-                // Save selected wallet type to state
+                // Save selected wallet type to state and localStorage
                 this.app.state.set('selectedWalletType', walletType);
+                localStorage.setItem('selectedWalletType', walletType);
                 
                 // Update the address display
                 this.updateAddressDisplay();
+                
+                // Update the label in the wallet selector display
+                const labelElement = document.getElementById('selected-wallet-label');
+                if (labelElement) {
+                    const labels = {
+                        'taproot': 'Bitcoin Taproot Address:',
+                        'nativeSegWit': 'Bitcoin Native SegWit Address:',
+                        'nestedSegWit': 'Bitcoin Nested SegWit Address:',
+                        'legacy': 'Bitcoin Legacy Address:',
+                        'spark': 'Spark Protocol Address:'
+                    };
+                    labelElement.textContent = labels[walletType] || 'Bitcoin Address:';
+                }
                 
                 // Show notification
                 const walletNames = {
@@ -20202,27 +20337,92 @@
         createPriceTicker() {
             const $ = window.ElementFactory || ElementFactory;
             
+            // Fetch initial data asynchronously
+            this.updateLiveData();
+            
             return $.div({ 
                 className: 'price-ticker',
                 style: 'background: #000000; border: 1px solid #333333; border-radius: 0; padding: 8px 16px; margin-bottom: 16px; font-family: JetBrains Mono, monospace; font-size: 11px; color: #888888; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;'
             }, [
                 $.span({}, [
                     'BTC: $',
-                    $.span({ id: 'btcPrice', style: 'color: #f57315; font-weight: 600;' }, ['45,234.56']),
+                    $.span({ id: 'btcPrice', style: 'color: #f57315; font-weight: 600;' }, ['Loading...']),
                     ' ',
-                    $.span({ style: 'color: #69fd97;' }, ['↑ 2.3%'])
+                    $.span({ id: 'priceChange', style: 'color: #69fd97;' }, [''])
                 ]),
                 $.span({}, [
                     'Next Block: ~',
-                    $.span({ id: 'nextBlock', style: 'color: #f57315;' }, ['8']),
+                    $.span({ id: 'nextBlock', style: 'color: #f57315;' }, ['...']),
                     ' min'
                 ]),
                 $.span({}, [
                     'Fee: ',
-                    $.span({ id: 'feeRate', style: 'color: #f57315;' }, ['12']),
+                    $.span({ id: 'feeRate', style: 'color: #f57315;' }, ['...']),
                     ' sat/vB'
                 ])
             ]);
+        }
+        
+        async updateLiveData() {
+            try {
+                // Fetch Bitcoin price
+                const priceData = await this.app.apiService.fetchBitcoinPrice();
+                const priceElement = document.getElementById('btcPrice');
+                const changeElement = document.getElementById('priceChange');
+                
+                if (priceElement && priceData.usd) {
+                    priceElement.textContent = priceData.usd.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+                
+                if (changeElement && priceData.usd_24h_change !== undefined) {
+                    const change = priceData.usd_24h_change;
+                    const arrow = change >= 0 ? '↑' : '↓';
+                    const color = change >= 0 ? '#69fd97' : '#ff4444';
+                    changeElement.textContent = `${arrow} ${Math.abs(change).toFixed(1)}%`;
+                    changeElement.style.color = color;
+                }
+                
+                // Fetch mempool data
+                this.updateMempoolData();
+                
+            } catch (error) {
+                console.error('Failed to update live data:', error);
+            }
+        }
+        
+        async updateMempoolData() {
+            try {
+                // Fetch recommended fees
+                const feesResponse = await fetch('https://mempool.space/api/v1/fees/recommended');
+                const feesData = await feesResponse.json();
+                
+                const feeElement = document.getElementById('feeRate');
+                if (feeElement && feesData.halfHourFee) {
+                    feeElement.textContent = feesData.halfHourFee.toString();
+                }
+                
+                // Fetch latest blocks
+                const blocksResponse = await fetch('https://mempool.space/api/blocks');
+                const blocks = await blocksResponse.json();
+                
+                if (blocks && blocks.length > 0) {
+                    // Calculate time since last block
+                    const lastBlockTime = blocks[0].timestamp;
+                    const currentTime = Date.now() / 1000;
+                    const minutesSinceLastBlock = Math.floor((currentTime - lastBlockTime) / 60);
+                    const estimatedTimeToNext = Math.max(1, 10 - minutesSinceLastBlock);
+                    
+                    const blockElement = document.getElementById('nextBlock');
+                    if (blockElement) {
+                        blockElement.textContent = estimatedTimeToNext.toString();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch mempool data:', error);
+            }
         }
         
         createQuickActionsBar() {
@@ -20705,5 +20905,29 @@
     window.ElementFactory = ElementFactory;
     window.WalletSettingsModal = WalletSettingsModal;
     window.DashboardPage = DashboardPage;
+    
+    // Add helper for testing account switching
+    window.switchAccount = (nameOrIndex) => {
+        const accounts = app.state.getAccounts();
+        let account;
+        
+        if (typeof nameOrIndex === 'number') {
+            account = accounts[nameOrIndex];
+        } else {
+            account = accounts.find(a => a.name.toLowerCase() === nameOrIndex.toLowerCase());
+        }
+        
+        if (account) {
+            console.log(`Switching to account: ${account.name}`);
+            return app.state.switchAccount(account.id);
+        } else {
+            console.error(`Account not found: ${nameOrIndex}`);
+            console.log('Available accounts:', accounts.map(a => a.name).join(', '));
+            return false;
+        }
+    };
+    
+    // Also expose wallet reference as MooshWallet for consistency
+    window.MooshWallet = app;
 
 })(window);

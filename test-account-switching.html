@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Account Switching - MOOSH Wallet</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-area {
+            border: 1px solid #0f0;
+            padding: 20px;
+            margin: 20px 0;
+            background: #111;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0a0;
+        }
+        .account-display {
+            font-size: 24px;
+            margin: 20px 0;
+            padding: 10px;
+            border: 2px solid #0f0;
+            background: #020;
+        }
+        .log {
+            background: #111;
+            border: 1px solid #333;
+            padding: 10px;
+            margin: 10px 0;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .info { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>MOOSH Wallet - Account Switching Test</h1>
+    
+    <div class="test-area">
+        <h2>Current Account</h2>
+        <div class="account-display" id="currentAccountDisplay">Loading...</div>
+        
+        <h2>Available Accounts</h2>
+        <div id="accountsList"></div>
+        
+        <h2>Actions</h2>
+        <button onclick="createTestAccount()">Create Test Account</button>
+        <button onclick="refreshDisplay()">Refresh Display</button>
+        <button onclick="runSwitchTest()">Run Switch Test</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="test-area">
+        <h2>Test Log</h2>
+        <div class="log" id="testLog"></div>
+    </div>
+    
+    <!-- Load wallet and reactive system -->
+    <script src="/js/moosh-wallet.js"></script>
+    <script src="/reactive-state-manager.js"></script>
+    <script src="/fast-wallet-creation.js"></script>
+    <script src="/reactive-integration.js"></script>
+    
+    <script>
+        const log = document.getElementById('testLog');
+        const accountDisplay = document.getElementById('currentAccountDisplay');
+        const accountsList = document.getElementById('accountsList');
+        
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function clearLog() {
+            log.innerHTML = '';
+            addLog('Log cleared', 'info');
+        }
+        
+        function updateDisplay() {
+            const currentAccount = window.MooshWallet?.state?.getCurrentAccount();
+            accountDisplay.textContent = currentAccount ? 
+                `Active: ${currentAccount.name} (ID: ${currentAccount.id})` : 
+                'No account selected';
+            
+            const accounts = window.MooshWallet?.state?.getAccounts() || [];
+            accountsList.innerHTML = accounts.map((acc, idx) => 
+                `<button onclick="switchToAccount('${acc.id}', '${acc.name}')">${idx + 1}. ${acc.name}</button>`
+            ).join('');
+        }
+        
+        function switchToAccount(id, name) {
+            addLog(`Switching to account: ${name}`, 'info');
+            const startTime = performance.now();
+            
+            const result = window.MooshWallet.state.switchAccount(id);
+            const switchTime = performance.now() - startTime;
+            
+            if (result) {
+                addLog(`✓ Successfully switched to ${name} in ${switchTime.toFixed(2)}ms`, 'success');
+                
+                // Force dashboard refresh if needed
+                if (window.MooshWallet.router?.currentPage === 'dashboard') {
+                    window.MooshWallet.router.navigate('dashboard', { refresh: true });
+                }
+            } else {
+                addLog(`✗ Failed to switch to ${name}`, 'error');
+            }
+            
+            // Update display after a short delay
+            setTimeout(updateDisplay, 100);
+        }
+        
+        async function createTestAccount() {
+            const name = `Test Account ${Date.now().toString(36)}`;
+            addLog(`Creating new account: ${name}`, 'info');
+            
+            try {
+                // Create a test account
+                const account = {
+                    id: 'acc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    name: name,
+                    addresses: {
+                        bitcoin: 'bc1q' + Math.random().toString(36).substr(2, 38),
+                        taproot: 'bc1p' + Math.random().toString(36).substr(2, 58),
+                        segwit: 'bc1q' + Math.random().toString(36).substr(2, 38),
+                        legacy: '1' + Math.random().toString(36).substr(2, 33)
+                    },
+                    createdAt: Date.now(),
+                    isImport: false,
+                    balances: {
+                        bitcoin: 0,
+                        lightning: 0,
+                        spark: 0
+                    }
+                };
+                
+                const accounts = window.MooshWallet.state.getAccounts();
+                accounts.push(account);
+                window.MooshWallet.state.set('accounts', accounts);
+                
+                addLog(`✓ Created account: ${name}`, 'success');
+                updateDisplay();
+                
+            } catch (error) {
+                addLog(`✗ Failed to create account: ${error.message}`, 'error');
+            }
+        }
+        
+        function refreshDisplay() {
+            addLog('Refreshing display...', 'info');
+            updateDisplay();
+            addLog('✓ Display refreshed', 'success');
+        }
+        
+        async function runSwitchTest() {
+            const accounts = window.MooshWallet.state.getAccounts();
+            
+            if (accounts.length < 2) {
+                addLog('Need at least 2 accounts to run switch test', 'error');
+                addLog('Creating test accounts...', 'info');
+                await createTestAccount();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await createTestAccount();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            addLog('Starting rapid switch test...', 'info');
+            
+            const times = [];
+            const updatedAccounts = window.MooshWallet.state.getAccounts();
+            
+            for (let i = 0; i < 10; i++) {
+                const account = updatedAccounts[i % updatedAccounts.length];
+                const startTime = performance.now();
+                
+                window.MooshWallet.state.switchAccount(account.id);
+                
+                const switchTime = performance.now() - startTime;
+                times.push(switchTime);
+                
+                addLog(`Switch ${i + 1}: ${account.name} (${switchTime.toFixed(2)}ms)`, 'success');
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+            const maxTime = Math.max(...times);
+            const minTime = Math.min(...times);
+            
+            addLog(`\nTest Results:`, 'info');
+            addLog(`Average: ${avgTime.toFixed(2)}ms`, avgTime < 50 ? 'success' : 'info');
+            addLog(`Fastest: ${minTime.toFixed(2)}ms`, 'success');
+            addLog(`Slowest: ${maxTime.toFixed(2)}ms`, 'info');
+            
+            updateDisplay();
+        }
+        
+        // Initialize when ready
+        async function initialize() {
+            addLog('Initializing test environment...', 'info');
+            
+            // Wait for wallet
+            await new Promise(resolve => {
+                const check = setInterval(() => {
+                    if (window.MooshWallet?.state) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 100);
+            });
+            
+            addLog('✓ Wallet loaded', 'success');
+            
+            // Wait for reactive system
+            await new Promise(resolve => {
+                const check = setInterval(() => {
+                    if (window.MooshReactive?.state) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 100);
+            });
+            
+            addLog('✓ Reactive system loaded', 'success');
+            
+            // Setup reactive binding for automatic updates
+            window.MooshReactive.state.watchState('currentAccountId', () => {
+                addLog('Account changed - updating display', 'info');
+                updateDisplay();
+            });
+            
+            updateDisplay();
+            addLog('✓ Test environment ready', 'success');
+            
+            const accounts = window.MooshWallet.state.getAccounts();
+            if (accounts.length === 0) {
+                addLog('No accounts found - creating test accounts', 'info');
+                await createTestAccount();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await createTestAccount();
+            }
+        }
+        
+        // Start initialization
+        initialize().catch(error => {
+            addLog(`Initialization error: ${error.message}`, 'error');
+        });
+    </script>
+</body>
+</html>

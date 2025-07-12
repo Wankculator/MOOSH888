@@ -114,6 +114,77 @@
             console.log('4. Click "Close" - should close modal and return to dashboard');
             console.log('\nThe fixes have been applied directly to the wallet code.');
         };
+        
+        // Account switching helper
+        window.testAccountSwitch = () => {
+            console.log('\n=== Testing Account Switching ===');
+            if (window.MooshWallet?.state) {
+                const accounts = window.MooshWallet.state.getAccounts();
+                if (accounts.length > 1) {
+                    console.log('Quick switch commands:');
+                    accounts.forEach((acc, idx) => {
+                        console.log(`  switchAccount("${acc.name}") or switchAccount(${idx})`);
+                    });
+                    console.log('\nThe account indicator should update instantly when you switch.');
+                } else {
+                    console.log('Create more accounts first to test switching.');
+                }
+            }
+        };
+        
+        // Display info when loaded
+        setTimeout(() => {
+            if (window.MooshWallet?.state) {
+                console.log('[MOOSH] Account switching fixes applied');
+                console.log('[MOOSH] Test with: testAccountSwitch()');
+                
+                // Add debug listener
+                window.MooshWallet.state.on('currentAccountId', (newId) => {
+                    console.log('[MOOSH] Account ID changed to:', newId);
+                    const account = window.MooshWallet.state.getCurrentAccount();
+                    console.log('[MOOSH] New account:', account?.name);
+                    
+                    // Check what's on screen
+                    setTimeout(() => {
+                        const indicator = document.querySelector('#currentAccountIndicator');
+                        if (indicator) {
+                            console.log('[MOOSH] Account indicator shows:', indicator.textContent);
+                        }
+                    }, 100);
+                });
+            }
+        }, 2000);
+        
+        // Enhanced switch function with more debugging
+        window.debugSwitch = (name) => {
+            console.log('\n=== DEBUG ACCOUNT SWITCH ===');
+            const accounts = window.MooshWallet.state.getAccounts();
+            console.log('Available accounts:', accounts.map(a => `${a.name} (${a.id})`));
+            
+            const account = accounts.find(a => a.name.toLowerCase() === name.toLowerCase());
+            if (!account) {
+                console.error('Account not found:', name);
+                return;
+            }
+            
+            console.log('Switching to:', account.name, account.id);
+            const result = window.MooshWallet.state.switchAccount(account.id);
+            console.log('Switch result:', result);
+            
+            // Check state after switch
+            setTimeout(() => {
+                const currentId = window.MooshWallet.state.get('currentAccountId');
+                const currentAccount = window.MooshWallet.state.getCurrentAccount();
+                console.log('Current account ID in state:', currentId);
+                console.log('Current account object:', currentAccount);
+                
+                // Check all indicators
+                const indicators = document.querySelectorAll('#currentAccountIndicator, .account-indicator');
+                indicators.forEach((ind, i) => {
+                    console.log(`Indicator ${i}:`, ind.textContent);
+                });
+            }, 500);
+        };
     </script>
 </body>
 </html>
