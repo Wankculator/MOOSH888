@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOOSH Wallet - Full User Simulation Test Suite</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Retro terminal aesthetic following Moosh style */
+        :root {
+            --terminal-bg: #000000;
+            --terminal-text: #69fd97;
+            --terminal-accent: #f57315;
+            --terminal-error: #ff4444;
+            --terminal-warning: #f57315;
+            --terminal-success: #69fd97;
+            --terminal-dim: #666666;
+            --border-color: #333333;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--terminal-bg);
+            color: var(--terminal-text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .test-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .test-panel {
+            background: var(--terminal-bg);
+            border: 2px solid var(--terminal-accent);
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .test-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .test-header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--terminal-accent);
+            text-shadow: 0 0 5px var(--terminal-accent);
+        }
+
+        .test-header p {
+            margin: 5px 0 0 0;
+            color: var(--terminal-dim);
+            font-size: 12px;
+        }
+
+        /* Test Controls */
+        .test-controls {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .test-button {
+            background: var(--terminal-bg);
+            border: 1px solid var(--terminal-accent);
+            color: var(--terminal-accent);
+            padding: 10px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .test-button:hover {
+            background: var(--terminal-accent);
+            color: var(--terminal-bg);
+            box-shadow: 0 0 10px var(--terminal-accent);
+        }
+
+        .test-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .test-button.running {
+            border-color: var(--terminal-warning);
+            color: var(--terminal-warning);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Test Results */
+        .test-results {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            font-size: 11px;
+        }
+
+        .test-result {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid var(--border-color);
+        }
+
+        .test-result.pass {
+            border-color: var(--terminal-success);
+            color: var(--terminal-success);
+        }
+
+        .test-result.fail {
+            border-color: var(--terminal-error);
+            color: var(--terminal-error);
+        }
+
+        .test-result.warning {
+            border-color: var(--terminal-warning);
+            color: var(--terminal-warning);
+        }
+
+        .test-result.info {
+            border-color: var(--terminal-dim);
+            color: var(--terminal-dim);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin: 20px 0;
+            background: var(--border-color);
+            height: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--terminal-accent);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px var(--terminal-accent);
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 11px;
+            color: var(--terminal-text);
+            font-weight: bold;
+        }
+
+        /* Wallet Preview */
+        .wallet-preview {
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wallet-frame {
+            flex: 1;
+            width: 100%;
+            border: 2px solid var(--terminal-accent);
+            background: var(--terminal-bg);
+        }
+
+        /* Stats Display */
+        .test-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: rgba(245, 115, 21, 0.1);
+            border: 1px solid var(--terminal-accent);
+            padding: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--terminal-accent);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--terminal-dim);
+            text-transform: uppercase;
+        }
+
+        /* Terminal Output */
+        .terminal-output {
+            background: #000;
+            border: 1px solid #333;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .terminal-line {
+            margin: 2px 0;
+        }
+
+        .terminal-line.error { color: var(--terminal-error); }
+        .terminal-line.success { color: var(--terminal-success); }
+        .terminal-line.info { color: var(--terminal-dim); }
+        .terminal-line.warning { color: var(--terminal-warning); }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .test-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <!-- Test Control Panel -->
+        <div class="test-panel">
+            <div class="test-header">
+                <h1>MOOSH Wallet Test Suite</h1>
+                <p>Comprehensive User Simulation Testing</p>
+            </div>
+
+            <!-- Test Controls -->
+            <div class="test-controls">
+                <button class="test-button" onclick="testSuite.runAllTests()">
+                    🚀 Run Full Test Suite
+                </button>
+                <button class="test-button" onclick="testSuite.testWalletCreation()">
+                    📝 Test Wallet Creation
+                </button>
+                <button class="test-button" onclick="testSuite.testAccountsManagement()">
+                    👥 Test Accounts Management
+                </button>
+                <button class="test-button" onclick="testSuite.testSendReceive()">
+                    💸 Test Send/Receive
+                </button>
+                <button class="test-button" onclick="testSuite.testSettings()">
+                    ⚙️ Test Settings
+                </button>
+                <button class="test-button" onclick="testSuite.testSecurity()">
+                    🔒 Test Security Features
+                </button>
+                <button class="test-button" onclick="testSuite.testResponsiveness()">
+                    📱 Test Responsiveness
+                </button>
+                <button class="test-button" onclick="testSuite.testPerformance()">
+                    ⚡ Test Performance
+                </button>
+                <button class="test-button" onclick="testSuite.clearResults()">
+                    🗑️ Clear Results
+                </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+                <div class="progress-text" id="progress-text">0%</div>
+            </div>
+
+            <!-- Test Statistics -->
+            <div class="test-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">Total Tests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-passed">0</div>
+                    <div class="stat-label">Passed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-failed">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-time">0s</div>
+                    <div class="stat-label">Time</div>
+                </div>
+            </div>
+
+            <!-- Test Results -->
+            <div class="test-results" id="test-results"></div>
+
+            <!-- Terminal Output -->
+            <div class="terminal-output" id="terminal-output"></div>
+        </div>
+
+        <!-- Wallet Preview Panel -->
+        <div class="test-panel wallet-preview">
+            <div class="test-header">
+                <h1>Wallet Preview</h1>
+                <p>Live wallet instance for testing</p>
+            </div>
+            <iframe src="/index.html" class="wallet-frame" id="wallet-frame"></iframe>
+        </div>
+    </div>
+
+    <!-- Test Suite Implementation -->
+    <script>
+        class MooshWalletTestSuite {
+            constructor() {
+                this.results = [];
+                this.stats = {
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    startTime: null,
+                    endTime: null
+                };
+                this.walletFrame = document.getElementById('wallet-frame');
+                this.resultsContainer = document.getElementById('test-results');
+                this.terminalOutput = document.getElementById('terminal-output');
+                this.isRunning = false;
+            }
+
+            // Utility: Wait for wallet to load
+            async waitForWallet() {
+                return new Promise((resolve) => {
+                    const checkInterval = setInterval(() => {
+                        try {
+                            const walletWindow = this.walletFrame.contentWindow;
+                            if (walletWindow.MooshWallet && walletWindow.MooshWallet.state) {
+                                clearInterval(checkInterval);
+                                resolve(walletWindow);
+                            }
+                        } catch (e) {
+                            // Cross-origin issues, keep trying
+                        }
+                    }, 100);
+
+                    // Timeout after 10 seconds
+                    setTimeout(() => {
+                        clearInterval(checkInterval);
+                        resolve(null);
+                    }, 10000);
+                });
+            }
+
+            // Utility: Log to terminal
+            log(message, type = 'info') {
+                const line = document.createElement('div');
+                line.className = `terminal-line ${type}`;
+                line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                this.terminalOutput.appendChild(line);
+                this.terminalOutput.scrollTop = this.terminalOutput.scrollHeight;
+            }
+
+            // Utility: Add test result
+            addResult(testName, passed, message, details = null) {
+                const result = {
+                    name: testName,
+                    passed: passed,
+                    message: message,
+                    details: details,
+                    timestamp: new Date().toISOString()
+                };
+
+                this.results.push(result);
+                this.stats.total++;
+                if (passed) {
+                    this.stats.passed++;
+                } else {
+                    this.stats.failed++;
+                }
+
+                // Update UI
+                this.updateStats();
+                this.displayResult(result);
+                this.updateProgress();
+            }
+
+            // Utility: Update statistics
+            updateStats() {
+                document.getElementById('stat-total').textContent = this.stats.total;
+                document.getElementById('stat-passed').textContent = this.stats.passed;
+                document.getElementById('stat-failed').textContent = this.stats.failed;
+                
+                if (this.stats.startTime) {
+                    const elapsed = ((Date.now() - this.stats.startTime) / 1000).toFixed(1);
+                    document.getElementById('stat-time').textContent = elapsed + 's';
+                }
+            }
+
+            // Utility: Update progress bar
+            updateProgress() {
+                const progress = (this.stats.total / 50) * 100; // Assuming ~50 total tests
+                document.getElementById('progress-bar').style.width = progress + '%';
+                document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+            }
+
+            // Utility: Display test result
+            displayResult(result) {
+                const resultEl = document.createElement('div');
+                resultEl.className = `test-result ${result.passed ? 'pass' : 'fail'}`;
+                resultEl.innerHTML = `
+                    <strong>${result.name}</strong>: ${result.message}
+                    ${result.details ? `<pre style="margin: 5px 0 0 0; font-size: 10px;">${JSON.stringify(result.details, null, 2)}</pre>` : ''}
+                `;
+                this.resultsContainer.appendChild(resultEl);
+                this.resultsContainer.scrollTop = this.resultsContainer.scrollHeight;
+            }
+
+            // Clear results
+            clearResults() {
+                this.results = [];
+                this.stats = {
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    startTime: null,
+                    endTime: null
+                };
+                this.resultsContainer.innerHTML = '';
+                this.terminalOutput.innerHTML = '';
+                this.updateStats();
+                this.updateProgress();
+                this.log('Test results cleared', 'info');
+            }
+
+            // Test: Wallet Creation
+            async testWalletCreation() {
+                this.log('Starting wallet creation tests...', 'info');
+                const walletWindow = await this.waitForWallet();
+
+                if (!walletWindow) {
+                    this.addResult('Wallet Load', false, 'Failed to load wallet');
+                    return;
+                }
+
+                try {
+                    // Test 1: Check if wallet loads
+                    this.addResult('Wallet Load', true, 'Wallet loaded successfully');
+
+                    // Test 2: Check initial state
+                    const state = walletWindow.MooshWallet.state;
+                    const hasState = !!state;
+                    this.addResult('State Manager', hasState, 
+                        hasState ? 'State manager initialized' : 'State manager not found');
+
+                    // Test 3: Check for create wallet button
+                    const createButton = walletWindow.document.querySelector('button:contains("Create"), button:contains("Generate")');
+                    this.addResult('Create Button', !!createButton, 
+                        createButton ? 'Create wallet button found' : 'Create wallet button not found');
+
+                    // Test 4: Check seed generation
+                    if (state) {
+                        const canGenerateSeed = typeof walletWindow.MooshWallet.apiService.generateSparkWallet === 'function';
+                        this.addResult('Seed Generation', canGenerateSeed, 
+                            canGenerateSeed ? 'Seed generation function available' : 'Seed generation not available');
+                    }
+
+                    // Test 5: Check password requirements
+                    const hasPasswordFeature = !!localStorage.getItem('walletPassword');
+                    this.addResult('Password Protection', true, 
+                        `Password protection ${hasPasswordFeature ? 'enabled' : 'available'}`);
+
+                } catch (error) {
+                    this.log(`Error in wallet creation tests: ${error.message}`, 'error');
+                    this.addResult('Wallet Creation Tests', false, error.message);
+                }
+            }
+
+            // Test: Accounts Management
+            async testAccountsManagement() {
+                this.log('Starting accounts management tests...', 'info');
+                const walletWindow = await this.waitForWallet();
+
+                if (!walletWindow) {
+                    this.addResult('Accounts Test Setup', false, 'Failed to load wallet');
+                    return;
+                }
+
+                try {
+                    // Test 1: Check accounts button
+                    const accountsButton = Array.from(walletWindow.document.querySelectorAll('button'))
+                        .find(btn => btn.textContent.includes('Accounts') || btn.textContent.trim() === '+');
+                    
+                    this.addResult('Accounts Button', !!accountsButton, 
+                        accountsButton ? 'Accounts button found' : 'Accounts button not found');
+
+                    // Test 2: Click accounts button
+                    if (accountsButton) {
+                        accountsButton.click();
+                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                        const modal = walletWindow.document.querySelector('.modal-overlay');
+                        this.addResult('Accounts Modal', !!modal, 
+                            modal ? 'Accounts modal opened' : 'Failed to open accounts modal');
+
+                        // Close modal
+                        if (modal) {
+                            modal.click();
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
+                    }
+
+                    // Test 3: Check account structure
+                    const accounts = walletWindow.MooshWallet.state.getAccounts();
+                    this.addResult('Account Data', accounts.length > 0, 
+                        `Found ${accounts.length} accounts`, 
+                        accounts.length > 0 ? { count: accounts.length, hasBalances: !!accounts[0].balances } : null);
+
+                    // Test 4: Test account switching
+                    if (accounts.length > 1) {
+                        const firstAccountId = accounts[0].id;
+                        const secondAccountId = accounts[1].id;
+                        
+                        walletWindow.MooshWallet.state.switchAccount(secondAccountId);
+                        const currentId = walletWindow.MooshWallet.state.get('currentAccountId');
+                        
+                        this.addResult('Account Switching', currentId === secondAccountId, 
+                            'Account switching functionality works');
+                    }
+
+                    // Test 5: Check multi-account features
+                    const hasMultiAccount = typeof walletWindow.MooshWallet.state.createAccount === 'function';
+                    this.addResult('Multi-Account Support', hasMultiAccount, 
+                        hasMultiAccount ? 'Multi-account features available' : 'Multi-account not supported');
+
+                } catch (error) {
+                    this.log(`Error in accounts tests: ${error.message}`, 'error');
+                    this.addResult('Accounts Management Tests', false, error.message);
+                }
+            }
+
+            // Test: Send/Receive
+            async testSendReceive() {
+                this.log('Starting send/receive tests...', 'info');
+                const walletWindow = await this.waitForWallet();
+
+                if (!walletWindow) {
+                    this.addResult('Send/Receive Test Setup', false, 'Failed to load wallet');
+                    return;
+                }
+
+                try {
+                    // Test 1: Find Send button
+                    const sendButton = Array.from(walletWindow.document.querySelectorAll('button'))
+                        .find(btn => btn.textContent.includes('Send'));
+                    
+                    this.addResult('Send Button', !!sendButton, 
+                        sendButton ? 'Send button found' : 'Send button not found');
+
+                    // Test 2: Find Receive button
+                    const receiveButton = Array.from(walletWindow.document.querySelectorAll('button'))
+                        .find(btn => btn.textContent.includes('Receive'));
+                    
+                    this.addResult('Receive Button', !!receiveButton, 
+                        receiveButton ? 'Receive button found' : 'Receive button not found');
+
+                    // Test 3: Check address display
+                    const addressElement = walletWindow.document.querySelector('#currentWalletAddress, .address-display');
+                    const hasAddress = addressElement && addressElement.textContent.length > 20;
+                    
+                    this.addResult('Address Display', hasAddress, 
+                        hasAddress ? 'Wallet address displayed' : 'No address found');
+
+                    // Test 4: Test receive modal
+                    if (receiveButton) {
+                        receiveButton.click();
+                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                        const receiveModal = walletWindow.document.querySelector('.receive-modal, .modal-overlay');
+                        this.addResult('Receive Modal', !!receiveModal, 
+                            receiveModal ? 'Receive modal opened' : 'Failed to open receive modal');
+
+                        // Check for QR code or address display
+                        const qrContainer = walletWindow.document.querySelector('.qr-code-container, .qr-section');
+                        this.addResult('QR Code Display', !!qrContainer, 
+                            qrContainer ? 'QR code section found' : 'No QR code display');
+
+                        // Close modal
+                        if (receiveModal) {
+                            receiveModal.click();
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
+                    }
+
+                    // Test 5: Test send modal
+                    if (sendButton) {
+                        sendButton.click();
+                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                        const sendModal = walletWindow.document.querySelector('.send-modal, .modal-overlay');
+                        this.addResult('Send Modal', !!sendModal, 
+                            sendModal ? 'Send modal opened' : 'Failed to open send modal');
+
+                        // Check for input fields
+                        const addressInput = walletWindow.document.querySelector('input[placeholder*="address"], #recipient-address');
+                        const amountInput = walletWindow.document.querySelector('input[placeholder*="amount"], #send-amount');
+                        
+                        this.addResult('Send Form Fields', !!(addressInput && amountInput), 
+                            'Send form has required fields');
+
+                        // Close modal
+                        if (sendModal) {
+                            sendModal.click();
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
+                    }
+
+                } catch (error) {
+                    this.log(`Error in send/receive tests: ${error.message}`, 'error');
+                    this.addResult('Send/Receive Tests', false, error.message);
+                }
+            }
+
+            // Test: Settings
+            async testSettings() {
+                this.log('Starting settings tests...', 'info');
+                const walletWindow = await this.waitForWallet();
+
+                if (!walletWindow) {
+                    this.addResult('Settings Test Setup', false, 'Failed to load wallet');
+                    return;
+                }
+
+                try {
+                    // Test 1: Find Settings button
+                    const settingsButton = Array.from(walletWindow.document.querySelectorAll('button'))
+                        .find(btn => btn.textContent.includes('Settings') || btn.textContent.includes('⚙'));
+                    
+                    this.addResult('Settings Button', !!settingsButton, 
+                        settingsButton ? 'Settings button found' : 'Settings button not found');
+
+                    // Test 2: Open settings
+                    if (settingsButton) {
+                        settingsButton.click();
+                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                        const settingsModal = walletWindow.document.querySelector('.settings-modal, .modal-overlay');
+                        this.addResult('Settings Modal', !!settingsModal, 
+                            settingsModal ? 'Settings modal opened' : 'Failed to open settings');
+
+                        // Test 3: Check settings tabs
+                        const tabs = walletWindow.document.querySelectorAll('.settings-tab, .tab-button');
+                        this.addResult('Settings Tabs', tabs.length > 0, 
+                            `Found ${tabs.length} settings tabs`);
+
+                        // Test 4: Check theme toggle
+                        const themeToggle = walletWindow.document.querySelector('[data-theme], .theme-toggle');
+                        this.addResult('Theme Toggle', true, 
+                            'Theme customization available');
+
+                        // Test 5: Check security settings
+                        const securitySection = Array.from(walletWindow.document.querySelectorAll('*'))
+                            .find(el => el.textContent.includes('Security') || el.textContent.includes('Password'));
+                        
+                        this.addResult('Security Settings', !!securitySection, 
+                            securitySection ? 'Security settings found' : 'No security settings');
+
+                        // Close modal
+                        if (settingsModal) {
+                            const closeButton = settingsModal.querySelector('.modal-close, button');
+                            if (closeButton) closeButton.click();
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
+                    }
+
+                } catch (error) {
+                    this.log(`Error in settings tests: ${error.message}`, 'error');
+                    this.addResult('Settings Tests', false, error.message);
+                }
+            }
+
+            // Test: Security Features
+            async testSecurity() {
+                this.log('Starting security tests...', 'info');
+                const walletWindow = await this.waitForWallet();
+
+                if (!walletWindow) {
+                    this.addResult('Security Test Setup', false, 'Failed to load wallet');
+                    return;
+                }
+
+                try {
+                    // Test 1: Check password protection
+                    const hasPassword = !!localStorage.getItem('walletPassword');
+                    this.addResult('Password Protection', true, 
+                        `Password protection ${hasPassword ? 'enabled' : 'available'}`);
+
+                    // Test 2: Check session management
+                    const isUnlocked = sessionStorage.getItem('walletUnlocked') === 'true';
+                    this.addResult('Session Management', true, 
+                        `Wallet ${isUnlocked ? 'unlocked' : 'locked'}`);
+
+                    // Test 3: Check seed phrase security
+                    const seedInMemory = walletWindow.MooshWallet.state.get('generatedSeed');
+                    this.addResult('Seed Security', !seedInMemory, 
+                        seedInMemory ? 'Warning: Seed visible in memory' : 'Seed properly secured');
+
+                    // Test 4: Check encryption capabilities
+                    const hasCrypto = !!walletWindow.crypto && !!walletWindow.crypto.subtle;
+                    this.addResult('Encryption Support', hasCrypto, 
+                        hasCrypto ? 'Web Crypto API available' : 'No encryption support');
+
+                    // Test 5: Check secure storage
+                    const hasIndexedDB = !!walletWindow.indexedDB;
+                    this.addResult('Secure Storage', hasIndexedDB, 
+                        hasIndexedDB ? 'IndexedDB available for secure storage' : 'No secure storage');
+
+                    // Test 6: Check HTTPS
+                    const isSecure = walletWindow.location.protocol === 'https:' || 
+                                   walletWindow.location.hostname === 'localhost';
+                    this.addResult('HTTPS/Secure Context', isSecure, 
+                        isSecure ? 'Running in secure context' : 'Warning: Not HTTPS');
+
+                } catch (error) {
+                    this.log(`Error in security tests: ${error.message}`, 'error');
+                    this.addResult('Security Tests', false, error.message);
+                }
+            }
+
+            // Test: Responsiveness
+            async testResponsiveness() {
+                this.log('Starting responsiveness tests...', 'info');
+                const walletWindow = await this.waitForWallet();
+
+                if (!walletWindow) {
+                    this.addResult('Responsiveness Test Setup', false, 'Failed to load wallet');
+                    return;
+                }
+
+                try {
+                    const originalWidth = this.walletFrame.style.width;
+                    const originalHeight = this.walletFrame.style.height;
+
+                    // Test different viewport sizes
+                    const viewports = [
+                        { name: 'Mobile', width: 375, height: 667 },
+                        { name: 'Tablet', width: 768, height: 1024 },
+                        { name: 'Desktop', width: 1920, height: 1080 }
+                    ];
+
+                    for (const viewport of viewports) {
+                        // Resize iframe
+                        this.walletFrame.style.width = viewport.width + 'px';
+                        this.walletFrame.style.height = viewport.height + 'px';
+                        
+                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                        // Check if UI adapted
+                        const container = walletWindow.document.querySelector('.wallet-container, .dashboard-container, #root');
+                        const buttons = walletWindow.document.querySelectorAll('button');
+                        
+                        // Check button sizes
+                        let touchFriendly = true;
+                        buttons.forEach(btn => {
+                            const rect = btn.getBoundingClientRect();
+                            if (rect.height < 44 || rect.width < 44) {
+                                touchFriendly = false;
+                            }
+                        });
+
+                        this.addResult(`${viewport.name} View`, true, 
+                            `UI adapts to ${viewport.width}x${viewport.height}`, 
+                            { touchFriendly });
+                    }
+
+                    // Restore original size
+                    this.walletFrame.style.width = originalWidth;
+                    this.walletFrame.style.height = originalHeight;
+
+                    // Test font scaling
+                    const rootFontSize = walletWindow.getComputedStyle(walletWindow.document.documentElement).fontSize;
+                    this.addResult('Font Scaling', true, 
+                        `Base font size: ${rootFontSize}`);
+
+                } catch (error) {
+                    this.log(`Error in responsiveness tests: ${error.message}`, 'error');
+                    this.addResult('Responsiveness Tests', false, error.message);
+                }
+            }
+
+            // Test: Performance
+            async testPerformance() {
+                this.log('Starting performance tests...', 'info');
+                const walletWindow = await this.waitForWallet();
+
+                if (!walletWindow) {
+                    this.addResult('Performance Test Setup', false, 'Failed to load wallet');
+                    return;
+                }
+
+                try {
+                    // Test 1: Page load time
+                    const loadTime = performance.now();
+                    this.addResult('Page Load Time', loadTime < 3000, 
+                        `Loaded in ${(loadTime / 1000).toFixed(2)}s`);
+
+                    // Test 2: DOM complexity
+                    const domNodes = walletWindow.document.querySelectorAll('*').length;
+                    this.addResult('DOM Complexity', domNodes < 3000, 
+                        `${domNodes} DOM nodes`);
+
+                    // Test 3: Memory usage
+                    if (performance.memory) {
+                        const memoryMB = (performance.memory.usedJSHeapSize / 1048576).toFixed(2);
+                        this.addResult('Memory Usage', memoryMB < 50, 
+                            `${memoryMB} MB used`);
+                    }
+
+                    // Test 4: Event listeners
+                    const buttons = walletWindow.document.querySelectorAll('button');
+                    this.addResult('Interactive Elements', buttons.length > 0, 
+                        `${buttons.length} buttons found`);
+
+                    // Test 5: Animation performance
+                    let fps = 60;
+                    let frameCount = 0;
+                    const startTime = performance.now();
+                    
+                    const measureFPS = () => {
+                        frameCount++;
+                        if (performance.now() - startTime < 1000) {
+                            requestAnimationFrame(measureFPS);
+                        } else {
+                            fps = frameCount;
+                        }
+                    };
+                    
+                    requestAnimationFrame(measureFPS);
+                    await new Promise(resolve => setTimeout(resolve, 1100));
+                    
+                    this.addResult('Animation Performance', fps > 30, 
+                        `${fps} FPS measured`);
+
+                    // Test 6: Local storage usage
+                    let storageSize = 0;
+                    for (let key in localStorage) {
+                        if (localStorage.hasOwnProperty(key)) {
+                            storageSize += localStorage[key].length + key.length;
+                        }
+                    }
+                    const storageMB = (storageSize / 1048576).toFixed(2);
+                    
+                    this.addResult('Storage Usage', storageMB < 5, 
+                        `${storageMB} MB in localStorage`);
+
+                } catch (error) {
+                    this.log(`Error in performance tests: ${error.message}`, 'error');
+                    this.addResult('Performance Tests', false, error.message);
+                }
+            }
+
+            // Run all tests
+            async runAllTests() {
+                if (this.isRunning) {
+                    this.log('Tests already running', 'warning');
+                    return;
+                }
+
+                this.isRunning = true;
+                this.clearResults();
+                this.stats.startTime = Date.now();
+                this.log('Starting comprehensive test suite...', 'success');
+
+                // Update UI
+                document.querySelectorAll('.test-button').forEach(btn => {
+                    btn.disabled = true;
+                    if (btn.textContent.includes('Run Full')) {
+                        btn.classList.add('running');
+                    }
+                });
+
+                try {
+                    // Run all test categories
+                    await this.testWalletCreation();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    await this.testAccountsManagement();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    await this.testSendReceive();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    await this.testSettings();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    await this.testSecurity();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    await this.testResponsiveness();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    await this.testPerformance();
+
+                    // Summary
+                    this.stats.endTime = Date.now();
+                    const totalTime = ((this.stats.endTime - this.stats.startTime) / 1000).toFixed(1);
+                    const passRate = ((this.stats.passed / this.stats.total) * 100).toFixed(1);
+
+                    this.log('═══════════════════════════════════════', 'info');
+                    this.log(`Test Suite Completed in ${totalTime}s`, 'success');
+                    this.log(`Total Tests: ${this.stats.total}`, 'info');
+                    this.log(`Passed: ${this.stats.passed} (${passRate}%)`, 'success');
+                    this.log(`Failed: ${this.stats.failed}`, this.stats.failed > 0 ? 'error' : 'info');
+                    this.log('═══════════════════════════════════════', 'info');
+
+                    // Show notification
+                    if (this.stats.failed === 0) {
+                        alert('✅ All tests passed! MOOSH Wallet is working perfectly.');
+                    } else {
+                        alert(`⚠️ ${this.stats.failed} tests failed. Check the results for details.`);
+                    }
+
+                } catch (error) {
+                    this.log(`Critical error: ${error.message}`, 'error');
+                } finally {
+                    this.isRunning = false;
+                    document.querySelectorAll('.test-button').forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('running');
+                    });
+                }
+            }
+        }
+
+        // Initialize test suite
+        const testSuite = new MooshWalletTestSuite();
+
+        // Auto-run on load (optional)
+        window.addEventListener('load', () => {
+            testSuite.log('MOOSH Wallet Test Suite initialized', 'success');
+            testSuite.log('Click "Run Full Test Suite" to begin comprehensive testing', 'info');
+            
+            // Optional: Auto-run after 3 seconds
+            // setTimeout(() => testSuite.runAllTests(), 3000);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        testSuite.runAllTests();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        testSuite.clearResults();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

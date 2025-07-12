@@ -2074,6 +2074,109 @@
             }
             return false;
         }
+        
+        // Multi-account methods
+        getAccounts() {
+            return this.state.accounts || [];
+        }
+        
+        getCurrentAccount() {
+            const accounts = this.getAccounts();
+            return accounts.find(acc => acc.id === this.state.currentAccountId) || accounts[0] || null;
+        }
+        
+        getAccountById(id) {
+            return this.getAccounts().find(acc => acc.id === id) || null;
+        }
+        
+        async createAccount(name, mnemonic, isImport = false) {
+            try {
+                console.log('[StateManager] Creating account:', { name, isImport });
+                
+                // Generate addresses from mnemonic using API
+                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/generate-wallet`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        mnemonic: Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic,
+                        strength: mnemonic.split(' ').length === 12 ? 128 : 256
+                    })
+                });
+                
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error);
+                
+                const account = {
+                    id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    name: name || `Account ${this.state.accounts.length + 1}`,
+                    addresses: {
+                        spark: result.data.addresses.spark,
+                        bitcoin: result.data.addresses.bitcoin
+                    },
+                    createdAt: Date.now(),
+                    isImport: isImport,
+                    seedHash: this.hashSeed(mnemonic),
+                    balance: {
+                        spark: 0,
+                        bitcoin: 0,
+                        total: 0
+                    }
+                };
+                
+                this.state.accounts.push(account);
+                this.state.currentAccountId = account.id;
+                this.persistAccounts();
+                
+                console.log('[StateManager] Account created:', account);
+                return account;
+            } catch (error) {
+                console.error('[StateManager] Failed to create account:', error);
+                throw error;
+            }
+        }
+        
+        switchAccount(accountId) {
+            const account = this.getAccountById(accountId);
+            if (account) {
+                this.state.currentAccountId = accountId;
+                this.persistAccounts();
+                this.emit('accountSwitched', account);
+                return account;
+            }
+            return null;
+        }
+        
+        renameAccount(accountId, newName) {
+            const account = this.getAccountById(accountId);
+            if (account) {
+                account.name = newName;
+                this.persistAccounts();
+                return true;
+            }
+            return false;
+        }
+        
+        deleteAccount(accountId) {
+            const accounts = this.getAccounts();
+            if (accounts.length <= 1) {
+                console.warn('[StateManager] Cannot delete the last account');
+                return false;
+            }
+            
+            const index = accounts.findIndex(acc => acc.id === accountId);
+            if (index > -1) {
+                accounts.splice(index, 1);
+                
+                // If we deleted the current account, switch to the first available
+                if (this.state.currentAccountId === accountId) {
+                    this.state.currentAccountId = accounts[0].id;
+                }
+                
+                this.persistAccounts();
+                return true;
+            }
+            return false;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -6678,7 +6781,34 @@
             }, [
                 new Button(this.app, {
                     text: 'Open Wallet Dashboard',
-                    onClick: () => {
+                    onClick: async () => {
+                        // Initialize multi-account system if needed
+                        const accounts = this.app.state.getAccounts();
+                        console.log('[WalletDetails] Current accounts:', accounts.length);
+                        
+                        if (accounts.length === 0) {
+                            console.log('[WalletDetails] No accounts found, initializing multi-account system');
+                            
+                            // Get the seed and wallet data
+                            const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
+                            const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                            
+                            if (generatedSeed.length > 0) {
+                                // Create the first account using the generated seed
+                                const mnemonic = Array.isArray(generatedSeed) ? generatedSeed.join(' ') : generatedSeed;
+                                const isImport = !!localStorage.getItem('importedSeed');
+                                
+                                try {
+                                    await this.app.state.createAccount('Main Account', mnemonic, isImport);
+                                    console.log('[WalletDetails] First account created successfully');
+                                    this.app.showNotification('Account initialized successfully', 'success');
+                                } catch (error) {
+                                    console.error('[WalletDetails] Failed to create first account:', error);
+                                    this.app.showNotification('Failed to initialize account', 'error');
+                                }
+                            }
+                        }
+                        
                         // Mark wallet as ready for dashboard
                         localStorage.setItem('walletReady', 'true');
                         this.app.state.set('walletReady', true);
@@ -6695,8 +6825,35 @@
             ]);
         }
 
-        openWalletDashboard() {
+        async openWalletDashboard() {
             this.app.showNotification('Opening wallet dashboard...', 'success');
+            
+            // Initialize multi-account system if needed
+            const accounts = this.app.state.getAccounts();
+            console.log('[WalletDetails] Current accounts:', accounts.length);
+            
+            if (accounts.length === 0) {
+                console.log('[WalletDetails] No accounts found, initializing multi-account system');
+                
+                // Get the seed and wallet data
+                const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
+                const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                
+                if (generatedSeed.length > 0) {
+                    // Create the first account using the generated seed
+                    const mnemonic = Array.isArray(generatedSeed) ? generatedSeed.join(' ') : generatedSeed;
+                    const isImport = !!localStorage.getItem('importedSeed');
+                    
+                    try {
+                        await this.app.state.createAccount('Main Account', mnemonic, isImport);
+                        console.log('[WalletDetails] First account created successfully');
+                        this.app.showNotification('Account initialized successfully', 'success');
+                    } catch (error) {
+                        console.error('[WalletDetails] Failed to create first account:', error);
+                        this.app.showNotification('Failed to initialize account', 'error');
+                    }
+                }
+            }
             
             // Mark wallet as ready and navigate properly through router
             localStorage.setItem('walletReady', 'true');
@@ -9071,7 +9228,34 @@
             }, [
                 new Button(this.app, {
                     text: 'Open Wallet Dashboard',
-                    onClick: () => {
+                    onClick: async () => {
+                        // Initialize multi-account system if needed
+                        const accounts = this.app.state.getAccounts();
+                        console.log('[WalletDetails] Current accounts:', accounts.length);
+                        
+                        if (accounts.length === 0) {
+                            console.log('[WalletDetails] No accounts found, initializing multi-account system');
+                            
+                            // Get the seed and wallet data
+                            const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
+                            const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                            
+                            if (generatedSeed.length > 0) {
+                                // Create the first account using the generated seed
+                                const mnemonic = Array.isArray(generatedSeed) ? generatedSeed.join(' ') : generatedSeed;
+                                const isImport = !!localStorage.getItem('importedSeed');
+                                
+                                try {
+                                    await this.app.state.createAccount('Main Account', mnemonic, isImport);
+                                    console.log('[WalletDetails] First account created successfully');
+                                    this.app.showNotification('Account initialized successfully', 'success');
+                                } catch (error) {
+                                    console.error('[WalletDetails] Failed to create first account:', error);
+                                    this.app.showNotification('Failed to initialize account', 'error');
+                                }
+                            }
+                        }
+                        
                         // Mark wallet as ready for dashboard
                         localStorage.setItem('walletReady', 'true');
                         this.app.state.set('walletReady', true);
@@ -9088,8 +9272,35 @@
             ]);
         }
 
-        openWalletDashboard() {
+        async openWalletDashboard() {
             this.app.showNotification('Opening wallet dashboard...', 'success');
+            
+            // Initialize multi-account system if needed
+            const accounts = this.app.state.getAccounts();
+            console.log('[WalletDetails] Current accounts:', accounts.length);
+            
+            if (accounts.length === 0) {
+                console.log('[WalletDetails] No accounts found, initializing multi-account system');
+                
+                // Get the seed and wallet data
+                const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
+                const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                
+                if (generatedSeed.length > 0) {
+                    // Create the first account using the generated seed
+                    const mnemonic = Array.isArray(generatedSeed) ? generatedSeed.join(' ') : generatedSeed;
+                    const isImport = !!localStorage.getItem('importedSeed');
+                    
+                    try {
+                        await this.app.state.createAccount('Main Account', mnemonic, isImport);
+                        console.log('[WalletDetails] First account created successfully');
+                        this.app.showNotification('Account initialized successfully', 'success');
+                    } catch (error) {
+                        console.error('[WalletDetails] Failed to create first account:', error);
+                        this.app.showNotification('Failed to initialize account', 'error');
+                    }
+                }
+            }
             
             // Mark wallet as ready and navigate properly through router
             localStorage.setItem('walletReady', 'true');
@@ -10954,8 +11165,35 @@
             }
         }
 
-        openWalletDashboard() {
+        async openWalletDashboard() {
             this.app.showNotification('Opening wallet dashboard...', 'success');
+            
+            // Initialize multi-account system if needed
+            const accounts = this.app.state.getAccounts();
+            console.log('[WalletDetails] Current accounts:', accounts.length);
+            
+            if (accounts.length === 0) {
+                console.log('[WalletDetails] No accounts found, initializing multi-account system');
+                
+                // Get the seed and wallet data
+                const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
+                const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                
+                if (generatedSeed.length > 0) {
+                    // Create the first account using the generated seed
+                    const mnemonic = Array.isArray(generatedSeed) ? generatedSeed.join(' ') : generatedSeed;
+                    const isImport = !!localStorage.getItem('importedSeed');
+                    
+                    try {
+                        await this.app.state.createAccount('Main Account', mnemonic, isImport);
+                        console.log('[WalletDetails] First account created successfully');
+                        this.app.showNotification('Account initialized successfully', 'success');
+                    } catch (error) {
+                        console.error('[WalletDetails] Failed to create first account:', error);
+                        this.app.showNotification('Failed to initialize account', 'error');
+                    }
+                }
+            }
             
             // Mark wallet as ready and navigate properly through router
             localStorage.setItem('walletReady', 'true');
@@ -13023,6 +13261,25 @@
         }
         
         show() {
+            console.log('[MultiAccountModal] Show called, states:', {
+                isCreating: this.isCreating,
+                isImporting: this.isImporting
+            });
+            
+            // Clean up any existing modal first
+            if (this.modal && this.modal.parentNode) {
+                this.modal.parentNode.removeChild(this.modal);
+                this.modal = null;
+            }
+            
+            // Remove any orphaned modals
+            const existingModals = document.querySelectorAll('.modal-overlay');
+            existingModals.forEach(modal => {
+                if (modal.parentNode) {
+                    modal.parentNode.removeChild(modal);
+                }
+            });
+            
             const $ = window.ElementFactory || ElementFactory;
             const accounts = this.app.state.get('accounts') || [];
             const currentAccountId = this.app.state.get('currentAccountId');
@@ -13274,7 +13531,20 @@
                     }, ['Import Account']),
                     $.button({
                         style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
-                        onclick: () => { this.isImporting = false; this.show(); }
+                        onclick: () => { 
+                            console.log('[MultiAccountModal] Cancel clicked in import form');
+                            this.isImporting = false;
+                            this.isCreating = false;
+                            // Remove current modal
+                            if (this.modal) {
+                                this.modal.remove();
+                                this.modal = null;
+                            }
+                            // Show main modal after brief delay
+                            setTimeout(() => {
+                                this.show();
+                            }, 50);
+                        }
                     }, ['Cancel'])
                 ])
             ]);
@@ -13363,35 +13633,326 @@
         }
         
         renameAccount(account) {
-            const newName = prompt('Enter new account name:', account.name);
-            if (newName && newName.trim()) {
-                account.name = newName.trim();
-                this.app.state.persistAccounts();
-                this.close();
-                this.show();
-            }
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Create terminal-style dialog
+            const dialog = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: '#000000',
+                    border: '2px solid var(--text-primary)',
+                    borderRadius: '0',
+                    padding: '20px',
+                    zIndex: '10001',
+                    minWidth: '400px'
+                }
+            }, [
+                $.div({ 
+                    className: 'terminal-header',
+                    style: {
+                        borderBottom: '1px solid var(--text-primary)',
+                        paddingBottom: '10px',
+                        marginBottom: '15px'
+                    }
+                }, [
+                    $.span({}, ['~/moosh/accounts/rename $ '])
+                ]),
+                $.div({ style: 'marginBottom: 15px' }, [
+                    $.label({ 
+                        style: 'display: block; marginBottom: 5px; color: var(--text-primary)' 
+                    }, ['Enter new name for account:']),
+                    $.input({
+                        id: 'rename-input-modal',
+                        type: 'text',
+                        value: account.name,
+                        style: {
+                            width: '100%',
+                            padding: '8px',
+                            background: '#000',
+                            border: '1px solid var(--text-primary)',
+                            borderRadius: '0',
+                            color: 'var(--text-primary)',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onkeydown: (e) => {
+                            if (e.key === 'Enter') {
+                                const input = document.getElementById('rename-input-modal');
+                                if (input && input.value.trim()) {
+                                    account.name = input.value.trim();
+                                    this.app.state.persistAccounts();
+                                    dialog.remove();
+                                    backdrop.remove();
+                                    this.close();
+                                    this.show();
+                                    this.app.showNotification(`Account renamed to "${input.value.trim()}"`, 'success');
+                                }
+                            } else if (e.key === 'Escape') {
+                                dialog.remove();
+                                backdrop.remove();
+                            }
+                        }
+                    })
+                ]),
+                $.div({ 
+                    style: 'display: flex; gap: 10px; justifyContent: flex-end' 
+                }, [
+                    $.button({
+                        style: {
+                            background: '#000',
+                            border: '2px solid var(--text-primary)',
+                            borderRadius: '0',
+                            color: 'var(--text-primary)',
+                            padding: '8px 20px',
+                            cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onclick: () => {
+                            const input = document.getElementById('rename-input-modal');
+                            if (input && input.value.trim()) {
+                                account.name = input.value.trim();
+                                this.app.state.persistAccounts();
+                                dialog.remove();
+                                backdrop.remove();
+                                this.close();
+                                this.show();
+                                this.app.showNotification(`Account renamed to "${input.value.trim()}"`, 'success');
+                            }
+                        }
+                    }, ['Rename']),
+                    $.button({
+                        style: {
+                            background: '#000',
+                            border: '1px solid var(--text-dim)',
+                            borderRadius: '0',
+                            color: 'var(--text-dim)',
+                            padding: '8px 20px',
+                            cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onclick: () => {
+                            dialog.remove();
+                            backdrop.remove();
+                        }
+                    }, ['Cancel'])
+                ])
+            ]);
+            
+            // Add backdrop
+            const backdrop = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: '10000'
+                },
+                onclick: () => {
+                    dialog.remove();
+                    backdrop.remove();
+                }
+            });
+            
+            document.body.appendChild(backdrop);
+            document.body.appendChild(dialog);
+            
+            // Focus input
+            setTimeout(() => {
+                const input = document.getElementById('rename-input-modal');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 100);
         }
         
         deleteAccount(account) {
-            if (confirm(`Are you sure you want to delete "${account.name}"? This action cannot be undone.`)) {
-                try {
-                    this.app.state.deleteAccount(account.id);
-                    this.app.showNotification(`Account "${account.name}" deleted`, 'success');
-                    this.close();
-                    this.app.router.render();
-                } catch (error) {
-                    this.app.showNotification(error.message, 'error');
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Create terminal-style confirmation dialog
+            const dialog = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: '#000000',
+                    border: '2px solid #ff4444',
+                    borderRadius: '0',
+                    padding: '20px',
+                    zIndex: '10001',
+                    minWidth: '400px'
+                }
+            }, [
+                $.div({ 
+                    className: 'terminal-header',
+                    style: {
+                        borderBottom: '1px solid #ff4444',
+                        paddingBottom: '10px',
+                        marginBottom: '15px'
+                    }
+                }, [
+                    $.span({ style: 'color: #ff4444' }, ['~/moosh/accounts/delete $ '])
+                ]),
+                $.div({ style: 'marginBottom: 20px' }, [
+                    $.p({ 
+                        style: 'color: var(--text-primary); marginBottom: 10px' 
+                    }, [`Are you sure you want to delete "${account.name}"?`]),
+                    $.p({ 
+                        style: 'color: #ff4444; fontSize: 12px' 
+                    }, ['⚠️ This action cannot be undone.'])
+                ]),
+                $.div({ 
+                    style: 'display: flex; gap: 10px; justifyContent: flex-end' 
+                }, [
+                    $.button({
+                        style: {
+                            background: '#000',
+                            border: '2px solid #ff4444',
+                            borderRadius: '0',
+                            color: '#ff4444',
+                            padding: '8px 20px',
+                            cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onclick: () => {
+                            try {
+                                this.app.state.deleteAccount(account.id);
+                                this.app.showNotification(`Account "${account.name}" deleted`, 'success');
+                                dialog.remove();
+                                backdrop.remove();
+                                this.close();
+                                this.app.router.render();
+                            } catch (error) {
+                                this.app.showNotification(error.message, 'error');
+                                dialog.remove();
+                                backdrop.remove();
+                            }
+                        }
+                    }, ['Delete']),
+                    $.button({
+                        style: {
+                            background: '#000',
+                            border: '1px solid var(--text-dim)',
+                            borderRadius: '0',
+                            color: 'var(--text-dim)',
+                            padding: '8px 20px',
+                            cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onclick: () => {
+                            dialog.remove();
+                            backdrop.remove();
+                        }
+                    }, ['Cancel'])
+                ])
+            ]);
+            
+            // Add backdrop
+            const backdrop = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: '10000'
+                },
+                onclick: () => {
+                    dialog.remove();
+                    backdrop.remove();
+                }
+            });
+            
+            document.body.appendChild(backdrop);
+            document.body.appendChild(dialog);
+        }
+        
+        close() {
+            console.log('[MultiAccountModal] Closing modal...');
+            
+            // Reset all states
+            this.isCreating = false;
+            this.isImporting = false;
+            
+            if (this.modal) {
+                // Add fade out animation
+                this.modal.style.opacity = '0';
+                this.modal.style.transition = 'opacity 0.3s ease';
+                
+                setTimeout(() => {
+                    if (this.modal && this.modal.parentNode) {
+                        this.modal.parentNode.removeChild(this.modal);
+                    }
+                    this.modal = null;
+                }, 300);
+            }
+            
+            // Navigate to dashboard
+            if (this.app && this.app.router) {
+                const currentPage = this.app.router.currentPage;
+                if (currentPage !== 'dashboard') {
+                    this.app.router.navigate('dashboard');
                 }
             }
         }
         
-        close() {
-            if (this.modal) {
-                this.modal.remove();
-                this.modal = null;
-                this.isCreating = false;
-                this.isImporting = false;
-            }
+        // Add a proper show method if it's missing
+        showAlt() {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            this.modal = $.div({
+                className: 'modal-overlay',
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: '10000'
+                },
+                onclick: (e) => {
+                    if (e.target === this.modal) this.close();
+                }
+            }, [
+                $.div({
+                    className: 'modal',
+                    style: {
+                        background: 'var(--bg-primary)',
+                        border: '2px solid var(--text-primary)',
+                        borderRadius: '0',
+                        maxWidth: '800px',
+                        width: '90%',
+                        maxHeight: '80vh',
+                        overflow: 'auto'
+                    }
+                }, [
+                    $.div({
+                        style: {
+                            padding: 'calc(24px * var(--scale-factor))'
+                        }
+                    }, [
+                        this.createHeader(),
+                        this.isCreating ? this.createNewAccountForm() :
+                        this.isImporting ? this.createImportForm() :
+                        $.div({}, [
+                            this.createAccountList(),
+                            this.createActions()
+                        ])
+                    ])
+                ])
+            ]);
+            
+            document.body.appendChild(this.modal);
         }
         
         createHeader() {
@@ -13489,7 +14050,7 @@
                                     width: 'calc(32px * var(--scale-factor))',
                                     height: 'calc(32px * var(--scale-factor))',
                                     background: isActive ? 'var(--text-primary)' : 'var(--border-color)',
-                                    borderRadius: '50%',
+                                    borderRadius: '0',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -13534,22 +14095,46 @@
                                 fontSize: 'calc(12px * var(--scale-factor))',
                                 color: 'var(--text-dim)'
                             }
-                        }, [`Balance: ${(account.balances.bitcoin / 100000000).toFixed(8)} BTC`]),
-                        $.button({
+                        }, [`Balance: ${((account.balances?.bitcoin || 0) / 100000000).toFixed(8)} BTC`]),
+                        $.div({
                             style: {
-                                background: 'transparent',
-                                border: '1px solid var(--text-dim)',
-                                color: 'var(--text-dim)',
-                                padding: 'calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor))',
-                                fontSize: 'calc(10px * var(--scale-factor))',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
-                            },
-                            onclick: (e) => {
-                                e.stopPropagation();
-                                this.renameAccount(index);
+                                display: 'flex',
+                                gap: 'calc(8px * var(--scale-factor))'
                             }
-                        }, ['Rename'])
+                        }, [
+                            $.button({
+                                style: {
+                                    background: 'transparent',
+                                    border: '1px solid var(--text-dim)',
+                                    borderRadius: '0',
+                                    color: 'var(--text-dim)',
+                                    padding: 'calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor))',
+                                    fontSize: 'calc(10px * var(--scale-factor))',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.renameAccount(index);
+                                }
+                            }, ['Rename']),
+                            accounts.length > 1 ? $.button({
+                                style: {
+                                    background: 'transparent',
+                                    border: '1px solid #ff4444',
+                                    borderRadius: '0',
+                                    color: '#ff4444',
+                                    padding: 'calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor))',
+                                    fontSize: 'calc(10px * var(--scale-factor))',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.deleteAccount(account);
+                                }
+                            }, ['Delete']) : null
+                        ])
                     ])
                 ]);
             }));
@@ -13562,7 +14147,8 @@
                 style: {
                     display: 'flex',
                     gap: 'calc(12px * var(--scale-factor))',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    flexWrap: 'wrap'
                 }
             }, [
                 $.button({
@@ -13578,8 +14164,37 @@
                         transition: 'all 0.2s ease',
                         fontWeight: '600'
                     },
-                    onclick: () => this.createNewAccount()
+                    onclick: () => {
+                        this.isCreating = true;
+                        this.isImporting = false;
+                        if (this.modal) {
+                            this.modal.remove();
+                        }
+                        this.show();
+                    }
                 }, ['+ Create New Account']),
+                $.button({
+                    style: {
+                        background: '#000000',
+                        border: '2px solid var(--text-accent)',
+                        borderRadius: '0',
+                        color: 'var(--text-accent)',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 'calc(14px * var(--scale-factor))',
+                        padding: 'calc(12px * var(--scale-factor)) calc(24px * var(--scale-factor))',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        fontWeight: '600'
+                    },
+                    onclick: () => {
+                        this.isImporting = true;
+                        this.isCreating = false;
+                        if (this.modal) {
+                            this.modal.remove();
+                        }
+                        this.show();
+                    }
+                }, ['Import Account']),
                 $.button({
                     style: {
                         background: 'transparent',
@@ -13610,40 +14225,424 @@
         
         renameAccount(index) {
             const account = this.app.state.get('accounts')[index];
-            const newName = prompt('Enter new account name:', account.name);
+            this.showRenameDialog(account, index);
+        }
+        
+        showRenameDialog(account, index) {
+            const $ = window.ElementFactory || ElementFactory;
             
-            if (newName && newName.trim()) {
-                const accounts = [...this.app.state.get('accounts')];
-                accounts[index].name = newName.trim();
-                this.app.state.set('accounts', accounts);
-                this.close();
-                this.show();
-            }
+            // Create terminal-style dialog
+            const dialog = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: '#000000',
+                    border: '2px solid var(--text-primary)',
+                    borderRadius: '0',
+                    padding: '20px',
+                    zIndex: '10001',
+                    minWidth: '400px'
+                }
+            }, [
+                $.div({ 
+                    className: 'terminal-header',
+                    style: {
+                        borderBottom: '1px solid var(--text-primary)',
+                        paddingBottom: '10px',
+                        marginBottom: '15px'
+                    }
+                }, [
+                    $.span({}, ['~/moosh/accounts/rename $ '])
+                ]),
+                $.div({ style: 'marginBottom: 15px' }, [
+                    $.label({ 
+                        style: 'display: block; marginBottom: 5px; color: var(--text-primary)' 
+                    }, ['Enter new name for account:']),
+                    $.input({
+                        id: 'rename-input',
+                        type: 'text',
+                        value: account.name,
+                        style: {
+                            width: '100%',
+                            padding: '8px',
+                            background: '#000',
+                            border: '1px solid var(--text-primary)',
+                            borderRadius: '0',
+                            color: 'var(--text-primary)',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onkeydown: (e) => {
+                            if (e.key === 'Enter') {
+                                const input = document.getElementById('rename-input');
+                                if (input && input.value.trim()) {
+                                    const accounts = [...this.app.state.get('accounts')];
+                                    accounts[index].name = input.value.trim();
+                                    this.app.state.set('accounts', accounts);
+                                    this.app.state.persistAccounts();
+                                    dialog.remove();
+                                    this.close();
+                                    this.show();
+                                    this.app.showNotification(`Account renamed to "${input.value.trim()}"`, 'success');
+                                }
+                            } else if (e.key === 'Escape') {
+                                dialog.remove();
+                            }
+                        }
+                    })
+                ]),
+                $.div({ 
+                    style: 'display: flex; gap: 10px; justifyContent: flex-end' 
+                }, [
+                    $.button({
+                        style: {
+                            background: '#000',
+                            border: '2px solid var(--text-primary)',
+                            borderRadius: '0',
+                            color: 'var(--text-primary)',
+                            padding: '8px 20px',
+                            cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onclick: () => {
+                            const input = document.getElementById('rename-input');
+                            if (input && input.value.trim()) {
+                                const accounts = [...this.app.state.get('accounts')];
+                                accounts[index].name = input.value.trim();
+                                this.app.state.set('accounts', accounts);
+                                this.app.state.persistAccounts();
+                                dialog.remove();
+                                this.close();
+                                this.show();
+                                this.app.showNotification(`Account renamed to "${input.value.trim()}"`, 'success');
+                            }
+                        }
+                    }, ['Rename']),
+                    $.button({
+                        style: {
+                            background: '#000',
+                            border: '1px solid var(--text-dim)',
+                            borderRadius: '0',
+                            color: 'var(--text-dim)',
+                            padding: '8px 20px',
+                            cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onclick: () => dialog.remove()
+                    }, ['Cancel'])
+                ])
+            ]);
+            
+            // Add backdrop
+            const backdrop = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: '10000'
+                },
+                onclick: () => {
+                    dialog.remove();
+                    backdrop.remove();
+                }
+            });
+            
+            document.body.appendChild(backdrop);
+            document.body.appendChild(dialog);
+            
+            // Focus input
+            setTimeout(() => {
+                const input = document.getElementById('rename-input');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 100);
+        }
+        
+        deleteAccount(account) {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Create terminal-style confirmation dialog
+            const dialog = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: '#000000',
+                    border: '2px solid #ff4444',
+                    borderRadius: '0',
+                    padding: '20px',
+                    zIndex: '10001',
+                    minWidth: '400px'
+                }
+            }, [
+                $.div({ 
+                    className: 'terminal-header',
+                    style: {
+                        borderBottom: '1px solid #ff4444',
+                        paddingBottom: '10px',
+                        marginBottom: '15px'
+                    }
+                }, [
+                    $.span({ style: 'color: #ff4444' }, ['~/moosh/accounts/delete $ '])
+                ]),
+                $.div({ style: 'marginBottom: 20px' }, [
+                    $.p({ 
+                        style: 'color: var(--text-primary); marginBottom: 10px' 
+                    }, [`Are you sure you want to delete "${account.name}"?`]),
+                    $.p({ 
+                        style: 'color: #ff4444; fontSize: 12px' 
+                    }, ['⚠️ This action cannot be undone.'])
+                ]),
+                $.div({ 
+                    style: 'display: flex; gap: 10px; justifyContent: flex-end' 
+                }, [
+                    $.button({
+                        style: {
+                            background: '#000',
+                            border: '2px solid #ff4444',
+                            borderRadius: '0',
+                            color: '#ff4444',
+                            padding: '8px 20px',
+                            cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onclick: () => {
+                            try {
+                                this.app.state.deleteAccount(account.id);
+                                this.app.showNotification(`Account "${account.name}" deleted`, 'success');
+                                dialog.remove();
+                                backdrop.remove();
+                                this.close();
+                                this.app.router.render();
+                            } catch (error) {
+                                this.app.showNotification(error.message, 'error');
+                                dialog.remove();
+                                backdrop.remove();
+                            }
+                        }
+                    }, ['Delete']),
+                    $.button({
+                        style: {
+                            background: '#000',
+                            border: '1px solid var(--text-dim)',
+                            borderRadius: '0',
+                            color: 'var(--text-dim)',
+                            padding: '8px 20px',
+                            cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        },
+                        onclick: () => {
+                            dialog.remove();
+                            backdrop.remove();
+                        }
+                    }, ['Cancel'])
+                ])
+            ]);
+            
+            // Add backdrop
+            const backdrop = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: '10000'
+                },
+                onclick: () => {
+                    dialog.remove();
+                    backdrop.remove();
+                }
+            });
+            
+            document.body.appendChild(backdrop);
+            document.body.appendChild(dialog);
         }
         
         async createNewAccount() {
+            // This method is now just used for the old button - it should show the form instead
+            this.isCreating = true;
+            this.isImporting = false;
+            if (this.modal) {
+                this.modal.remove();
+            }
+            this.show();
+        }
+        
+        async importAccount() {
+            // Show the import form
+            this.isImporting = true;
+            this.isCreating = false;
+            if (this.modal) {
+                this.modal.remove();
+            }
+            this.show();
+        }
+        
+        createNewAccountForm() {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            return $.div({}, [
+                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Create New Account']),
+                $.div({ style: 'margin-bottom: 20px;' }, [
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Account Name']),
+                    $.input({
+                        id: 'newAccountName',
+                        type: 'text',
+                        placeholder: 'Enter account name',
+                        style: 'width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff;',
+                        value: `Account ${(this.app.state.get('accounts') || []).length + 1}`
+                    })
+                ]),
+                $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
+                    $.button({
+                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
+                        onmouseover: (e) => { e.target.style.background = '#f57315'; e.target.style.color = '#000'; },
+                        onmouseout: (e) => { e.target.style.background = '#000'; e.target.style.color = '#f57315'; },
+                        onclick: () => this.handleCreateAccount()
+                    }, ['Create Account']),
+                    $.button({
+                        style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
+                        onclick: () => { this.isCreating = false; this.show(); }
+                    }, ['Cancel'])
+                ])
+            ]);
+        }
+        
+        createImportForm() {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            return $.div({}, [
+                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Import Account']),
+                $.div({ style: 'margin-bottom: 20px;' }, [
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Account Name']),
+                    $.input({
+                        id: 'importAccountName',
+                        type: 'text',
+                        placeholder: 'Enter account name',
+                        style: 'width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; margin-bottom: 15px;',
+                        value: `Imported ${(this.app.state.get('accounts') || []).length + 1}`
+                    }),
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Seed Phrase']),
+                    $.textarea({
+                        id: 'importSeedPhrase',
+                        placeholder: 'Enter your 12 or 24 word seed phrase',
+                        style: 'width: 100%; height: 80px; padding: 10px; background: #000; border: 1px solid #333; color: #fff; resize: none;'
+                    })
+                ]),
+                $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
+                    $.button({
+                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer;',
+                        onclick: () => this.handleImportAccount()
+                    }, ['Import Account']),
+                    $.button({
+                        style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
+                        onclick: () => { 
+                            console.log('[MultiAccountModal] Cancel clicked in import form');
+                            this.isImporting = false;
+                            this.isCreating = false;
+                            // Remove current modal
+                            if (this.modal) {
+                                this.modal.remove();
+                                this.modal = null;
+                            }
+                            // Show main modal after brief delay
+                            setTimeout(() => {
+                                this.show();
+                            }, 50);
+                        }
+                    }, ['Cancel'])
+                ])
+            ]);
+        }
+        
+        async handleCreateAccount() {
+            console.log('[MultiAccountModal] handleCreateAccount called');
+            
+            const nameInput = document.getElementById('newAccountName');
+            if (!nameInput) {
+                console.error('[MultiAccountModal] Name input not found!');
+                this.app.showNotification('Error: Name input not found', 'error');
+                return;
+            }
+            
+            const name = nameInput.value.trim();
+            console.log('[MultiAccountModal] Account name:', name);
+            
+            if (!name) {
+                this.app.showNotification('Please enter an account name', 'error');
+                return;
+            }
+            
             try {
-                // Generate new seed via API
+                this.app.showNotification('Generating new wallet...', 'info');
+                console.log('[MultiAccountModal] Calling generateSparkWallet...');
+                
+                // Generate new seed
                 const response = await this.app.apiService.generateSparkWallet(12);
+                console.log('[MultiAccountModal] Generate response:', response);
                 
                 if (!response || !response.data || !response.data.mnemonic) {
-                    throw new Error('Failed to generate wallet');
+                    throw new Error('Invalid response from wallet generation');
                 }
                 
                 const mnemonic = response.data.mnemonic;
-                const name = `Account ${(this.app.state.get('accounts') || []).length + 1}`;
+                console.log('[MultiAccountModal] Generated mnemonic length:', mnemonic.split(' ').length);
                 
-                // Create account using the correct method
+                // Create account
                 await this.app.state.createAccount(name, mnemonic, false);
                 
-                this.app.showNotification(`Created new account: ${name}`, 'success');
+                this.app.showNotification(`Account "${name}" created successfully`, 'success');
+                this.isCreating = false;
                 this.close();
-                
-                // Navigate to dashboard
-                this.app.router.navigate('dashboard');
+                this.app.router.render();
             } catch (error) {
-                console.error('[MultiAccountModal] Failed to create account:', error);
+                console.error('[MultiAccountModal] Create account error:', error);
                 this.app.showNotification('Failed to create account: ' + error.message, 'error');
+            }
+        }
+        
+        async handleImportAccount() {
+            const nameInput = document.getElementById('importAccountName');
+            const seedInput = document.getElementById('importSeedPhrase');
+            const name = nameInput.value.trim();
+            const seed = seedInput.value.trim();
+            
+            if (!name) {
+                this.app.showNotification('Please enter an account name', 'error');
+                return;
+            }
+            
+            if (!seed) {
+                this.app.showNotification('Please enter a seed phrase', 'error');
+                return;
+            }
+            
+            // Validate seed phrase
+            const words = seed.split(/\s+/);
+            if (words.length !== 12 && words.length !== 24) {
+                this.app.showNotification('Seed phrase must be 12 or 24 words', 'error');
+                return;
+            }
+            
+            try {
+                // Create account from imported seed
+                await this.app.state.createAccount(name, seed, true);
+                
+                this.app.showNotification(`Account "${name}" imported successfully`, 'success');
+                this.isImporting = false;
+                this.close();
+                this.app.router.render();
+            } catch (error) {
+                this.app.showNotification('Failed to import account: ' + error.message, 'error');
             }
         }
         
@@ -19035,7 +20034,7 @@
                 // Update price display
                 const currentAccount = this.app.state.getCurrentAccount();
                 if (currentAccount) {
-                    const btcBalance = currentAccount.balances.bitcoin / 100000000;
+                    const btcBalance = (currentAccount.balances?.bitcoin || 0) / 100000000;
                     const usdValue = btcBalance * btcPrice;
                     
                     const btcElement = document.getElementById('btc-balance');
