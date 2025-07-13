@@ -1915,9 +1915,18 @@
                 });
             }
             // Auto-persist certain state changes
-            if (['accounts', 'activeAccountIndex', 'isBalanceHidden', 'apiCache'].includes(key)) {
+            if (['accounts', 'currentAccountId', 'isBalanceHidden', 'apiCache'].includes(key)) {
                 this.persistState();
             }
+        }
+        
+        // Alias methods for consistency
+        subscribe(key, callback) {
+            return this.on(key, callback);
+        }
+        
+        removeListener(key, callback) {
+            return this.off(key, callback);
         }
         
         loadPersistedState() {
@@ -1927,7 +1936,13 @@
                     const data = JSON.parse(saved);
                     // Only load safe data
                     if (data.accounts) this.state.accounts = data.accounts;
-                    if (typeof data.activeAccountIndex === 'number') this.state.activeAccountIndex = data.activeAccountIndex;
+                    if (data.currentAccountId) this.state.currentAccountId = data.currentAccountId;
+                    // Handle legacy activeAccountIndex
+                    if (typeof data.activeAccountIndex === 'number' && !data.currentAccountId && data.accounts) {
+                        // Migrate from old index-based system
+                        const account = data.accounts[data.activeAccountIndex];
+                        if (account) this.state.currentAccountId = account.id;
+                    }
                     if (typeof data.isBalanceHidden === 'boolean') this.state.isBalanceHidden = data.isBalanceHidden;
                     if (data.apiCache) this.state.apiCache = data.apiCache;
                 }
@@ -1940,7 +1955,7 @@
             try {
                 const toPersist = {
                     accounts: this.state.accounts,
-                    activeAccountIndex: this.state.activeAccountIndex,
+                    currentAccountId: this.state.currentAccountId,
                     isBalanceHidden: this.state.isBalanceHidden,
                     apiCache: this.state.apiCache
                 };
@@ -1951,79 +1966,20 @@
         }
         
         // Multi-account management methods
-        async createAccount(name, mnemonic, isImport = false) {
-            try {
-                // Generate addresses from mnemonic using API
-                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/import`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        mnemonic: Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic,
-                        network: this.state.isMainnet ? 'MAINNET' : 'TESTNET'
-                    })
-                });
-                
-                const result = await response.json();
-                if (!result.success) throw new Error(result.error);
-                
-                const account = {
-                    id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    name: name || `Account ${this.state.accounts.length + 1}`,
-                    addresses: {
-                        spark: result.data.spark.address,
-                        segwit: result.data.bitcoin.segwit,
-                        taproot: result.data.bitcoin.taproot,
-                        legacy: result.data.bitcoin.legacy
-                    },
-                    seedHash: this.hashSeed(mnemonic), // For verification only
-                    balances: {
-                        bitcoin: 0,
-                        lightning: 0,
-                        stablecoins: {}
-                    },
-                    createdAt: Date.now(),
-                    lastUsed: Date.now(),
-                    isImport: isImport
-                };
-                
-                // Add to accounts
-                const accounts = [...this.state.accounts, account];
-                this.set('accounts', accounts);
-                this.set('currentAccountId', account.id);
-                
-                // Persist to localStorage
-                this.persistAccounts();
-                
-                return account;
-            } catch (error) {
-                console.error('[StateManager] Failed to create account:', error);
-                throw error;
-            }
-        }
+        // REMOVED DUPLICATE createAccount - see line 2120 for the active implementation
         
         switchAccount(accountId) {
             const account = this.state.accounts.find(a => a.id === accountId);
             if (account) {
                 console.log('[StateManager] Switching to account:', account.name);
                 
-                // Update state
+                // Update state - this will trigger listeners
                 this.set('currentAccountId', accountId);
                 account.lastUsed = Date.now();
                 this.persistAccounts();
                 
-                // Force UI update immediately
-                this.updateAccountIndicators(account);
-                
                 // Emit event for any listeners
                 this.emit('accountSwitched', account);
-                
-                // Force dashboard refresh if on dashboard page
-                if (this.state.currentPage === 'dashboard' && window.MooshWallet?.router) {
-                    console.log('[StateManager] Forcing dashboard refresh...');
-                    setTimeout(() => {
-                        window.MooshWallet.router.navigate('dashboard', { forceRefresh: true });
-                    }, 0);
-                }
                 
                 return true;
             }
@@ -2031,33 +1987,8 @@
         }
         
         updateAccountIndicators(account) {
-            console.log(`[StateManager] Updating all indicators to: ${account.name}`);
-            
-            // Update all account indicators in the UI immediately
-            const indicators = document.querySelectorAll('#currentAccountIndicator, .account-indicator, [data-account-name]');
-            indicators.forEach(indicator => {
-                if (indicator) {
-                    const oldText = indicator.textContent;
-                    indicator.textContent = `Active: ${account.name}`;
-                    console.log(`[StateManager] Updated indicator from "${oldText}" to "${indicator.textContent}"`);
-                }
-            });
-            
-            // Update dropdown button
-            const dropdownBtn = document.querySelector('#accountDropdownButton span:first-child');
-            if (dropdownBtn) {
-                dropdownBtn.textContent = `Account: ${account.name}`;
-            }
-            
-            // Also try to update any elements that might have the account name
-            const elementsWithAccountText = document.querySelectorAll('*');
-            elementsWithAccountText.forEach(el => {
-                if (el.textContent && el.textContent.match(/^Active: .+$/) && el.children.length === 0) {
-                    el.textContent = `Active: ${account.name}`;
-                }
-            });
-            
-            console.log(`[StateManager] Updated ${indicators.length} account indicators`);
+            // Deprecated - using reactive state updates instead
+            console.log(`[StateManager] updateAccountIndicators called but using reactive updates now`);
         }
         
         getCurrentAccount() {
@@ -2158,13 +2089,17 @@
                     id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     name: name || `Account ${this.state.accounts.length + 1}`,
                     addresses: {
-                        spark: result.data.addresses.spark,
-                        bitcoin: result.data.addresses.bitcoin
+                        spark: result.data.addresses?.spark || result.data.spark?.address || '',
+                        bitcoin: result.data.addresses?.bitcoin || result.data.bitcoin?.address || '',
+                        segwit: result.data.addresses?.segwit || result.data.bitcoin?.segwit || '',
+                        taproot: result.data.addresses?.taproot || result.data.bitcoin?.taproot || '',
+                        legacy: result.data.addresses?.legacy || result.data.bitcoin?.legacy || ''
                     },
+                    type: isImport ? 'Imported' : 'Generated',
                     createdAt: Date.now(),
                     isImport: isImport,
                     seedHash: this.hashSeed(mnemonic),
-                    balance: {
+                    balances: {
                         spark: 0,
                         bitcoin: 0,
                         total: 0
@@ -2183,21 +2118,14 @@
             }
         }
         
-        switchAccount(accountId) {
-            const account = this.getAccountById(accountId);
-            if (account) {
-                this.state.currentAccountId = accountId;
-                this.persistAccounts();
-                this.emit('accountSwitched', account);
-                return account;
-            }
-            return null;
-        }
         
         renameAccount(accountId, newName) {
-            const account = this.getAccountById(accountId);
+            const accounts = [...this.state.accounts];
+            const account = accounts.find(a => a.id === accountId);
             if (account) {
                 account.name = newName;
+                // Trigger state update to notify listeners
+                this.set('accounts', accounts);
                 this.persistAccounts();
                 return true;
             }
@@ -2651,8 +2579,14 @@
                 console.log('[Router] Content element found:', !!content);
                 
                 if (content) {
+                    // Clear any existing page instance
+                    if (this.currentPageInstance && this.currentPageInstance.destroy) {
+                        this.currentPageInstance.destroy();
+                    }
+                    
                     content.innerHTML = '';
                     const page = PageClass();
+                    this.currentPageInstance = page;
                     console.log('[Router] Page instance created:', !!page);
                     
                     // Mount the page
@@ -2693,6 +2627,7 @@
         constructor(app) {
             this.app = app;
             this.element = null;
+            this.stateListeners = [];
         }
 
         render() {
@@ -2721,6 +2656,24 @@
             const lockOverlay = document.querySelector('.wallet-lock-overlay');
             if (lockOverlay && lockOverlay.parentNode) {
                 lockOverlay.parentNode.removeChild(lockOverlay);
+            }
+        }
+        
+        destroy() {
+            // Remove all state listeners
+            this.stateListeners.forEach(({ key, callback }) => {
+                if (this.app.state.removeListener) {
+                    this.app.state.removeListener(key, callback);
+                }
+            });
+            this.stateListeners = [];
+            this.unmount();
+        }
+        
+        listenToState(key, callback) {
+            if (this.app.state.subscribe) {
+                this.app.state.subscribe(key, callback);
+                this.stateListeners.push({ key, callback });
             }
         }
     }
@@ -6977,14 +6930,14 @@
         
         createAccountSelector() {
             const $ = window.ElementFactory || ElementFactory;
-            const activeAccount = 'Account 1'; // Will be dynamic later
+            const accountName = this.getAccountDisplayName();
             
             return $.div({ className: 'account-selector' }, [
                 $.button({
                     className: 'account-dropdown-btn',
                     onclick: () => this.toggleAccountDropdown()
                 }, [
-                    $.span({ className: 'account-name' }, [activeAccount]),
+                    $.span({ className: 'account-name' }, [accountName]),
                     $.span({ className: 'dropdown-arrow' }, ['▼'])
                 ])
             ]);
@@ -9424,14 +9377,14 @@
         
         createAccountSelector() {
             const $ = window.ElementFactory || ElementFactory;
-            const activeAccount = 'Account 1'; // Will be dynamic later
+            const accountName = this.getAccountDisplayName();
             
             return $.div({ className: 'account-selector' }, [
                 $.button({
                     className: 'account-dropdown-btn',
                     onclick: () => this.toggleAccountDropdown()
                 }, [
-                    $.span({ className: 'account-name' }, [activeAccount]),
+                    $.span({ className: 'account-name' }, [accountName]),
                     $.span({ className: 'dropdown-arrow' }, ['▼'])
                 ])
             ]);
@@ -11460,14 +11413,14 @@
         
         createAccountSelector() {
             const $ = window.ElementFactory || ElementFactory;
-            const activeAccount = 'Account 1'; // Will be dynamic later
+            const accountName = this.getAccountDisplayName();
             
             return $.div({ className: 'account-selector' }, [
                 $.button({
                     className: 'account-dropdown-btn',
                     onclick: () => this.toggleAccountDropdown()
                 }, [
-                    $.span({ className: 'account-name' }, [activeAccount]),
+                    $.span({ className: 'account-name' }, [accountName]),
                     $.span({ className: 'dropdown-arrow' }, ['▼'])
                 ])
             ]);
@@ -14047,7 +14000,7 @@
         createAccountList() {
             const $ = window.ElementFactory || ElementFactory;
             const accounts = this.app.state.get('accounts');
-            const activeIndex = this.app.state.get('activeAccountIndex');
+            const currentAccountId = this.app.state.get('currentAccountId');
             
             if (accounts.length === 0) {
                 return $.div({
@@ -14064,7 +14017,7 @@
                     marginBottom: 'calc(24px * var(--scale-factor))'
                 }
             }, accounts.map((account, index) => {
-                const isActive = index === activeIndex;
+                const isActive = account.id === currentAccountId;
                 
                 return $.div({
                     className: 'account-item',
@@ -14121,7 +14074,15 @@
                                         color: 'var(--text-dim)',
                                         fontSize: 'calc(11px * var(--scale-factor))'
                                     }
-                                }, [`${account.type} • Created ${new Date(account.createdAt).toLocaleDateString()}`])
+                                }, [`${account.type || 'Wallet'} • Created ${new Date(account.createdAt).toLocaleDateString()}`]),
+                                $.div({
+                                    style: {
+                                        color: 'var(--text-dim)',
+                                        fontSize: 'calc(10px * var(--scale-factor))',
+                                        marginTop: 'calc(4px * var(--scale-factor))',
+                                        fontFamily: "'JetBrains Mono', monospace"
+                                    }
+                                }, [this.formatAddress(account.addresses?.taproot || account.addresses?.spark || 'No address')])
                             ])
                         ]),
                         isActive && $.div({
@@ -14261,14 +14222,26 @@
             ]);
         }
         
+        formatAddress(address) {
+            if (!address || address === 'No address') return address;
+            // Show first 8 and last 6 characters
+            return `${address.substring(0, 8)}...${address.substring(address.length - 6)}`;
+        }
+        
         switchToAccount(index) {
-            this.app.state.switchAccount(index);
-            this.app.showNotification(`Switched to ${this.app.state.get('accounts')[index].name}`, 'success');
-            this.close();
-            
-            // Refresh dashboard
-            if (this.app.state.get('currentPage') === 'dashboard') {
-                this.app.router.navigate('dashboard');
+            const accounts = this.app.state.get('accounts') || [];
+            const account = accounts[index];
+            if (account) {
+                const switched = this.app.state.switchAccount(account.id);
+                if (switched) {
+                    this.app.showNotification(`Switched to ${account.name}`, 'success');
+                    this.close();
+                    
+                    // Refresh dashboard
+                    if (this.app.state.get('currentPage') === 'dashboard') {
+                        this.app.router.navigate('dashboard');
+                    }
+                }
             }
         }
         
@@ -18133,6 +18106,41 @@
     // DASHBOARD PAGE
     // ═══════════════════════════════════════════════════════════════════════
     class DashboardPage extends Component {
+        afterMount() {
+            // Listen for account changes using reactive state
+            this.listenToState('currentAccountId', (newAccountId, oldAccountId) => {
+                console.log('[DashboardPage] Account changed from', oldAccountId, 'to', newAccountId);
+                this.updateAccountDisplay();
+                this.loadCurrentAccountData();
+            });
+            
+            // Also listen for accounts array changes (for renaming)
+            this.listenToState('accounts', (newAccounts, oldAccounts) => {
+                console.log('[DashboardPage] Accounts array changed');
+                this.updateAccountDisplay();
+            });
+            
+            // Keep backward compatibility with event listener
+            this.accountSwitchHandler = (account) => {
+                console.log('[DashboardPage] Account switched event:', account.name);
+                this.updateAccountDisplay();
+                this.loadCurrentAccountData();
+            };
+            
+            // Subscribe to account switch events as well
+            this.app.state.on('accountSwitched', this.accountSwitchHandler);
+        }
+        
+        unmount() {
+            // Clean up listener
+            if (this.accountSwitchHandler) {
+                this.app.state.off('accountSwitched', this.accountSwitchHandler);
+            }
+            
+            // Call parent unmount
+            super.unmount();
+        }
+        
         render() {
             const $ = window.ElementFactory || ElementFactory;
             
@@ -18525,7 +18533,34 @@
             // Get the selected wallet type
             const selectedType = this.app.state.get('selectedWalletType') || 'taproot';
             
-            // Get wallet data from localStorage
+            // Get current account
+            const currentAccount = this.app.state.getCurrentAccount();
+            
+            if (currentAccount && currentAccount.addresses) {
+                // Map wallet types to their addresses from current account
+                const addressMap = {
+                    'taproot': currentAccount.addresses.taproot || '',
+                    'nativeSegWit': currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '',
+                    'nestedSegWit': currentAccount.addresses.nestedSegWit || '',
+                    'legacy': currentAccount.addresses.legacy || '',
+                    'spark': currentAccount.addresses.spark || ''
+                };
+                
+                // Return the selected address
+                const selectedAddress = addressMap[selectedType];
+                if (selectedAddress) {
+                    return selectedAddress;
+                }
+                
+                // Fallback to any available address
+                return currentAccount.addresses.spark || 
+                       currentAccount.addresses.segwit || 
+                       currentAccount.addresses.taproot || 
+                       currentAccount.addresses.legacy ||
+                       'No address found';
+            }
+            
+            // Legacy fallback for old wallet data
             const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
             const currentWallet = this.app.state.get('currentWallet') || {};
             
@@ -18554,14 +18589,14 @@
         
         createAccountSelector() {
             const $ = window.ElementFactory || ElementFactory;
-            const activeAccount = 'Account 1'; // Will be dynamic later
+            const accountName = this.getAccountDisplayName();
             
             return $.div({ className: 'account-selector' }, [
                 $.button({
                     className: 'account-dropdown-btn',
                     onclick: () => this.toggleAccountDropdown()
                 }, [
-                    $.span({ className: 'account-name' }, [activeAccount]),
+                    $.span({ className: 'account-name' }, [accountName]),
                     $.span({ className: 'dropdown-arrow' }, ['▼'])
                 ])
             ]);
@@ -19503,6 +19538,26 @@
             this.startLiveDataUpdates();
         }
         
+        
+        updateAccountDisplay() {
+            // Update all account indicators
+            const accountIndicators = this.element.querySelectorAll('.account-indicator, #currentAccountIndicator');
+            const newAccountName = this.getAccountDisplayName();
+            
+            accountIndicators.forEach(indicator => {
+                if (indicator) {
+                    indicator.textContent = newAccountName;
+                    console.log('[DashboardPage] Updated indicator to:', newAccountName);
+                }
+            });
+            
+            // Update wallet type selector to show current address
+            this.updateAccountIndicator();
+            
+            // Also trigger a data refresh for the new account
+            this.loadWalletData();
+        }
+        
         initializeWalletTypeSelector() {
             // Get the selected wallet type from state or localStorage
             const selectedType = this.app.state.get('selectedWalletType') || 
@@ -19882,11 +19937,54 @@
         
         loadWalletData() {
             // Load current account data
+            this.loadCurrentAccountData();
+        }
+        
+        loadCurrentAccountData() {
             const currentAccount = this.app.state.getCurrentAccount();
-            if (currentAccount) {
-                // Update UI with account data
-                this.updateAccountIndicator();
-                this.refreshBalances();
+            if (!currentAccount) {
+                console.log('[DashboardPage] No current account found');
+                return;
+            }
+            
+            console.log('[DashboardPage] Loading data for account:', currentAccount.name);
+            
+            // Update wallet addresses display
+            this.updateWalletAddresses(currentAccount);
+            
+            // Refresh balances for current account
+            this.refreshBalances();
+            
+            // Update account indicator
+            this.updateAccountIndicator();
+        }
+        
+        updateWalletAddresses(account) {
+            // Update all address displays with current account's addresses
+            const addressElements = {
+                spark: this.element.querySelector('[data-address-type="spark"]'),
+                segwit: this.element.querySelector('[data-address-type="segwit"]'),
+                taproot: this.element.querySelector('[data-address-type="taproot"]'),
+                legacy: this.element.querySelector('[data-address-type="legacy"]')
+            };
+            
+            // Update each address display
+            Object.entries(addressElements).forEach(([type, element]) => {
+                if (element && account.addresses && account.addresses[type]) {
+                    const addressText = element.querySelector('.address-text');
+                    if (addressText) {
+                        addressText.textContent = account.addresses[type];
+                    }
+                }
+            });
+            
+            // Also update the main wallet address if displayed
+            const mainAddressElement = this.element.querySelector('.wallet-address');
+            if (mainAddressElement && account.addresses) {
+                const mainAddress = account.addresses.spark || account.addresses.segwit || 
+                                  account.addresses.taproot || account.addresses.legacy || 
+                                  'No address found';
+                mainAddressElement.textContent = mainAddress;
             }
         }
         
@@ -20152,20 +20250,52 @@
                     blockElement.textContent = blockHeight.toLocaleString();
                 }
                 
-                // Update price display
+                // Get current account and fetch fresh balance
                 const currentAccount = this.app.state.getCurrentAccount();
-                if (currentAccount) {
-                    const btcBalance = (currentAccount.balances?.bitcoin || 0) / 100000000;
-                    const usdValue = btcBalance * btcPrice;
+                if (currentAccount && currentAccount.addresses) {
+                    // Get the selected wallet type to determine which address to use
+                    const walletType = this.app.state.get('selectedWalletType') || 'taproot';
+                    let address = '';
                     
-                    const btcElement = document.getElementById('btc-balance');
-                    const usdElement = document.getElementById('usd-balance');
-                    
-                    if (btcElement && !this.app.state.get('isBalanceHidden')) {
-                        btcElement.textContent = btcBalance.toFixed(8);
+                    // Select the appropriate address based on wallet type
+                    switch(walletType) {
+                        case 'segwit':
+                        case 'nativeSegWit':
+                            address = currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '';
+                            break;
+                        case 'legacy':
+                            address = currentAccount.addresses.legacy || '';
+                            break;
+                        case 'spark':
+                            address = currentAccount.addresses.spark || '';
+                            break;
+                        case 'taproot':
+                        default:
+                            address = currentAccount.addresses.taproot || '';
+                            break;
                     }
-                    if (usdElement && !this.app.state.get('isBalanceHidden')) {
-                        usdElement.textContent = usdValue.toFixed(2);
+                    
+                    if (address) {
+                        // Fetch fresh balance from blockchain
+                        const balanceSats = await this.app.apiService.fetchAddressBalance(address);
+                        const btcBalance = balanceSats / 100000000; // Convert from satoshis
+                        const usdValue = btcBalance * btcPrice;
+                        
+                        // Update the account's balance in state
+                        currentAccount.balances = currentAccount.balances || {};
+                        currentAccount.balances.bitcoin = balanceSats;
+                        currentAccount.balances.usd = usdValue;
+                        
+                        // Update UI elements
+                        const btcElement = document.getElementById('btc-balance');
+                        const usdElement = document.getElementById('usd-balance');
+                        
+                        if (btcElement && !this.app.state.get('isBalanceHidden')) {
+                            btcElement.textContent = btcBalance.toFixed(8);
+                        }
+                        if (usdElement && !this.app.state.get('isBalanceHidden')) {
+                            usdElement.textContent = usdValue.toFixed(2);
+                        }
                     }
                 }
             } catch (error) {

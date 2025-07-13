@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Account Switching Fix - MOOSH Wallet</title>
+    <link rel="stylesheet" href="/public/css/global.css">
+    <link rel="stylesheet" href="/public/css/fonts.css">
+    <link rel="stylesheet" href="/public/css/variables.css">
+    <link rel="stylesheet" href="/public/css/components/buttons.css">
+    <link rel="stylesheet" href="/public/css/components/forms.css">
+    <link rel="stylesheet" href="/public/css/components/header.css">
+    <link rel="stylesheet" href="/public/css/components/modals.css">
+    <style>
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Space Mono', monospace;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #0f0;
+        }
+        .log-entry {
+            font-size: 12px;
+            margin: 2px 0;
+            font-family: monospace;
+        }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .info { color: #ff0; }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+        }
+        button:hover {
+            background: #0a0;
+        }
+    </style>
+</head>
+<body>
+    <h1>MOOSH Wallet - Account Switching Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="createTestAccounts()">Create Test Accounts</button>
+        <button onclick="showAccountModal()">Show Account Modal</button>
+        <button onclick="testSwitchAccount(0)">Switch to Account 1</button>
+        <button onclick="testSwitchAccount(1)">Switch to Account 2</button>
+        <button onclick="testSwitchAccount(2)">Switch to Account 3</button>
+        <button onclick="goToDashboard()">Go to Dashboard</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Current State</h2>
+        <div id="current-state"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="console-log"></div>
+    </div>
+    
+    <div id="app"></div>
+    
+    <script src="/public/js/moosh-wallet.js"></script>
+    <script>
+        let app;
+        const logContainer = document.getElementById('console-log');
+        const stateContainer = document.getElementById('current-state');
+        
+        // Override console.log to capture logs
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog('info', args.join(' '));
+        };
+        
+        function addLog(type, message) {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function clearLogs() {
+            logContainer.innerHTML = '';
+            addLog('info', 'Logs cleared');
+        }
+        
+        function updateStateDisplay() {
+            const accounts = app.state.get('accounts') || [];
+            const currentAccountId = app.state.get('currentAccountId');
+            const currentAccount = app.state.getCurrentAccount();
+            
+            stateContainer.innerHTML = `
+                <div><strong>Total Accounts:</strong> ${accounts.length}</div>
+                <div><strong>Current Account ID:</strong> ${currentAccountId || 'None'}</div>
+                <div><strong>Current Account Name:</strong> ${currentAccount ? currentAccount.name : 'None'}</div>
+                <div><strong>Current Page:</strong> ${app.state.get('currentPage') || 'None'}</div>
+                <hr>
+                <div><strong>All Accounts:</strong></div>
+                ${accounts.map((acc, i) => `
+                    <div style="margin-left: 20px;">
+                        ${i + 1}. ${acc.name} 
+                        (ID: ${acc.id.substring(0, 8)}...)
+                        ${acc.id === currentAccountId ? '<span style="color: #0f0;">[ACTIVE]</span>' : ''}
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        // Initialize app
+        window.addEventListener('load', () => {
+            app = new MooshWallet();
+            window.app = app;
+            
+            addLog('success', 'MooshWallet initialized');
+            
+            // Listen for state changes
+            app.state.subscribe('currentAccountId', (newId, oldId) => {
+                addLog('success', `Account switched: ${oldId || 'None'} → ${newId}`);
+                updateStateDisplay();
+            });
+            
+            app.state.subscribe('accounts', () => {
+                addLog('info', 'Accounts array updated');
+                updateStateDisplay();
+            });
+            
+            // Initial state display
+            updateStateDisplay();
+            
+            // Check if accounts exist
+            const accounts = app.state.get('accounts') || [];
+            if (accounts.length === 0) {
+                addLog('info', 'No accounts found. Click "Create Test Accounts" to begin.');
+            } else {
+                addLog('info', `Found ${accounts.length} existing accounts`);
+            }
+        });
+        
+        async function createTestAccounts() {
+            try {
+                addLog('info', 'Creating test accounts...');
+                
+                const testSeeds = [
+                    'test wallet one seed phrase for development testing only please ignore completely thanks',
+                    'test wallet two different seed phrase also for testing purposes only not real',
+                    'test wallet three another unique seed phrase testing multi account system here'
+                ];
+                
+                const testNames = ['Primary Wallet', 'Trading Wallet', 'Savings Wallet'];
+                
+                for (let i = 0; i < testSeeds.length; i++) {
+                    await app.state.createAccount(testNames[i], testSeeds[i], i === 2);
+                    addLog('success', `Created account: ${testNames[i]}`);
+                }
+                
+                updateStateDisplay();
+                addLog('success', 'All test accounts created!');
+            } catch (error) {
+                addLog('error', `Error creating accounts: ${error.message}`);
+            }
+        }
+        
+        function showAccountModal() {
+            try {
+                const modal = new MultiAccountModal(app);
+                modal.show();
+                addLog('info', 'Account modal opened');
+            } catch (error) {
+                addLog('error', `Error showing modal: ${error.message}`);
+            }
+        }
+        
+        function testSwitchAccount(index) {
+            try {
+                const accounts = app.state.get('accounts') || [];
+                if (index >= accounts.length) {
+                    addLog('error', `Account index ${index} out of range`);
+                    return;
+                }
+                
+                const account = accounts[index];
+                addLog('info', `Attempting to switch to: ${account.name}`);
+                
+                const result = app.state.switchAccount(account.id);
+                if (result) {
+                    addLog('success', `Successfully switched to: ${account.name}`);
+                } else {
+                    addLog('error', `Failed to switch to: ${account.name}`);
+                }
+            } catch (error) {
+                addLog('error', `Error switching account: ${error.message}`);
+            }
+        }
+        
+        function goToDashboard() {
+            try {
+                app.router.navigate('dashboard');
+                addLog('info', 'Navigated to dashboard');
+            } catch (error) {
+                addLog('error', `Error navigating: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
