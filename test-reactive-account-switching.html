@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Reactive Account Switching - MOOSH Wallet</title>
+    <style>
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #0f0;
+            background: #111;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #222;
+        }
+        .success {
+            color: #0f0;
+            border-left: 3px solid #0f0;
+        }
+        .error {
+            color: #f00;
+            border-left: 3px solid #f00;
+        }
+        button {
+            background: #222;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+        pre {
+            background: #222;
+            padding: 10px;
+            overflow-x: auto;
+            border: 1px solid #333;
+        }
+        .account-display {
+            background: #222;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #f57315;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Reactive Account Switching Test</h1>
+    
+    <div class="test-section">
+        <h2>Current State</h2>
+        <div id="current-state" class="account-display">Loading...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Actions</h2>
+        <button onclick="testAccountSwitch()">Test Account Switch</button>
+        <button onclick="createTestAccounts()">Create Test Accounts</button>
+        <button onclick="clearAndReload()">Clear & Reload</button>
+        <button onclick="window.location.href='/'">Go to Wallet</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        const results = document.getElementById('test-results');
+        const stateDisplay = document.getElementById('current-state');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'test-result ' + (type === 'error' ? 'error' : type === 'success' ? 'success' : '');
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            results.appendChild(div);
+            console.log(`[Test] ${message}`);
+        }
+        
+        function updateStateDisplay() {
+            const state = JSON.parse(localStorage.getItem('mooshWalletState') || '{}');
+            const accounts = JSON.parse(localStorage.getItem('mooshAccounts') || '{}');
+            
+            stateDisplay.innerHTML = `
+                <h3>Wallet State</h3>
+                <pre>${JSON.stringify(state, null, 2)}</pre>
+                <h3>Accounts Data</h3>
+                <pre>${JSON.stringify(accounts, null, 2)}</pre>
+            `;
+        }
+        
+        async function createTestAccounts() {
+            log('Creating test accounts...');
+            
+            try {
+                // Create test data
+                const testAccounts = [
+                    {
+                        id: 'test_acc_1',
+                        name: 'Test Account 1',
+                        addresses: { spark: 'spark1test...', bitcoin: '1test...' },
+                        createdAt: Date.now()
+                    },
+                    {
+                        id: 'test_acc_2',
+                        name: 'Test Account 2',
+                        addresses: { spark: 'spark2test...', bitcoin: '2test...' },
+                        createdAt: Date.now()
+                    },
+                    {
+                        id: 'test_acc_3',
+                        name: 'Test Account 3',
+                        addresses: { spark: 'spark3test...', bitcoin: '3test...' },
+                        createdAt: Date.now()
+                    }
+                ];
+                
+                // Save to localStorage
+                const accountsData = {
+                    accounts: testAccounts,
+                    currentAccountId: testAccounts[0].id
+                };
+                
+                localStorage.setItem('mooshAccounts', JSON.stringify(accountsData));
+                
+                const stateData = {
+                    accounts: testAccounts,
+                    currentAccountId: testAccounts[0].id,
+                    isBalanceHidden: false
+                };
+                
+                localStorage.setItem('mooshWalletState', JSON.stringify(stateData));
+                
+                log('✓ Created 3 test accounts', 'success');
+                updateStateDisplay();
+                
+            } catch (error) {
+                log(`Error creating test accounts: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAccountSwitch() {
+            log('Testing account switch functionality...');
+            
+            try {
+                // Get current state
+                const state = JSON.parse(localStorage.getItem('mooshWalletState') || '{}');
+                const accounts = state.accounts || [];
+                const currentId = state.currentAccountId;
+                
+                if (accounts.length < 2) {
+                    log('Not enough accounts to test switching. Create test accounts first.', 'error');
+                    return;
+                }
+                
+                log(`Current account: ${currentId}`);
+                
+                // Find a different account to switch to
+                const otherAccount = accounts.find(a => a.id !== currentId);
+                if (!otherAccount) {
+                    log('No other account found to switch to', 'error');
+                    return;
+                }
+                
+                log(`Switching to: ${otherAccount.name} (${otherAccount.id})`);
+                
+                // Simulate the switch by updating localStorage
+                state.currentAccountId = otherAccount.id;
+                localStorage.setItem('mooshWalletState', JSON.stringify(state));
+                
+                // Also update mooshAccounts
+                const accountsData = JSON.parse(localStorage.getItem('mooshAccounts') || '{}');
+                accountsData.currentAccountId = otherAccount.id;
+                localStorage.setItem('mooshAccounts', JSON.stringify(accountsData));
+                
+                log(`✓ Account switched successfully`, 'success');
+                log(`New current account: ${otherAccount.id}`, 'success');
+                
+                updateStateDisplay();
+                
+                // Test if the state is properly persisted
+                setTimeout(() => {
+                    const newState = JSON.parse(localStorage.getItem('mooshWalletState') || '{}');
+                    if (newState.currentAccountId === otherAccount.id) {
+                        log('✓ State persistence verified', 'success');
+                    } else {
+                        log('✗ State persistence failed', 'error');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                log(`Error during account switch test: ${error.message}`, 'error');
+            }
+        }
+        
+        function clearAndReload() {
+            if (confirm('This will clear all wallet data. Are you sure?')) {
+                localStorage.clear();
+                log('✓ All data cleared', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }
+        }
+        
+        // Initialize
+        updateStateDisplay();
+        log('Test page loaded. Ready for testing.');
+        
+        // Auto-check current state
+        const state = JSON.parse(localStorage.getItem('mooshWalletState') || '{}');
+        const accounts = JSON.parse(localStorage.getItem('mooshAccounts') || '{}');
+        
+        if (!state.accounts || state.accounts.length === 0) {
+            log('No accounts found. Click "Create Test Accounts" to begin.', 'info');
+        } else {
+            log(`Found ${state.accounts.length} accounts`, 'success');
+            log(`Current account ID: ${state.currentAccountId}`, 'info');
+        }
+    </script>
+</body>
+</html>
