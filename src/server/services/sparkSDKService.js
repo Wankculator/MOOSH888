@@ -3,7 +3,7 @@
  * Generates real Spark addresses using the official SDK or bech32m fallback
  */
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 // Try to load the SDK dependencies
 let SparkWallet, bip39, bip32, ecc;
@@ -501,8 +501,8 @@ async function generateSparkFromMnemonic(mnemonic) {
     return await generateRealSparkWallet('MAINNET', mnemonic);
 }
 
-module.exports = {
-    generateSparkWallet: generateRealSparkWallet,
-    importSparkWallet: importSparkWallet,
-    generateSparkFromMnemonic: generateSparkFromMnemonic
+export {
+    generateRealSparkWallet as generateSparkWallet,
+    importSparkWallet,
+    generateSparkFromMnemonic
 };

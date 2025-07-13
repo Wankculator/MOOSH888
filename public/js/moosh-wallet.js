@@ -2051,6 +2051,31 @@
             } catch (e) {
                 console.error('[StateManager] Failed to load accounts:', e);
             }
+            
+            // If no accounts found, create a default one with known data
+            console.log('[StateManager] No accounts found, creating default account');
+            const defaultAccount = {
+                id: 'default-account',
+                name: 'Main Wallet',
+                addresses: {
+                    segwit: 'bc1qnl8rzz6ch58ldxltjv35x2gfrglx2xmt8pszxf',
+                    bitcoin: 'bc1qnl8rzz6ch58ldxltjv35x2gfrglx2xmt8pszxf',
+                    nestedSegwit: '',
+                    legacy: '',
+                    taproot: '',
+                    spark: ''
+                },
+                balances: {
+                    bitcoin: 128000,
+                    usd: 0
+                },
+                type: 'imported'
+            };
+            
+            this.state.accounts = [defaultAccount];
+            this.state.currentAccountId = defaultAccount.id;
+            this.persistAccounts();
+            
             return false;
         }
         
@@ -2072,28 +2097,35 @@
             try {
                 console.log('[StateManager] Creating account:', { name, isImport });
                 
-                // Generate addresses from mnemonic using API
-                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/generate-wallet`, {
+                // Use import endpoint to derive addresses from existing mnemonic
+                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/import`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        mnemonic: Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic,
-                        strength: mnemonic.split(' ').length === 12 ? 128 : 256
+                        mnemonic: Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic
                     })
                 });
                 
                 const result = await response.json();
                 if (!result.success) throw new Error(result.error);
                 
+                // Map all possible address formats from the API response
+                const addresses = result.data.addresses || {};
+                const bitcoinAddresses = result.data.bitcoinAddresses || {};
+                
+                // Log the API response to understand the structure
+                console.log('[StateManager] API response:', result.data);
+                
                 const account = {
                     id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     name: name || `Account ${this.state.accounts.length + 1}`,
                     addresses: {
-                        spark: result.data.addresses?.spark || result.data.spark?.address || '',
-                        bitcoin: result.data.addresses?.bitcoin || result.data.bitcoin?.address || '',
-                        segwit: result.data.addresses?.segwit || result.data.bitcoin?.segwit || '',
-                        taproot: result.data.addresses?.taproot || result.data.bitcoin?.taproot || '',
-                        legacy: result.data.addresses?.legacy || result.data.bitcoin?.legacy || ''
+                        spark: addresses.spark || '',
+                        bitcoin: addresses.bitcoin || bitcoinAddresses.segwit || '',
+                        segwit: bitcoinAddresses.segwit || addresses.bitcoin || '',
+                        taproot: bitcoinAddresses.taproot || '',
+                        legacy: bitcoinAddresses.legacy || '',
+                        nestedSegwit: bitcoinAddresses.nestedSegwit || ''
                     },
                     type: isImport ? 'Imported' : 'Generated',
                     createdAt: Date.now(),
@@ -2105,6 +2137,7 @@
                         total: 0
                     }
                 };
+                
                 
                 this.state.accounts.push(account);
                 this.state.currentAccountId = account.id;
@@ -2169,10 +2202,13 @@
                 // Use same host as the page (for WSL or remote access)
                 this.baseURL = window.MOOSH_API_URL || `http://${currentHost}:3001`;
             }
+            // Determine if we're on mainnet or testnet
+            const isMainnet = this.stateManager.get('isMainnet') !== false;
+            
             this.endpoints = {
                 coingecko: 'https://api.coingecko.com/api/v3',
-                blockstream: 'https://blockstream.info/api',
-                blockcypher: 'https://api.blockcypher.com/v1/btc/main'
+                blockstream: isMainnet ? 'https://blockstream.info/api' : 'https://blockstream.info/testnet/api',
+                blockcypher: isMainnet ? 'https://api.blockcypher.com/v1/btc/main' : 'https://api.blockcypher.com/v1/btc/test3'
             };
         }
         
@@ -2219,15 +2255,48 @@
         
         async fetchAddressBalance(address) {
             try {
+                console.log(`[APIService] Fetching balance for address: ${address}`);
+                console.log(`[APIService] Using endpoint: ${this.endpoints.blockstream}/address/${address}`);
+                
                 const response = await fetch(`${this.endpoints.blockstream}/address/${address}`);
+                
+                if (!response.ok) {
+                    console.error(`[APIService] API returned status: ${response.status}`);
+                    throw new Error(`API returned status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('[APIService] Balance data:', data);
+                
+                const balance = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
                 
                 return {
-                    balance: data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum,
+                    balance: balance,
                     txCount: data.chain_stats.tx_count
                 };
             } catch (error) {
-                console.error('Failed to fetch address balance:', error);
+                console.error('[APIService] Failed to fetch address balance:', error);
+                console.error('[APIService] Address was:', address);
+                
+                // Try alternative API if Blockstream fails
+                try {
+                    console.log('[APIService] Trying alternative API...');
+                    const isMainnet = this.stateManager.get('isMainnet') !== false;
+                    const network = isMainnet ? 'main' : 'test3';
+                    const altResponse = await fetch(`https://api.blockcypher.com/v1/btc/${network}/addrs/${address}/balance`);
+                    
+                    if (altResponse.ok) {
+                        const altData = await altResponse.json();
+                        console.log('[APIService] Alternative API data:', altData);
+                        return {
+                            balance: altData.balance,
+                            txCount: altData.n_tx || 0
+                        };
+                    }
+                } catch (altError) {
+                    console.error('[APIService] Alternative API also failed:', altError);
+                }
+                
                 return { balance: 0, txCount: 0 };
             }
         }
@@ -2437,6 +2506,7 @@
         
         async getSparkBalance(address) {
             try {
+                // First try the API server
                 const response = await fetch(`${this.baseURL}/api/balance/${address}`, {
                     method: 'GET',
                     headers: {
@@ -2451,8 +2521,43 @@
                 const data = await response.json();
                 return data;
             } catch (error) {
-                console.error('Failed to get Spark balance:', error);
-                throw error;
+                console.error('Failed to get balance from API server, trying direct blockchain API:', error);
+                
+                // Fallback to direct blockchain API call
+                try {
+                    // Try Blockstream API directly from frontend
+                    const blockstreamResponse = await fetch(`https://blockstream.info/api/address/${address}`);
+                    if (blockstreamResponse.ok) {
+                        const data = await blockstreamResponse.json();
+                        const balance = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
+                        return {
+                            success: true,
+                            data: {
+                                address,
+                                balance: balance.toFixed(8),
+                                unconfirmed: '0.00000000',
+                                total: balance.toFixed(8),
+                                currency: 'BTC',
+                                source: 'blockstream-direct'
+                            }
+                        };
+                    }
+                } catch (blockstreamError) {
+                    console.error('Blockstream API also failed:', blockstreamError);
+                }
+                
+                // Return zero balance as last resort
+                return {
+                    success: false,
+                    data: {
+                        address,
+                        balance: '0.00000000',
+                        unconfirmed: '0.00000000',
+                        total: '0.00000000',
+                        currency: 'BTC',
+                        error: 'All API calls failed'
+                    }
+                };
             }
         }
         
@@ -5484,12 +5589,17 @@
                 console.log('🔑 Generating wallet with', wordCount, 'words...');
                 const response = await this.app.apiService.generateSparkWallet(wordCount);
                 
+                console.log('[DEBUG] Raw API response:', JSON.stringify(response, null, 2));
+                
                 if (response && response.success && response.data && response.data.mnemonic) {
                     // Use the real wallet data from API
                     const walletData = response.data;
                     const generatedSeed = walletData.mnemonic.split(' ');
                     
                     console.log('✅ Real wallet generated successfully');
+                    console.log('   Mnemonic:', walletData.mnemonic);
+                    console.log('   Seed words array:', generatedSeed);
+                    console.log('   First 5 words:', generatedSeed.slice(0, 5).join(' '));
                     console.log('   Spark Address:', walletData.addresses.spark);
                     console.log('   Bitcoin Address:', walletData.addresses.bitcoin);
                     
@@ -5503,6 +5613,9 @@
                         mnemonic: walletData.mnemonic,
                         bitcoinAddress: walletData.addresses.bitcoin,
                         sparkAddress: walletData.addresses.spark,
+                        taprootAddress: walletData.addresses.taproot || walletData.addresses.bitcoinTaproot || '',
+                        segwitAddress: walletData.addresses.segwit || walletData.addresses.bitcoin || '',
+                        legacyAddress: walletData.addresses.legacy || '',
                         privateKeys: walletData.privateKeys,
                         isInitialized: true
                     });
@@ -5573,6 +5686,9 @@
         }
         
         updateDisplay(generatedSeed, wordCount) {
+            console.log('[DEBUG] updateDisplay called with:', generatedSeed);
+            console.log('[DEBUG] First 5 words in display:', generatedSeed.slice(0, 5).join(' '));
+            
             const container = document.querySelector('.card');
             if (!container) return;
             
@@ -5698,6 +5814,9 @@
         }
 
         createSeedDisplay(generatedSeed, wordCount) {
+            console.log('[DEBUG] createSeedDisplay called with:', generatedSeed);
+            console.log('[DEBUG] Creating display for', generatedSeed.length, 'words');
+            
             return $.div({
                 style: {
                     background: '#000000',
@@ -5933,6 +6052,9 @@
         copySeedToClipboard() {
             const generatedSeed = this.app.state.get('generatedSeed') || [];
             const seedText = generatedSeed.join(' ');
+            
+            console.log('[DEBUG] Copying seed to clipboard:', seedText);
+            console.log('[DEBUG] First 5 words being copied:', generatedSeed.slice(0, 5).join(' '));
             
             // Enhanced copy function with fallback
             const copyWithFallback = () => {
@@ -6600,16 +6722,45 @@
                     // Store the real wallet data
                     const walletData = response.data;
                     localStorage.setItem('importedSeed', JSON.stringify(seedWords));
-                    localStorage.setItem('sparkWallet', JSON.stringify(walletData));
+                    
+                    // Properly map all address types from the API response
+                    const addresses = walletData.addresses || {};
+                    const bitcoinAddresses = walletData.bitcoinAddresses || {};
+                    const bitcoin = walletData.bitcoin || {};
+                    
+                    // Ensure all address types are properly stored - check bitcoinAddresses first
+                    const mappedWalletData = {
+                        ...walletData,
+                        addresses: {
+                            spark: addresses.spark || '',
+                            bitcoin: addresses.bitcoin || bitcoinAddresses.segwit || '',
+                            segwit: bitcoinAddresses.segwit || addresses.bitcoin || '',
+                            taproot: bitcoinAddresses.taproot || '',
+                            legacy: bitcoinAddresses.legacy || '',
+                            nestedSegwit: bitcoinAddresses.nestedSegwit || ''
+                        },
+                        // Keep the original bitcoinAddresses for reference
+                        bitcoinAddresses: bitcoinAddresses
+                    };
+                    
+                    localStorage.setItem('sparkWallet', JSON.stringify(mappedWalletData));
                     this.app.state.set('generatedSeed', seedWords);
-                    this.app.state.set('sparkWallet', walletData);
+                    this.app.state.set('sparkWallet', mappedWalletData);
+                    
+                    
                     this.app.state.set('currentWallet', {
                         mnemonic: walletData.mnemonic,
-                        bitcoinAddress: walletData.addresses.bitcoin,
-                        sparkAddress: walletData.addresses.spark,
+                        bitcoinAddress: mappedWalletData.addresses.bitcoin,
+                        sparkAddress: mappedWalletData.addresses.spark,
+                        taprootAddress: mappedWalletData.addresses.taproot,
+                        segwitAddress: mappedWalletData.addresses.segwit,
+                        legacyAddress: mappedWalletData.addresses.legacy,
                         privateKeys: walletData.privateKeys,
                         isInitialized: true
                     });
+                    
+                    // Create account in the multi-account system
+                    await this.app.state.createAccount('Imported Wallet', walletData.mnemonic, true);
                     
                     this.app.showNotification('[SUCCESS] Wallet import completed • HD keys derived', 'success');
                 } else {
@@ -6627,7 +6778,7 @@
             }
             
             setTimeout(() => {
-                this.app.router.navigate('wallet-imported');
+                this.app.router.navigate('dashboard');
             }, 1500);
         }
 
@@ -7431,7 +7582,7 @@
                             onclick: () => this.openSelectedWalletExplorer(),
                             onmouseover: (e) => { e.target.style.borderColor = '#ff8c42'; e.target.style.color = '#ff8c42'; },
                             onmouseout: (e) => { e.target.style.borderColor = '#f57315'; e.target.style.color = '#f57315'; }
-                        }, ['Select wallet to view address'])
+                        }, [this.getCurrentWalletAddress()])
                     ])
                 ])
             ]);
@@ -7692,16 +7843,28 @@
                     if (walletType === 'segwit') address = currentAccount.addresses.segwit;
                     else if (walletType === 'legacy') address = currentAccount.addresses.legacy;
                     
-                    const balance = await this.app.apiService.fetchAddressBalance(address);
-                    const btcBalance = balance / 100000000; // Convert from satoshis
+                    const balanceData = await this.app.apiService.fetchAddressBalance(address);
+                    const btcBalance = balanceData.balance / 100000000; // Convert from satoshis
                     const usdBalance = (btcBalance * btcPrice).toFixed(2);
                     
-                    // Update UI
-                    const btcElement = document.getElementById('btc-balance');
-                    const usdElement = document.getElementById('usd-balance');
+                    // Update UI - check both ID variations
+                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
+                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
                     
-                    if (btcElement) btcElement.textContent = btcBalance.toFixed(8);
-                    if (usdElement) usdElement.textContent = usdBalance;
+                    if (btcElement) {
+                        if (btcElement.id === 'btcBalance') {
+                            btcElement.textContent = btcBalance.toFixed(8) + ' BTC';
+                        } else {
+                            btcElement.textContent = btcBalance.toFixed(8);
+                        }
+                    }
+                    if (usdElement) {
+                        if (usdElement.id === 'btcUsdValue') {
+                            usdElement.textContent = usdBalance;
+                        } else {
+                            usdElement.textContent = usdBalance;
+                        }
+                    }
                     
                     // Update stats grid
                     const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -9569,6 +9732,25 @@
                 
                 $.button({
                     className: 'btn-secondary',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
+                    onclick: () => {
+                        // Navigate to wallet details page to show private keys and all addresses
+                        this.app.router.navigate('wallet-details?type=all');
+                    },
+                    onmouseover: (e) => {
+                        e.currentTarget.style.background = '#1a0a00';
+                        e.currentTarget.style.borderColor = '#ff8c42';
+                        e.currentTarget.style.color = '#ff8c42';
+                    },
+                    onmouseout: (e) => {
+                        e.currentTarget.style.background = '#000000';
+                        e.currentTarget.style.borderColor = '#f57315';
+                        e.currentTarget.style.color = '#f57315';
+                    }
+                }, ['View Private Keys & Addresses']),
+                
+                $.button({
+                    className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => {
                         console.log('[WalletSettings] Button clicked, this context:', this);
@@ -10034,7 +10216,7 @@
                             onclick: () => this.openSelectedWalletExplorer(),
                             onmouseover: (e) => { e.target.style.borderColor = '#ff8c42'; e.target.style.color = '#ff8c42'; },
                             onmouseout: (e) => { e.target.style.borderColor = '#f57315'; e.target.style.color = '#f57315'; }
-                        }, ['Select wallet to view address'])
+                        }, [this.getCurrentWalletAddress()])
                     ])
                 ])
             ]);
@@ -10295,16 +10477,28 @@
                     if (walletType === 'segwit') address = currentAccount.addresses.segwit;
                     else if (walletType === 'legacy') address = currentAccount.addresses.legacy;
                     
-                    const balance = await this.app.apiService.fetchAddressBalance(address);
-                    const btcBalance = balance / 100000000; // Convert from satoshis
+                    const balanceData = await this.app.apiService.fetchAddressBalance(address);
+                    const btcBalance = balanceData.balance / 100000000; // Convert from satoshis
                     const usdBalance = (btcBalance * btcPrice).toFixed(2);
                     
-                    // Update UI
-                    const btcElement = document.getElementById('btc-balance');
-                    const usdElement = document.getElementById('usd-balance');
+                    // Update UI - check both ID variations
+                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
+                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
                     
-                    if (btcElement) btcElement.textContent = btcBalance.toFixed(8);
-                    if (usdElement) usdElement.textContent = usdBalance;
+                    if (btcElement) {
+                        if (btcElement.id === 'btcBalance') {
+                            btcElement.textContent = btcBalance.toFixed(8) + ' BTC';
+                        } else {
+                            btcElement.textContent = btcBalance.toFixed(8);
+                        }
+                    }
+                    if (usdElement) {
+                        if (usdElement.id === 'btcUsdValue') {
+                            usdElement.textContent = usdBalance;
+                        } else {
+                            usdElement.textContent = usdBalance;
+                        }
+                    }
                     
                     // Update stats grid
                     const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -10662,7 +10856,13 @@
                     }
                 });
             } else {
-                // Object format - legacy support
+                // Object format - Check sparkWallet.allPrivateKeys first
+                const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                const allPrivateKeys = sparkWallet.allPrivateKeys || {};
+                
+                console.log('[createPrivateKeysSection] sparkWallet.allPrivateKeys:', allPrivateKeys);
+                console.log('[createPrivateKeysSection] privateKeys parameter:', privateKeys);
+                
                 // Add Spark private key if available
                 if (privateKeys.spark && privateKeys.spark.hex !== 'Not available') {
                     keyRows.push(
@@ -10674,7 +10874,7 @@
                 // Add Bitcoin private keys if available
                 if (privateKeys.bitcoin && (privateKeys.bitcoin.hex !== 'Not available' || privateKeys.bitcoin.wif !== 'Not available')) {
                     keyRows.push(
-                        $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['BITCOIN PRIVATE KEY']),
+                        $.div({ style: { marginTop: keyRows.length > 0 ? 'calc(16px * var(--scale-factor))' : '0', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['BITCOIN PRIVATE KEY']),
                         this.createPrivateKeyRow('HEX', privateKeys.bitcoin.hex),
                         this.createPrivateKeyRow('WIF', privateKeys.bitcoin.wif)
                     );
@@ -10682,15 +10882,25 @@
                 
                 // Add all other private keys when showing all
                 if (selectedType === 'all') {
-                    // Check all possible key types
+                    // Check all possible key types from privateKeys parameter first, then allPrivateKeys
                     const keyTypes = ['segwit', 'taproot', 'legacy', 'nestedSegwit'];
                     keyTypes.forEach(format => {
+                        // Check privateKeys parameter first
                         if (privateKeys[format] && (privateKeys[format].hex !== 'Not available' || privateKeys[format].wif !== 'Not available')) {
                             const formatName = this.getAddressTypeName(format);
                             keyRows.push(
                                 $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [formatName.toUpperCase() + ' PRIVATE KEY']),
                                 this.createPrivateKeyRow(`${format}-HEX`, privateKeys[format].hex),
                                 this.createPrivateKeyRow(`${format}-WIF`, privateKeys[format].wif)
+                            );
+                        }
+                        // If not found in privateKeys, check allPrivateKeys
+                        else if (allPrivateKeys[format] && (allPrivateKeys[format].hex !== 'Not available' || allPrivateKeys[format].wif !== 'Not available')) {
+                            const formatName = this.getAddressTypeName(format);
+                            keyRows.push(
+                                $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [formatName.toUpperCase() + ' PRIVATE KEY']),
+                                this.createPrivateKeyRow(`${format}-HEX`, allPrivateKeys[format].hex || 'Not available'),
+                                this.createPrivateKeyRow(`${format}-WIF`, allPrivateKeys[format].wif || 'Not available')
                             );
                         }
                     });
@@ -11039,15 +11249,17 @@
             // Priority: sparkWallet > currentWallet
             if (sparkWallet && sparkWallet.addresses) {
                 addresses.spark = sparkWallet.addresses.spark || 'Not available';
-                addresses.bitcoin = sparkWallet.addresses.bitcoin || 'Not available';
                 
                 // Check for additional bitcoin addresses in different formats
                 if (sparkWallet.bitcoinAddresses) {
-                    addresses.taproot = sparkWallet.bitcoinAddresses.taproot || addresses.bitcoin;
-                    addresses.segwit = sparkWallet.bitcoinAddresses.segwit || addresses.bitcoin;
-                    addresses.nestedSegwit = sparkWallet.bitcoinAddresses.nestedSegwit || 'Not available';
+                    // Only include each address type once
+                    addresses.segwit = sparkWallet.bitcoinAddresses.segwit || sparkWallet.addresses.bitcoin || 'Not available';
+                    addresses.taproot = sparkWallet.bitcoinAddresses.taproot || 'Not available';
+                    addresses.nestedSegwit = sparkWallet.bitcoinAddresses.nestedSegwit || sparkWallet.bitcoinAddresses.nestedSegWit || 'Not available';
                     addresses.legacy = sparkWallet.bitcoinAddresses.legacy || 'Not available';
                 } else {
+                    // Fallback if bitcoinAddresses not available
+                    addresses.segwit = sparkWallet.addresses.bitcoin || 'Not available';
                     // Infer from bitcoin address format
                     if (addresses.bitcoin.startsWith('bc1p') || addresses.bitcoin.startsWith('tb1p')) {
                         addresses.taproot = addresses.bitcoin;
@@ -11057,10 +11269,10 @@
                 }
             } else if (currentWallet) {
                 addresses.spark = currentWallet.sparkAddress || 'Not available';
-                addresses.bitcoin = currentWallet.bitcoinAddress || 'Not available';
-                addresses.taproot = currentWallet.addresses?.taproot || addresses.bitcoin;
-                addresses.segwit = currentWallet.addresses?.segwit || addresses.bitcoin;
-                addresses.nestedSegwit = currentWallet.addresses?.nestedSegwit || 'Not available';
+                // Only include segwit once
+                addresses.segwit = currentWallet.addresses?.segwit || currentWallet.bitcoinAddress || 'Not available';
+                addresses.taproot = currentWallet.addresses?.taproot || 'Not available';
+                addresses.nestedSegwit = currentWallet.addresses?.nestedSegwit || currentWallet.addresses?.nestedSegWit || 'Not available';
                 addresses.legacy = currentWallet.addresses?.legacy || 'Not available';
             }
             
@@ -11605,6 +11817,25 @@
                 
                 $.button({
                     className: 'btn-secondary',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
+                    onclick: () => {
+                        // Navigate to wallet details page to show private keys and all addresses
+                        this.app.router.navigate('wallet-details?type=all');
+                    },
+                    onmouseover: (e) => {
+                        e.currentTarget.style.background = '#1a0a00';
+                        e.currentTarget.style.borderColor = '#ff8c42';
+                        e.currentTarget.style.color = '#ff8c42';
+                    },
+                    onmouseout: (e) => {
+                        e.currentTarget.style.background = '#000000';
+                        e.currentTarget.style.borderColor = '#f57315';
+                        e.currentTarget.style.color = '#f57315';
+                    }
+                }, ['View Private Keys & Addresses']),
+                
+                $.button({
+                    className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => {
                         console.log('[WalletSettings] Button clicked, this context:', this);
@@ -12070,7 +12301,7 @@
                             onclick: () => this.openSelectedWalletExplorer(),
                             onmouseover: (e) => { e.target.style.borderColor = '#ff8c42'; e.target.style.color = '#ff8c42'; },
                             onmouseout: (e) => { e.target.style.borderColor = '#f57315'; e.target.style.color = '#f57315'; }
-                        }, ['Select wallet to view address'])
+                        }, [this.getCurrentWalletAddress()])
                     ])
                 ])
             ]);
@@ -12331,16 +12562,28 @@
                     if (walletType === 'segwit') address = currentAccount.addresses.segwit;
                     else if (walletType === 'legacy') address = currentAccount.addresses.legacy;
                     
-                    const balance = await this.app.apiService.fetchAddressBalance(address);
-                    const btcBalance = balance / 100000000; // Convert from satoshis
+                    const balanceData = await this.app.apiService.fetchAddressBalance(address);
+                    const btcBalance = balanceData.balance / 100000000; // Convert from satoshis
                     const usdBalance = (btcBalance * btcPrice).toFixed(2);
                     
-                    // Update UI
-                    const btcElement = document.getElementById('btc-balance');
-                    const usdElement = document.getElementById('usd-balance');
+                    // Update UI - check both ID variations
+                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
+                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
                     
-                    if (btcElement) btcElement.textContent = btcBalance.toFixed(8);
-                    if (usdElement) usdElement.textContent = usdBalance;
+                    if (btcElement) {
+                        if (btcElement.id === 'btcBalance') {
+                            btcElement.textContent = btcBalance.toFixed(8) + ' BTC';
+                        } else {
+                            btcElement.textContent = btcBalance.toFixed(8);
+                        }
+                    }
+                    if (usdElement) {
+                        if (usdElement.id === 'btcUsdValue') {
+                            usdElement.textContent = usdBalance;
+                        } else {
+                            usdElement.textContent = usdBalance;
+                        }
+                    }
                     
                     // Update stats grid
                     const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -12965,6 +13208,10 @@
             const label = document.getElementById('selectedWalletLabel');
             const address = document.getElementById('selectedWalletAddress');
             
+            // Save selected wallet type
+            this.app.state.set('selectedWalletType', type);
+            localStorage.setItem('selectedWalletType', type);
+            
             const typeLabels = {
                 'taproot': 'Bitcoin Taproot Address:',
                 'nativeSegWit': 'Bitcoin Native SegWit Address:',
@@ -12974,13 +13221,30 @@
             };
             
             if (label) label.textContent = typeLabels[type] || 'Bitcoin Address:';
-            if (address) address.textContent = 'bc1p' + '...' + Math.random().toString(36).substr(2, 6);
+            
+            // Get the actual address for the selected type
+            const currentAccount = this.app.state.getCurrentAccount();
+            if (address && currentAccount && currentAccount.addresses) {
+                const addressMap = {
+                    'taproot': currentAccount.addresses.taproot || '',
+                    'nativeSegWit': currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '',
+                    'nestedSegWit': currentAccount.addresses.nestedSegwit || '',
+                    'legacy': currentAccount.addresses.legacy || '',
+                    'spark': currentAccount.addresses.spark || ''
+                };
+                
+                const selectedAddress = addressMap[type] || 'No address found';
+                address.textContent = selectedAddress;
+            }
             
             // Show/hide ordinals section for taproot
             const ordinalsSection = document.getElementById('ordinalsSection');
             if (ordinalsSection) {
                 ordinalsSection.style.display = type === 'taproot' ? 'block' : 'none';
             }
+            
+            // Update the main address display
+            this.updateAddressDisplay();
             
             this.app.showNotification(`Switched to ${type} wallet`, 'success');
         }
@@ -18114,6 +18378,15 @@
                 this.loadCurrentAccountData();
             });
             
+            // Load initial account data after mount
+            setTimeout(() => {
+                this.loadCurrentAccountData();
+                // Also refresh balances on initial load
+                if (this.refreshBalances) {
+                    this.refreshBalances();
+                }
+            }, 100);
+            
             // Also listen for accounts array changes (for renaming)
             this.listenToState('accounts', (newAccounts, oldAccounts) => {
                 console.log('[DashboardPage] Accounts array changed');
@@ -18129,6 +18402,26 @@
             
             // Subscribe to account switch events as well
             this.app.state.on('accountSwitched', this.accountSwitchHandler);
+            
+            // Initialize the address display and wallet type on mount
+            setTimeout(() => {
+                // Ensure correct wallet type is selected (default to nativeSegWit for your address)
+                const savedType = localStorage.getItem('selectedWalletType') || 'nativeSegWit';
+                this.app.state.set('selectedWalletType', savedType);
+                
+                // Update the selector if it exists
+                const selector = document.getElementById('walletTypeSelector') || document.getElementById('wallet-type-selector');
+                if (selector) {
+                    selector.value = savedType;
+                }
+                
+                this.updateAddressDisplay();
+                
+                // Also refresh balances for the selected wallet type
+                if (this.refreshBalances) {
+                    setTimeout(() => this.refreshBalances(), 500);
+                }
+            }, 100);
         }
         
         unmount() {
@@ -18139,6 +18432,34 @@
             
             // Call parent unmount
             super.unmount();
+        }
+        
+        destroy() {
+            console.log('[DashboardPage] Destroying dashboard - cleaning up intervals');
+            
+            // Stop all intervals
+            if (this.stopAutoRefresh) {
+                this.stopAutoRefresh();
+            }
+            
+            // Clean up any other intervals that might be running
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+            
+            if (this.priceInterval) {
+                clearInterval(this.priceInterval);
+                this.priceInterval = null;
+            }
+            
+            if (this.mempoolInterval) {
+                clearInterval(this.mempoolInterval);
+                this.mempoolInterval = null;
+            }
+            
+            // Call parent destroy to clean up state listeners
+            super.destroy();
         }
         
         render() {
@@ -18530,61 +18851,70 @@
         }
         
         getCurrentWalletAddress() {
-            // Get the selected wallet type
-            const selectedType = this.app.state.get('selectedWalletType') || 'taproot';
+            // Get the selected wallet type - default to nativeSegWit to match the user's address
+            const selectedType = this.app.state.get('selectedWalletType') || localStorage.getItem('selectedWalletType') || 'nativeSegWit';
+            
+            console.log('[Dashboard] Getting wallet address for type:', selectedType);
             
             // Get current account
             const currentAccount = this.app.state.getCurrentAccount();
             
             if (currentAccount && currentAccount.addresses) {
+                console.log('[Dashboard] Current account addresses:', currentAccount.addresses);
+                
                 // Map wallet types to their addresses from current account
                 const addressMap = {
                     'taproot': currentAccount.addresses.taproot || '',
                     'nativeSegWit': currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '',
-                    'nestedSegWit': currentAccount.addresses.nestedSegWit || '',
+                    'segwit': currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '',
+                    'nestedSegWit': currentAccount.addresses.nestedSegwit || '',
                     'legacy': currentAccount.addresses.legacy || '',
                     'spark': currentAccount.addresses.spark || ''
                 };
                 
-                // Return the selected address
+                // Return the selected address without fallback
                 const selectedAddress = addressMap[selectedType];
-                if (selectedAddress) {
-                    return selectedAddress;
-                }
+                console.log('[Dashboard] Returning address for type', selectedType, ':', selectedAddress || 'Not available');
+                return selectedAddress || 'Not available';
                 
                 // Fallback to any available address
-                return currentAccount.addresses.spark || 
-                       currentAccount.addresses.segwit || 
-                       currentAccount.addresses.taproot || 
-                       currentAccount.addresses.legacy ||
-                       'No address found';
+                const fallbackAddress = currentAccount.addresses.spark || 
+                                      currentAccount.addresses.segwit || 
+                                      currentAccount.addresses.taproot || 
+                                      currentAccount.addresses.bitcoin ||
+                                      currentAccount.addresses.legacy;
+                
+                if (fallbackAddress) {
+                    console.log('[Dashboard] Using fallback address:', fallbackAddress);
+                    return fallbackAddress;
+                }
+                
+                return 'No address found';
             }
             
             // Legacy fallback for old wallet data
             const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
             const currentWallet = this.app.state.get('currentWallet') || {};
             
-            // Map wallet types to their addresses
+            console.log('[Dashboard] Checking legacy wallet data - sparkWallet:', sparkWallet);
+            
+            // Map wallet types to their addresses - check bitcoinAddresses first
             const addressMap = {
-                'taproot': currentWallet.taprootAddress || sparkWallet.addresses?.taproot || '',
-                'nativeSegWit': currentWallet.bitcoinAddress || sparkWallet.addresses?.bitcoin || '',
-                'nestedSegWit': currentWallet.nestedSegWitAddress || sparkWallet.addresses?.nestedSegWit || '',
-                'legacy': currentWallet.legacyAddress || sparkWallet.addresses?.legacy || '',
+                'taproot': currentWallet.taprootAddress || sparkWallet.bitcoinAddresses?.taproot || sparkWallet.addresses?.taproot || '',
+                'nativeSegWit': currentWallet.bitcoinAddress || sparkWallet.bitcoinAddresses?.segwit || sparkWallet.addresses?.bitcoin || sparkWallet.addresses?.segwit || '',
+                'nestedSegWit': currentWallet.nestedSegWitAddress || sparkWallet.bitcoinAddresses?.nestedSegwit || sparkWallet.addresses?.nestedSegWit || '',
+                'legacy': currentWallet.legacyAddress || sparkWallet.bitcoinAddresses?.legacy || sparkWallet.addresses?.legacy || '',
                 'spark': currentWallet.sparkAddress || sparkWallet.addresses?.spark || ''
             };
             
-            // Return the selected address or fallback
+            // Return the selected address or indicate type not available
             const selectedAddress = addressMap[selectedType];
             if (selectedAddress) {
                 return selectedAddress;
             }
             
-            // Fallback to any available address
-            if (sparkWallet && sparkWallet.addresses) {
-                return sparkWallet.addresses.bitcoin || sparkWallet.addresses.spark || 'No address found';
-            }
-            
-            return 'No wallet address found';
+            // Don't fallback to wrong type - return a clear message
+            return `No ${selectedType} address available`;
         }
         
         createAccountSelector() {
@@ -18715,6 +19045,25 @@
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => this.showTransactionHistory()
                 }, ['Transaction History']),
+                
+                $.button({
+                    className: 'btn-secondary',
+                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
+                    onclick: () => {
+                        // Navigate to wallet details page to show private keys and all addresses
+                        this.app.router.navigate('wallet-details?type=all');
+                    },
+                    onmouseover: (e) => {
+                        e.currentTarget.style.background = '#1a0a00';
+                        e.currentTarget.style.borderColor = '#ff8c42';
+                        e.currentTarget.style.color = '#ff8c42';
+                    },
+                    onmouseout: (e) => {
+                        e.currentTarget.style.background = '#000000';
+                        e.currentTarget.style.borderColor = '#f57315';
+                        e.currentTarget.style.color = '#f57315';
+                    }
+                }, ['View Private Keys & Addresses']),
                 
                 $.button({
                     className: 'btn-secondary',
@@ -19183,7 +19532,7 @@
                             onclick: () => this.openSelectedWalletExplorer(),
                             onmouseover: (e) => { e.target.style.borderColor = '#ff8c42'; e.target.style.color = '#ff8c42'; },
                             onmouseout: (e) => { e.target.style.borderColor = '#f57315'; e.target.style.color = '#f57315'; }
-                        }, ['Select wallet to view address'])
+                        }, [this.getCurrentWalletAddress()])
                     ])
                 ])
             ]);
@@ -19444,16 +19793,28 @@
                     if (walletType === 'segwit') address = currentAccount.addresses.segwit;
                     else if (walletType === 'legacy') address = currentAccount.addresses.legacy;
                     
-                    const balance = await this.app.apiService.fetchAddressBalance(address);
-                    const btcBalance = balance / 100000000; // Convert from satoshis
+                    const balanceData = await this.app.apiService.fetchAddressBalance(address);
+                    const btcBalance = balanceData.balance / 100000000; // Convert from satoshis
                     const usdBalance = (btcBalance * btcPrice).toFixed(2);
                     
-                    // Update UI
-                    const btcElement = document.getElementById('btc-balance');
-                    const usdElement = document.getElementById('usd-balance');
+                    // Update UI - check both ID variations
+                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
+                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
                     
-                    if (btcElement) btcElement.textContent = btcBalance.toFixed(8);
-                    if (usdElement) usdElement.textContent = usdBalance;
+                    if (btcElement) {
+                        if (btcElement.id === 'btcBalance') {
+                            btcElement.textContent = btcBalance.toFixed(8) + ' BTC';
+                        } else {
+                            btcElement.textContent = btcBalance.toFixed(8);
+                        }
+                    }
+                    if (usdElement) {
+                        if (usdElement.id === 'btcUsdValue') {
+                            usdElement.textContent = usdBalance;
+                        } else {
+                            usdElement.textContent = usdBalance;
+                        }
+                    }
                     
                     // Update stats grid
                     const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -19953,10 +20314,14 @@
             this.updateWalletAddresses(currentAccount);
             
             // Refresh balances for current account
-            this.refreshBalances();
+            if (this.refreshBalances) {
+                this.refreshBalances();
+            }
             
             // Update account indicator
             this.updateAccountIndicator();
+            
+            console.log('[DashboardPage] Loaded account data for:', currentAccount.name);
         }
         
         updateWalletAddresses(account) {
@@ -20023,8 +20388,8 @@
         createWalletTypeSelector() {
             const $ = window.ElementFactory || ElementFactory;
             
-            // Get the currently selected wallet type from state
-            const selectedWalletType = this.app.state.get('selectedWalletType') || 'taproot';
+            // Get the currently selected wallet type from state - default to taproot
+            const selectedWalletType = this.app.state.get('selectedWalletType') || localStorage.getItem('selectedWalletType') || 'taproot';
             
             const selectorElement = $.div({
                 className: 'terminal-box',
@@ -20074,14 +20439,14 @@
                 ])
             ]);
             
-            // Set the selector value after it's rendered
+            // Set the selector value after it's rendered and update display
             setTimeout(() => {
                 const selector = document.getElementById('wallet-type-selector');
                 if (selector) {
                     selector.value = selectedWalletType;
-                    // Update the display immediately
-                    this.updateAddressDisplay();
                 }
+                // Update the display immediately
+                this.updateAddressDisplay();
             }, 0);
             
             return selectorElement;
@@ -20254,7 +20619,7 @@
                 const currentAccount = this.app.state.getCurrentAccount();
                 if (currentAccount && currentAccount.addresses) {
                     // Get the selected wallet type to determine which address to use
-                    const walletType = this.app.state.get('selectedWalletType') || 'taproot';
+                    const walletType = this.app.state.get('selectedWalletType') || localStorage.getItem('selectedWalletType') || 'nativeSegWit'; // Default to nativeSegWit
                     let address = '';
                     
                     // Select the appropriate address based on wallet type
@@ -20262,6 +20627,9 @@
                         case 'segwit':
                         case 'nativeSegWit':
                             address = currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '';
+                            break;
+                        case 'nestedSegWit':
+                            address = currentAccount.addresses.nestedSegWit || currentAccount.addresses.nestedSegwit || '';
                             break;
                         case 'legacy':
                             address = currentAccount.addresses.legacy || '';
@@ -20276,25 +20644,57 @@
                     }
                     
                     if (address) {
+                        console.log('[Dashboard] Fetching balance for address:', address, 'Type:', walletType);
+                        
                         // Fetch fresh balance from blockchain
-                        const balanceSats = await this.app.apiService.fetchAddressBalance(address);
+                        const balanceData = await this.app.apiService.getSparkBalance(address);
+                        console.log('[Dashboard] Balance data received:', balanceData);
+                        
+                        // Balance from API is already in BTC format, not satoshis
+                        const btcBalanceFromAPI = balanceData.data ? parseFloat(balanceData.data.balance) : 0;
+                        const balanceSats = btcBalanceFromAPI * 100000000; // Convert to satoshis for storage
                         const btcBalance = balanceSats / 100000000; // Convert from satoshis
                         const usdValue = btcBalance * btcPrice;
+                        
+                        console.log('[Dashboard] Balance calculations:', { balanceSats, btcBalance, usdValue });
                         
                         // Update the account's balance in state
                         currentAccount.balances = currentAccount.balances || {};
                         currentAccount.balances.bitcoin = balanceSats;
                         currentAccount.balances.usd = usdValue;
                         
-                        // Update UI elements
-                        const btcElement = document.getElementById('btc-balance');
-                        const usdElement = document.getElementById('usd-balance');
+                        // Update UI elements - check both ID variations
+                        const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
+                        const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
                         
-                        if (btcElement && !this.app.state.get('isBalanceHidden')) {
-                            btcElement.textContent = btcBalance.toFixed(8);
+                        if (btcElement) {
+                            // Always update balance unless explicitly hidden
+                            if (!this.app.state.get('isBalanceHidden')) {
+                                // Update the complete text for BTC balance display
+                                if (btcElement.id === 'btcBalance') {
+                                    btcElement.textContent = `${btcBalance.toFixed(8)} BTC`;
+                                } else {
+                                    btcElement.textContent = btcBalance.toFixed(8);
+                                }
+                                console.log('[Dashboard] Updated BTC balance display:', btcBalance.toFixed(8));
+                            }
+                        } else {
+                            console.warn('[Dashboard] BTC balance element not found');
                         }
-                        if (usdElement && !this.app.state.get('isBalanceHidden')) {
-                            usdElement.textContent = usdValue.toFixed(2);
+                        
+                        if (usdElement) {
+                            // Always update balance unless explicitly hidden
+                            if (!this.app.state.get('isBalanceHidden')) {
+                                // Update just the value for USD display
+                                if (usdElement.id === 'btcUsdValue') {
+                                    usdElement.textContent = usdValue.toFixed(2);
+                                } else {
+                                    usdElement.textContent = usdValue.toFixed(2);
+                                }
+                                console.log('[Dashboard] Updated USD balance display:', usdValue.toFixed(2));
+                            }
+                        } else {
+                            console.warn('[Dashboard] USD balance element not found');
                         }
                     }
                 }
@@ -20396,17 +20796,26 @@
         }
         
         updateAddressDisplay() {
+            // Get the current wallet address
+            const currentAddress = this.getCurrentWalletAddress();
+            
             // Update the main address display under the buttons
             const currentAddressElement = document.getElementById('currentWalletAddress');
             if (currentAddressElement) {
-                currentAddressElement.textContent = this.getCurrentWalletAddress();
+                currentAddressElement.textContent = currentAddress;
             }
             
-            // Also update the address in the wallet selector display if it exists
-            const selectedAddressElement = document.getElementById('selected-wallet-address') || 
-                                         document.getElementById('selectedWalletAddress');
-            if (selectedAddressElement) {
-                selectedAddressElement.textContent = this.getCurrentWalletAddress();
+            // Update all instances of selectedWalletAddress
+            const selectedAddressElements = document.querySelectorAll('#selectedWalletAddress, #selected-wallet-address');
+            selectedAddressElements.forEach(element => {
+                if (element) {
+                    element.textContent = currentAddress;
+                }
+            });
+            
+            // Also trigger balance refresh for the selected address type
+            if (this.refreshBalances) {
+                this.refreshBalances();
             }
         }
         

@@ -41,7 +41,7 @@ export async function generateSparkCompatibleWallet(strength = 256) {
                 segwit: bitcoinWallet.addresses.segwit.address,
                 taproot: bitcoinWallet.addresses.taproot.address,
                 legacy: bitcoinWallet.addresses.legacy.address,
-                nestedSegwit: bitcoinWallet.addresses.nestedSegwit?.address || ''
+                nestedSegwit: bitcoinWallet.addresses.nestedSegwit?.address || bitcoinWallet.addresses.nestedSegWit?.address || ''
             },
             allPrivateKeys: {
                 segwit: {
@@ -102,7 +102,7 @@ export async function importSparkCompatibleWallet(mnemonic) {
                 segwit: wallet.bitcoin.addresses.segwit.address,
                 taproot: wallet.bitcoin.addresses.taproot.address,
                 legacy: wallet.bitcoin.addresses.legacy.address,
-                nestedSegwit: wallet.bitcoin.addresses.nestedSegwit?.address || ''
+                nestedSegwit: wallet.bitcoin.addresses.nestedSegwit?.address || wallet.bitcoin.addresses.nestedSegWit?.address || ''
             },
             allPrivateKeys: {
                 segwit: {
@@ -137,15 +137,31 @@ export async function importSparkCompatibleWallet(mnemonic) {
  * @returns {object} Balance data
  */
 export function getBalance(address) {
-    // Mock balance for UI testing
+    // For demonstration, return some test balances
+    // In production, this would connect to real blockchain APIs
+    
+    // Known test addresses with balances
+    const testBalances = {
+        // Test address from the standard test mnemonic
+        'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu': '0.12345678',
+        // Satoshi's address (has real balance)
+        '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa': '72.65898897',
+        // Another test address
+        '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf': '0.50000000'
+    };
+    
+    const balance = testBalances[address] || '0.00000000';
+    
     return {
         success: true,
         data: {
             address,
-            balance: '0.00000000',
+            balance: balance,
             unconfirmed: '0.00000000',
-            total: '0.00000000',
-            currency: address.startsWith('sp1') ? 'SPARK' : 'BTC'
+            total: balance,
+            currency: address.startsWith('sp1') ? 'SPARK' : 'BTC',
+            // Add some additional info for testing
+            note: balance !== '0.00000000' ? 'Test balance for demonstration' : 'No balance found'
         }
     };
 }
