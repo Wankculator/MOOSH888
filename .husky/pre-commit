@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run linting
+npm run lint || {
+    echo "❌ Linting failed. Please fix errors before committing."
+    exit 1
+}
+
+# Run tests
+npm test || {
+    echo "❌ Tests failed. Please fix failing tests before committing."
+    exit 1
+}
+
+# Check for security vulnerabilities
+npm audit --audit-level=high || {
+    echo "⚠️  Security vulnerabilities found. Please review before committing."
+}
+
+echo "✅ Pre-commit checks passed!"

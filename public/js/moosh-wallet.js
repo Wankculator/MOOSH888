@@ -2834,10 +2834,17 @@
                     $.div({ className: 'terminal-content', style: 'padding: 30px;' }, [
                         $.div({ style: 'text-align: center; margin-bottom: 30px;' }, [
                             $.img({
-                                src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                                src: 'images/moosh-logo.svg',
                                 alt: 'MOOSH Logo',
                                 style: 'width: 60px; height: 60px; margin-bottom: 10px;',
-                                onerror: function() { this.style.display = 'none'; }
+                                onerror: function() { 
+                                    // Fallback to PNG if SVG fails
+                                    if (this.src.includes('.svg')) {
+                                        this.src = 'images/moosh-logo.png';
+                                    } else {
+                                        this.style.display = 'none';
+                                    }
+                                }
                             }),
                             $.h2({ style: 'font-size: 24px; margin-bottom: 10px; color: var(--text-primary);' }, ['Wallet Locked']),
                             $.p({ style: 'font-size: 14px; color: var(--text-dim);' }, ['Enter your password to unlock your wallet'])
@@ -3076,14 +3083,22 @@
             const $ = window.ElementFactory || ElementFactory;
             return $.div({ className: 'brand-box' }, [
                 $.img({
-                    src: '/04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                    src: '/images/moosh-logo.svg',
                     alt: 'MOOSH Logo',
                     className: 'brand-logo',
                     onerror: function() { 
                         console.log('[Header] Logo failed to load from:', this.src);
-                        this.style.width = '32px';
-                        this.style.height = '32px';
-                        this.style.background = '#f57315';
+                        // Try PNG fallback
+                        if (this.src.includes('.svg')) {
+                            this.src = '/images/moosh-logo.png';
+                        } else {
+                            // Final fallback - create text logo
+                            this.style.display = 'none';
+                            const textLogo = document.createElement('div');
+                            textLogo.style.cssText = 'width: 32px; height: 32px; background: #f57315; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000;';
+                            textLogo.textContent = 'M';
+                            this.parentNode.replaceChild(textLogo, this);
+                        }
                         this.style.borderRadius = '50%';
                     }
                 }),
@@ -5098,7 +5113,7 @@
                     }
                 }, [
                     $.img({
-                        src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                        src: 'images/moosh-logo.svg',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(48px * var(--scale-factor))',
@@ -5756,7 +5771,7 @@
                     }
                 }, [
                     $.img({
-                        src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                        src: 'images/moosh-logo.svg',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -6240,7 +6255,7 @@
                     }
                 }, [
                     $.img({
-                        src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                        src: 'images/moosh-logo.svg',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -6504,7 +6519,7 @@
                     }
                 }, [
                     $.img({
-                        src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                        src: 'images/moosh-logo.svg',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -6851,7 +6866,7 @@
                     }
                 }, [
                     $.img({
-                        src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                        src: 'images/moosh-logo.svg',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(48px * var(--scale-factor))',
@@ -9301,7 +9316,7 @@
                     }
                 }, [
                     $.img({
-                        src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                        src: 'images/moosh-logo.svg',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(48px * var(--scale-factor))',
@@ -10746,7 +10761,7 @@
                     }
                 }, [
                     $.img({
-                        src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                        src: 'images/moosh-logo.svg',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -11539,7 +11554,7 @@
                     }
                 }, [
                     $.img({
-                        src: '04_ASSETS/Brand_Assets/Logos/Moosh_logo.png',
+                        src: 'images/moosh-logo.svg',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',

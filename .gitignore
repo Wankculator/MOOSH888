@@ -9,10 +9,13 @@ dist/
 build/
 
 # Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+api.log
+server.log
 
 # Environment variables
 .env
