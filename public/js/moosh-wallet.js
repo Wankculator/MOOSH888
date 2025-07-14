@@ -1107,22 +1107,22 @@
                     flex-wrap: nowrap !important;
                 }
 
-                /* Dashboard Button Overrides - Fixed */
+                /* Dashboard Button Overrides - Fixed with scaling */
                 .dashboard-btn {
                     flex-shrink: 0 !important;
-                    min-width: 60px !important;
-                    max-width: 90px !important;
+                    min-width: calc(60px * var(--scale-factor)) !important;
+                    max-width: calc(90px * var(--scale-factor)) !important;
                     width: auto !important;
-                    height: 32px !important;
+                    height: calc(32px * var(--scale-factor)) !important;
                     white-space: nowrap !important;
                     overflow: hidden !important;
                     text-overflow: ellipsis !important;
                     display: flex !important;
                     align-items: center !important;
                     justify-content: center !important;
-                    font-size: 11px !important;
-                    padding: 6px 12px !important;
-                    border: 1px solid #f57315 !important;
+                    font-size: calc(11px * var(--scale-factor)) !important;
+                    padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)) !important;
+                    border: calc(1px * var(--scale-factor)) solid #f57315 !important;
                     background: #000000 !important;
                     color: #f57315 !important;
                     box-sizing: border-box !important;
@@ -1136,20 +1136,20 @@
                 /* Mobile optimizations for dashboard buttons */
                 @media (max-width: 480px) {
                     .dashboard-btn {
-                        min-width: 50px !important;
-                        max-width: 70px !important;
-                        height: 28px !important;
-                        font-size: 9px !important;
-                        padding: 4px 6px !important;
+                        min-width: calc(50px * var(--scale-factor)) !important;
+                        max-width: calc(70px * var(--scale-factor)) !important;
+                        height: calc(28px * var(--scale-factor)) !important;
+                        font-size: calc(9px * var(--scale-factor)) !important;
+                        padding: calc(4px * var(--scale-factor)) calc(6px * var(--scale-factor)) !important;
                     }
                 }
 
                 @media (max-width: 360px) {
                     .dashboard-btn {
-                        min-width: 45px !important;
-                        max-width: 60px !important;
-                        font-size: 8px !important;
-                        padding: 3px 4px !important;
+                        min-width: calc(45px * var(--scale-factor)) !important;
+                        max-width: calc(60px * var(--scale-factor)) !important;
+                        font-size: calc(8px * var(--scale-factor)) !important;
+                        padding: calc(3px * var(--scale-factor)) calc(4px * var(--scale-factor)) !important;
                     }
                 }
 
@@ -9792,7 +9792,7 @@
                                         className: 'modal-container',
                                         style: {
                                             background: '#000000',
-                                            border: '2px solid #ffffff',
+                                            border: '2px solid #f57315',
                                             borderRadius: '0',
                                             padding: '30px',
                                             minWidth: '400px',
@@ -9801,7 +9801,7 @@
                                     }, [
                                         $.h3({
                                             style: {
-                                                color: '#ffffff',
+                                                color: '#f57315',
                                                 marginBottom: '20px',
                                                 fontSize: '18px'
                                             }
@@ -9823,8 +9823,8 @@
                                                 width: '100%',
                                                 padding: '12px',
                                                 background: '#000000',
-                                                border: '1px solid #ffffff',
-                                                color: '#ffffff',
+                                                border: '1px solid #f57315',
+                                                color: '#f57315',
                                                 fontSize: '14px',
                                                 borderRadius: '0',
                                                 marginBottom: '10px'
@@ -9871,7 +9871,7 @@
                                                     padding: '10px 20px',
                                                     background: '#000000',
                                                     border: '1px solid #666666',
-                                                    color: '#ffffff',
+                                                    color: '#888888',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
                                                 },
@@ -9881,8 +9881,8 @@
                                             $.button({
                                                 style: {
                                                     padding: '10px 20px',
-                                                    background: '#ffffff',
-                                                    border: '1px solid #ffffff',
+                                                    background: '#f57315',
+                                                    border: '1px solid #f57315',
                                                     color: '#000000',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
@@ -11877,7 +11877,7 @@
                                         className: 'modal-container',
                                         style: {
                                             background: '#000000',
-                                            border: '2px solid #ffffff',
+                                            border: '2px solid #f57315',
                                             borderRadius: '0',
                                             padding: '30px',
                                             minWidth: '400px',
@@ -11886,7 +11886,7 @@
                                     }, [
                                         $.h3({
                                             style: {
-                                                color: '#ffffff',
+                                                color: '#f57315',
                                                 marginBottom: '20px',
                                                 fontSize: '18px'
                                             }
@@ -11908,8 +11908,8 @@
                                                 width: '100%',
                                                 padding: '12px',
                                                 background: '#000000',
-                                                border: '1px solid #ffffff',
-                                                color: '#ffffff',
+                                                border: '1px solid #f57315',
+                                                color: '#f57315',
                                                 fontSize: '14px',
                                                 borderRadius: '0',
                                                 marginBottom: '10px'
@@ -11956,7 +11956,7 @@
                                                     padding: '10px 20px',
                                                     background: '#000000',
                                                     border: '1px solid #666666',
-                                                    color: '#ffffff',
+                                                    color: '#888888',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
                                                 },
@@ -11966,8 +11966,8 @@
                                             $.button({
                                                 style: {
                                                     padding: '10px 20px',
-                                                    background: '#ffffff',
-                                                    border: '1px solid #ffffff',
+                                                    background: '#f57315',
+                                                    border: '1px solid #f57315',
                                                     color: '#000000',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
@@ -13185,22 +13185,69 @@
         }
         
         toggleBalanceVisibility() {
-            const balances = document.querySelectorAll('#btcBalance, #btcUsdValue, #lightningBalance, #stablecoinBalance, #ordinalsCount');
-            const btn = document.querySelector('.hide-btn');
+            // Toggle the hidden state
+            const isHidden = this.app.state.get('isBalanceHidden');
+            this.app.state.set('isBalanceHidden', !isHidden);
             
-            if (btn && btn.textContent === 'Hide') {
-                balances.forEach(el => {
-                    el.setAttribute('data-original', el.textContent);
-                    el.textContent = '••••••••';
-                });
-                btn.textContent = 'Show';
-            } else if (btn) {
-                balances.forEach(el => {
-                    const original = el.getAttribute('data-original');
-                    if (original) el.textContent = original;
-                });
-                btn.textContent = 'Hide';
+            // Get all balance elements
+            const btcBalance = document.getElementById('btcBalance');
+            const btcUsdValue = document.getElementById('btcUsdValue');
+            const lightningBalance = document.getElementById('lightningBalance');
+            const stablecoinBalance = document.getElementById('stablecoinBalance');
+            const ordinalsCount = document.getElementById('ordinalsCount');
+            
+            if (!isHidden) {
+                // Hide balances
+                if (btcBalance) {
+                    btcBalance.setAttribute('data-original', btcBalance.textContent);
+                    btcBalance.textContent = '••••••••';
+                }
+                if (btcUsdValue) {
+                    btcUsdValue.setAttribute('data-original', btcUsdValue.textContent);
+                    btcUsdValue.textContent = '••••••••';
+                }
+                if (lightningBalance) {
+                    lightningBalance.setAttribute('data-original', lightningBalance.textContent);
+                    lightningBalance.textContent = '••••••••';
+                }
+                if (stablecoinBalance) {
+                    stablecoinBalance.setAttribute('data-original', stablecoinBalance.textContent);
+                    stablecoinBalance.textContent = '••••••••';
+                }
+                if (ordinalsCount) {
+                    ordinalsCount.setAttribute('data-original', ordinalsCount.textContent);
+                    ordinalsCount.textContent = '••••••••';
+                }
+            } else {
+                // Show balances
+                if (btcBalance) {
+                    const original = btcBalance.getAttribute('data-original');
+                    if (original) btcBalance.textContent = original;
+                }
+                if (btcUsdValue) {
+                    const original = btcUsdValue.getAttribute('data-original');
+                    if (original) btcUsdValue.textContent = original;
+                }
+                if (lightningBalance) {
+                    const original = lightningBalance.getAttribute('data-original');
+                    if (original) lightningBalance.textContent = original;
+                }
+                if (stablecoinBalance) {
+                    const original = stablecoinBalance.getAttribute('data-original');
+                    if (original) stablecoinBalance.textContent = original;
+                }
+                if (ordinalsCount) {
+                    const original = ordinalsCount.getAttribute('data-original');
+                    if (original) ordinalsCount.textContent = original;
+                }
+                
+                // Refresh balances to get latest values
+                if (this.refreshBalances) {
+                    this.refreshBalances();
+                }
             }
+            
+            this.app.showNotification(isHidden ? 'Balances shown' : 'Balances hidden', 'success');
         }
         
         switchWalletType(e) {
@@ -18665,37 +18712,39 @@
                         className: 'dashboard-header-row',
                         style: {
                             display: 'flex',
-                            justifyContent: 'space-between',
+                            justifyContent: 'center',
                             alignItems: 'center',
                             width: '100%',
-                            marginBottom: '12px',
-                            gap: '8px',
-                            flexWrap: 'nowrap'
+                            marginBottom: 'calc(12px * var(--scale-factor))',
+                            gap: 'calc(12px * var(--scale-factor))',
+                            flexWrap: 'nowrap',
+                            padding: '0 calc(16px * var(--scale-factor))'
                         }
                     }, [
-                        // Left side: Account indicator
+                        // Centered container for all controls
                         $.div({ 
                             style: {
                                 display: 'flex',
                                 alignItems: 'center',
+                                gap: 'calc(12px * var(--scale-factor))',
                                 flexShrink: 0
                             }
                         }, [
+                            // Account indicator
                             $.div({ 
                                 id: 'currentAccountIndicator',
                                 style: {
-                                    fontSize: isXS ? '10px' : '11px',
+                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     color: '#69fd97',
-                                    padding: isXS ? '5px 10px' : '6px 10px',
+                                    padding: isXS ? 'calc(5px * var(--scale-factor)) calc(10px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))',
                                     background: 'rgba(105, 253, 151, 0.1)',
-                                    border: '1px solid #69fd97',
+                                    border: 'calc(1px * var(--scale-factor)) solid #69fd97',
                                     borderRadius: '0',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    marginRight: '20px',
-                                    height: isXS ? '22px' : '26px',
+                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
                                     display: 'flex',
                                     alignItems: 'center',
                                     boxSizing: 'border-box'
@@ -18703,44 +18752,25 @@
                                 onclick: () => this.showMultiAccountManager(),
                                 onmouseover: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.2)',
                                 onmouseout: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.1)'
-                            }, [this.getAccountDisplayName()])
-                        ]),
-                        
-                        // Center: Spacer
-                        $.div({ 
-                            style: {
-                                flex: '1 1 auto',
-                                minWidth: '20px'
-                            }
-                        }),
-                        
-                        // Right: Action buttons
-                        $.div({ 
-                            className: 'header-buttons',
-                            style: {
-                                display: 'flex',
-                                gap: '8px',
-                                flexShrink: 0,
-                                alignItems: 'center',
-                                paddingRight: '8px'
-                            }
-                        }, [
+                            }, [this.getAccountDisplayName()]),
+                            
+                            // Action buttons
                             // + Accounts button
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: isXS ? '4px 8px' : '6px 10px',
-                                    fontSize: isXS ? '10px' : '11px',
+                                    padding: isXS ? 'calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))',
+                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
-                                    border: '1px solid #f57315',
+                                    border: 'calc(1px * var(--scale-factor)) solid #f57315',
                                     color: '#f57315',
                                     borderRadius: '0',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    minWidth: isXS ? '28px' : '70px',
-                                    height: isXS ? '22px' : '26px',
+                                    minWidth: isXS ? 'calc(28px * var(--scale-factor))' : 'calc(70px * var(--scale-factor))',
+                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -18762,18 +18792,18 @@
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: isXS ? '4px 6px' : '6px 8px',
-                                    fontSize: isXS ? '10px' : '11px',
+                                    padding: isXS ? 'calc(4px * var(--scale-factor)) calc(6px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(8px * var(--scale-factor))',
+                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
-                                    border: '1px solid #f57315',
+                                    border: 'calc(1px * var(--scale-factor)) solid #f57315',
                                     color: '#f57315',
                                     borderRadius: '0',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    minWidth: isXS ? '28px' : '55px',
-                                    height: isXS ? '22px' : '26px',
+                                    minWidth: isXS ? 'calc(28px * var(--scale-factor))' : 'calc(55px * var(--scale-factor))',
+                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -18795,17 +18825,17 @@
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: isXS ? '6px 10px' : '6px 12px',
-                                    fontSize: isXS ? '10px' : '11px',
+                                    padding: isXS ? 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor))',
+                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
-                                    border: '1px solid #f57315',
+                                    border: 'calc(1px * var(--scale-factor)) solid #f57315',
                                     color: '#f57315',
                                     borderRadius: '0',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    height: isXS ? '22px' : '26px',
+                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -19108,7 +19138,7 @@
                                         className: 'modal-container',
                                         style: {
                                             background: '#000000',
-                                            border: '2px solid #ffffff',
+                                            border: '2px solid #f57315',
                                             borderRadius: '0',
                                             padding: '30px',
                                             minWidth: '400px',
@@ -19117,7 +19147,7 @@
                                     }, [
                                         $.h3({
                                             style: {
-                                                color: '#ffffff',
+                                                color: '#f57315',
                                                 marginBottom: '20px',
                                                 fontSize: '18px'
                                             }
@@ -19139,8 +19169,8 @@
                                                 width: '100%',
                                                 padding: '12px',
                                                 background: '#000000',
-                                                border: '1px solid #ffffff',
-                                                color: '#ffffff',
+                                                border: '1px solid #f57315',
+                                                color: '#f57315',
                                                 fontSize: '14px',
                                                 borderRadius: '0',
                                                 marginBottom: '10px'
@@ -19187,7 +19217,7 @@
                                                     padding: '10px 20px',
                                                     background: '#000000',
                                                     border: '1px solid #666666',
-                                                    color: '#ffffff',
+                                                    color: '#888888',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
                                                 },
@@ -19197,8 +19227,8 @@
                                             $.button({
                                                 style: {
                                                     padding: '10px 20px',
-                                                    background: '#ffffff',
-                                                    border: '1px solid #ffffff',
+                                                    background: '#f57315',
+                                                    border: '1px solid #f57315',
                                                     color: '#000000',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
@@ -20668,34 +20698,59 @@
                         const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
                         
                         if (btcElement) {
-                            // Always update balance unless explicitly hidden
-                            if (!this.app.state.get('isBalanceHidden')) {
-                                // Update the complete text for BTC balance display
-                                if (btcElement.id === 'btcBalance') {
-                                    btcElement.textContent = `${btcBalance.toFixed(8)} BTC`;
+                            // Update the complete text for BTC balance display
+                            if (btcElement.id === 'btcBalance') {
+                                const balanceText = `${btcBalance.toFixed(8)} BTC`;
+                                btcElement.setAttribute('data-original', balanceText);
+                                // Only show if not hidden
+                                if (!this.app.state.get('isBalanceHidden')) {
+                                    btcElement.textContent = balanceText;
                                 } else {
-                                    btcElement.textContent = btcBalance.toFixed(8);
+                                    btcElement.textContent = '••••••••';
                                 }
-                                console.log('[Dashboard] Updated BTC balance display:', btcBalance.toFixed(8));
+                            } else {
+                                btcElement.setAttribute('data-original', btcBalance.toFixed(8));
+                                if (!this.app.state.get('isBalanceHidden')) {
+                                    btcElement.textContent = btcBalance.toFixed(8);
+                                } else {
+                                    btcElement.textContent = '••••••••';
+                                }
                             }
+                            console.log('[Dashboard] Updated BTC balance display:', btcBalance.toFixed(8));
                         } else {
                             console.warn('[Dashboard] BTC balance element not found');
                         }
                         
                         if (usdElement) {
-                            // Always update balance unless explicitly hidden
+                            // Update just the value for USD display
+                            const usdText = usdValue.toFixed(2);
+                            usdElement.setAttribute('data-original', usdText);
+                            // Only show if not hidden
                             if (!this.app.state.get('isBalanceHidden')) {
-                                // Update just the value for USD display
-                                if (usdElement.id === 'btcUsdValue') {
-                                    usdElement.textContent = usdValue.toFixed(2);
-                                } else {
-                                    usdElement.textContent = usdValue.toFixed(2);
-                                }
-                                console.log('[Dashboard] Updated USD balance display:', usdValue.toFixed(2));
+                                usdElement.textContent = usdText;
+                            } else {
+                                usdElement.textContent = '••••••••';
                             }
+                            console.log('[Dashboard] Updated USD balance display:', usdText);
                         } else {
                             console.warn('[Dashboard] USD balance element not found');
                         }
+                        
+                        // Also update wallet selector balance displays
+                        const walletSelectorBalances = document.querySelectorAll('#selectedWalletBalance, #selected-wallet-balance');
+                        walletSelectorBalances.forEach(element => {
+                            if (element) {
+                                const balanceText = `${btcBalance.toFixed(8)} BTC`;
+                                element.setAttribute('data-original', balanceText);
+                                // Only show if not hidden
+                                if (!this.app.state.get('isBalanceHidden')) {
+                                    element.textContent = balanceText;
+                                } else {
+                                    element.textContent = '••••••••';
+                                }
+                            }
+                        });
+                        console.log('[Dashboard] Updated wallet selector balances');
                     }
                 }
             } catch (error) {
@@ -20862,6 +20917,99 @@
         showTokenMenu() {
             const modal = new TokenMenuModal(this.app);
             modal.show();
+        }
+        
+        toggleBalanceVisibility() {
+            // Toggle the hidden state
+            const isHidden = this.app.state.get('isBalanceHidden');
+            this.app.state.set('isBalanceHidden', !isHidden);
+            
+            // Get all balance elements
+            const btcBalance = document.getElementById('btcBalance');
+            const btcUsdValue = document.getElementById('btcUsdValue');
+            const lightningBalance = document.getElementById('lightningBalance');
+            const stablecoinBalance = document.getElementById('stablecoinBalance');
+            const ordinalsCount = document.getElementById('ordinalsCount');
+            
+            // Also get wallet selector balance elements
+            const walletSelectorBalances = document.querySelectorAll('#selectedWalletBalance, #selected-wallet-balance');
+            
+            if (!isHidden) {
+                // Hide balances
+                if (btcBalance) {
+                    btcBalance.setAttribute('data-original', btcBalance.textContent);
+                    btcBalance.textContent = '••••••••';
+                }
+                if (btcUsdValue) {
+                    btcUsdValue.setAttribute('data-original', btcUsdValue.textContent);
+                    btcUsdValue.textContent = '••••••••';
+                }
+                if (lightningBalance) {
+                    lightningBalance.setAttribute('data-original', lightningBalance.textContent);
+                    lightningBalance.textContent = '••••••••';
+                }
+                if (stablecoinBalance) {
+                    stablecoinBalance.setAttribute('data-original', stablecoinBalance.textContent);
+                    stablecoinBalance.textContent = '••••••••';
+                }
+                if (ordinalsCount) {
+                    ordinalsCount.setAttribute('data-original', ordinalsCount.textContent);
+                    ordinalsCount.textContent = '••••••••';
+                }
+                
+                // Hide wallet selector balances
+                walletSelectorBalances.forEach(element => {
+                    if (element) {
+                        element.setAttribute('data-original', element.textContent);
+                        element.textContent = '••••••••';
+                    }
+                });
+            } else {
+                // Show balances
+                if (btcBalance) {
+                    const original = btcBalance.getAttribute('data-original');
+                    if (original) btcBalance.textContent = original;
+                }
+                if (btcUsdValue) {
+                    const original = btcUsdValue.getAttribute('data-original');
+                    if (original) btcUsdValue.textContent = original;
+                }
+                if (lightningBalance) {
+                    const original = lightningBalance.getAttribute('data-original');
+                    if (original) lightningBalance.textContent = original;
+                }
+                if (stablecoinBalance) {
+                    const original = stablecoinBalance.getAttribute('data-original');
+                    if (original) stablecoinBalance.textContent = original;
+                }
+                if (ordinalsCount) {
+                    const original = ordinalsCount.getAttribute('data-original');
+                    if (original) ordinalsCount.textContent = original;
+                }
+                
+                // Show wallet selector balances
+                walletSelectorBalances.forEach(element => {
+                    if (element) {
+                        const original = element.getAttribute('data-original');
+                        if (original) element.textContent = original;
+                    }
+                });
+                
+                // Refresh balances to get latest values
+                if (this.refreshBalances) {
+                    this.refreshBalances();
+                }
+            }
+            
+            // Update the button text
+            const hideShowButtons = document.querySelectorAll('.dashboard-btn');
+            hideShowButtons.forEach(btn => {
+                if (btn.textContent === 'Hide' || btn.textContent === 'Show') {
+                    btn.textContent = isHidden ? 'Hide' : 'Show';
+                }
+            });
+            
+            this.app.showNotification(isHidden ? 'Balances shown' : 'Balances hidden', 'success');
         }
         
         showStablecoinSwap() {
