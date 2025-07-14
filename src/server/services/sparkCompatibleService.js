@@ -3,14 +3,15 @@
  * Transforms wallet data to match the MOOSH Wallet UI expectations
  */
 
-import { generateMnemonic, generateBitcoinWallet, generateSparkAddress, importWallet } from './walletService.js';
+const { generateMnemonic, generateBitcoinWallet, generateSparkAddress, importWallet } = require('./walletService.js');
+const fetch = require('node-fetch');
 
 /**
  * Generate wallet in Spark-compatible format
  * @param {number} strength - 128 for 12 words, 256 for 24 words
  * @returns {object} Wallet data formatted for UI
  */
-export async function generateSparkCompatibleWallet(strength = 256) {
+async function generateSparkCompatibleWallet(strength = 256) {
     // Generate mnemonic
     const mnemonic = generateMnemonic(strength);
     
@@ -41,7 +42,7 @@ export async function generateSparkCompatibleWallet(strength = 256) {
                 segwit: bitcoinWallet.addresses.segwit.address,
                 taproot: bitcoinWallet.addresses.taproot.address,
                 legacy: bitcoinWallet.addresses.legacy.address,
-                nestedSegwit: bitcoinWallet.addresses.nestedSegwit?.address || bitcoinWallet.addresses.nestedSegWit?.address || ''
+                nestedSegwit: bitcoinWallet.addresses.nestedSegwit?.address || ''
             },
             allPrivateKeys: {
                 segwit: {
@@ -77,7 +78,7 @@ export async function generateSparkCompatibleWallet(strength = 256) {
  * @param {string} mnemonic - Seed phrase
  * @returns {object} Wallet data formatted for UI
  */
-export async function importSparkCompatibleWallet(mnemonic) {
+async function importSparkCompatibleWallet(mnemonic) {
     const wallet = await importWallet(mnemonic, 'MAINNET');
     
     // Transform to UI format
@@ -102,7 +103,7 @@ export async function importSparkCompatibleWallet(mnemonic) {
                 segwit: wallet.bitcoin.addresses.segwit.address,
                 taproot: wallet.bitcoin.addresses.taproot.address,
                 legacy: wallet.bitcoin.addresses.legacy.address,
-                nestedSegwit: wallet.bitcoin.addresses.nestedSegwit?.address || wallet.bitcoin.addresses.nestedSegWit?.address || ''
+                nestedSegwit: wallet.bitcoin.addresses.nestedSegwit?.address || ''
             },
             allPrivateKeys: {
                 segwit: {
@@ -132,38 +133,123 @@ export async function importSparkCompatibleWallet(mnemonic) {
 }
 
 /**
- * Get mock balance (for now)
+ * Get real balance from blockchain
  * @param {string} address - Bitcoin or Spark address
  * @returns {object} Balance data
  */
-export function getBalance(address) {
-    // For demonstration, return some test balances
-    // In production, this would connect to real blockchain APIs
-    
-    // Known test addresses with balances
-    const testBalances = {
-        // Test address from the standard test mnemonic
-        'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu': '0.12345678',
-        // Satoshi's address (has real balance)
-        '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa': '72.65898897',
-        // Another test address
-        '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf': '0.50000000'
-    };
-    
-    const balance = testBalances[address] || '0.00000000';
-    
-    return {
-        success: true,
-        data: {
-            address,
-            balance: balance,
-            unconfirmed: '0.00000000',
-            total: balance,
-            currency: address.startsWith('sp1') ? 'SPARK' : 'BTC',
-            // Add some additional info for testing
-            note: balance !== '0.00000000' ? 'Test balance for demonstration' : 'No balance found'
+async function getBalance(address) {
+    try {
+        // For Spark addresses, return mock data for now
+        if (address.startsWith('sp1')) {
+            return {
+                success: true,
+                data: {
+                    address,
+                    balance: '0.00000000',
+                    unconfirmed: '0.00000000',
+                    total: '0.00000000',
+                    currency: 'SPARK'
+                }
+            };
         }
-    };
+        
+        // For Bitcoin addresses, fetch real balance from blockchain
+        // Try multiple APIs for reliability
+        let balanceData = null;
+        
+        // Try mempool.space first
+        try {
+            const response = await fetch(`https://mempool.space/api/address/${address}`, {
+                timeout: 5000
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const balance = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+                const unconfirmed = data.mempool_stats.funded_txo_sum - data.mempool_stats.spent_txo_sum;
+                balanceData = {
+                    balance: balance,
+                    unconfirmed: unconfirmed,
+                    txCount: data.chain_stats.tx_count
+                };
+            }
+        } catch (e) {
+            console.log('Mempool.space failed, trying blockstream...');
+        }
+        
+        // Try blockstream.info as fallback
+        if (!balanceData) {
+            try {
+                const response = await fetch(`https://blockstream.info/api/address/${address}`, {
+                    timeout: 5000
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const balance = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+                    const unconfirmed = data.mempool_stats.funded_txo_sum - data.mempool_stats.spent_txo_sum;
+                    balanceData = {
+                        balance: balance,
+                        unconfirmed: unconfirmed,
+                        txCount: data.chain_stats.tx_count
+                    };
+                }
+            } catch (e) {
+                console.log('Blockstream failed, trying blockchain.info...');
+            }
+        }
+        
+        // Try blockchain.info as last resort
+        if (!balanceData) {
+            try {
+                const response = await fetch(`https://blockchain.info/q/addressbalance/${address}`, {
+                    timeout: 5000
+                });
+                if (response.ok) {
+                    const balance = parseInt(await response.text());
+                    balanceData = {
+                        balance: balance,
+                        unconfirmed: 0,
+                        txCount: 0
+                    };
+                }
+            } catch (e) {
+                throw new Error('All balance APIs failed');
+            }
+        }
+        
+        if (!balanceData) {
+            throw new Error('Unable to fetch balance from any API');
+        }
+        
+        // Convert satoshis to BTC
+        const btcBalance = (balanceData.balance / 100000000).toFixed(8);
+        const btcUnconfirmed = (balanceData.unconfirmed / 100000000).toFixed(8);
+        const btcTotal = ((balanceData.balance + balanceData.unconfirmed) / 100000000).toFixed(8);
+        
+        return {
+            success: true,
+            data: {
+                address,
+                balance: btcBalance,
+                unconfirmed: btcUnconfirmed,
+                total: btcTotal,
+                currency: 'BTC',
+                txCount: balanceData.txCount
+            }
+        };
+    } catch (error) {
+        console.error('Failed to fetch balance:', error);
+        return {
+            success: true,
+            data: {
+                address,
+                balance: '0.00000000',
+                unconfirmed: '0.00000000',
+                total: '0.00000000',
+                currency: address.startsWith('sp1') ? 'SPARK' : 'BTC',
+                error: error.message
+            }
+        };
+    }
 }
 
 /**
@@ -171,7 +257,7 @@ export function getBalance(address) {
  * @param {string} address - Bitcoin or Spark address
  * @returns {object} Transaction list
  */
-export function getTransactions(address) {
+function getTransactions(address) {
     // Mock transactions for UI testing
     return {
         success: true,
@@ -183,7 +269,7 @@ export function getTransactions(address) {
     };
 }
 
-export default {
+module.exports = {
     generateSparkCompatibleWallet,
     importSparkCompatibleWallet,
     getBalance,

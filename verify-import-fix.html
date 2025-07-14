@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Import Fix</title>
+    <style>
+        body { background: #000; color: #69fd97; font-family: monospace; padding: 20px; }
+        .box { border: 1px solid #69fd97; padding: 15px; margin: 10px 0; }
+        .address { word-break: break-all; margin: 5px 0; padding: 5px; background: #111; }
+        .match { background: #69fd9730; color: #50fa7b; }
+        button { background: #000; color: #69fd97; border: 1px solid #69fd97; padding: 10px; cursor: pointer; }
+        button:hover { background: #69fd97; color: #000; }
+    </style>
+</head>
+<body>
+    <h1>Verify Wallet Import Fix</h1>
+    
+    <div class="box">
+        <h3>Test with Known Seed</h3>
+        <p>Using test seed: abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about</p>
+        <button onclick="testImport()">Test Import</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        async function testImport() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="box">Testing import...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/spark/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const expectedAddresses = {
+                        nativeSegwit: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
+                        nestedSegwit: '37VucYSaXLCAsxYyAPfbSi9eh4iEcbShgf',
+                        legacy: '1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA',
+                        taproot: 'bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr'
+                    };
+                    
+                    const bitcoinAddresses = result.data.bitcoinAddresses || {};
+                    
+                    let html = '<div class="box"><h3>Import Results:</h3>';
+                    
+                    // Check each address type
+                    html += '<div class="address">Native SegWit: ' + (bitcoinAddresses.segwit || 'NOT GENERATED');
+                    if (bitcoinAddresses.segwit === expectedAddresses.nativeSegwit) {
+                        html += ' ✅ CORRECT';
+                    }
+                    html += '</div>';
+                    
+                    html += '<div class="address">Nested SegWit: ' + (bitcoinAddresses.nestedSegwit || 'NOT GENERATED');
+                    if (bitcoinAddresses.nestedSegwit === expectedAddresses.nestedSegwit) {
+                        html += ' ✅ CORRECT';
+                    } else {
+                        html += ' ❌ EXPECTED: ' + expectedAddresses.nestedSegwit;
+                    }
+                    html += '</div>';
+                    
+                    html += '<div class="address">Legacy: ' + (bitcoinAddresses.legacy || 'NOT GENERATED');
+                    if (bitcoinAddresses.legacy === expectedAddresses.legacy) {
+                        html += ' ✅ CORRECT';
+                    }
+                    html += '</div>';
+                    
+                    html += '<div class="address">Taproot: ' + (bitcoinAddresses.taproot || 'NOT GENERATED');
+                    if (bitcoinAddresses.taproot === expectedAddresses.taproot) {
+                        html += ' ✅ CORRECT';
+                    }
+                    html += '</div>';
+                    
+                    html += '<h4>Full Response:</h4>';
+                    html += '<pre>' + JSON.stringify(result.data, null, 2) + '</pre>';
+                    html += '</div>';
+                    
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = '<div class="box">Error: ' + result.error + '</div>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="box">Network Error: ' + error.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

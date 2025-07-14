@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Wallet Import</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #000; color: #0f0; }
+        .address { margin: 10px 0; padding: 10px; border: 1px solid #0f0; }
+        .error { color: #f00; }
+        button { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px; cursor: pointer; }
+        input { background: #000; color: #0f0; border: 1px solid #0f0; padding: 5px; width: 100%; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Test Wallet Import - Address Derivation</h1>
+    
+    <div>
+        <label>Enter your seed phrase (12 or 24 words):</label>
+        <input type="text" id="seedPhrase" placeholder="word1 word2 word3...">
+        <button onclick="testImport()">Test Import</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        async function testImport() {
+            const seedPhrase = document.getElementById('seedPhrase').value.trim();
+            const resultsDiv = document.getElementById('results');
+            
+            if (!seedPhrase) {
+                resultsDiv.innerHTML = '<div class="error">Please enter a seed phrase</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div>Testing import...</div>';
+            
+            try {
+                // Test the import endpoint
+                const response = await fetch('http://localhost:3001/api/spark/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mnemonic: seedPhrase })
+                });
+                
+                const result = await response.json();
+                console.log('Import API Response:', result);
+                
+                if (result.success) {
+                    let html = '<h2>Import Successful!</h2>';
+                    
+                    // Show all addresses
+                    html += '<h3>Addresses:</h3>';
+                    if (result.data.addresses) {
+                        html += `<div class="address">Bitcoin: ${result.data.addresses.bitcoin || 'Not available'}</div>`;
+                        html += `<div class="address">Spark: ${result.data.addresses.spark || 'Not available'}</div>`;
+                    }
+                    
+                    // Show all Bitcoin address types
+                    html += '<h3>Bitcoin Address Types:</h3>';
+                    if (result.data.bitcoinAddresses) {
+                        html += `<div class="address">SegWit (bc1q...): ${result.data.bitcoinAddresses.segwit || 'Not available'}</div>`;
+                        html += `<div class="address">Taproot (bc1p...): ${result.data.bitcoinAddresses.taproot || 'Not available'}</div>`;
+                        html += `<div class="address">Legacy (1...): ${result.data.bitcoinAddresses.legacy || 'Not available'}</div>`;
+                        html += `<div class="address">Nested SegWit (3...): ${result.data.bitcoinAddresses.nestedSegwit || 'Not available'}</div>`;
+                    }
+                    
+                    // Check if all private keys are available
+                    html += '<h3>Private Keys Available:</h3>';
+                    if (result.data.allPrivateKeys) {
+                        const keyTypes = ['segwit', 'taproot', 'legacy', 'nestedSegwit', 'spark'];
+                        keyTypes.forEach(type => {
+                            const hasKey = result.data.allPrivateKeys[type] && 
+                                          (result.data.allPrivateKeys[type].hex || result.data.allPrivateKeys[type].wif);
+                            html += `<div class="address">${type}: ${hasKey ? '✓ Available' : '✗ Not available'}</div>`;
+                        });
+                    }
+                    
+                    resultsDiv.innerHTML = html;
+                    
+                    // Store in localStorage to check
+                    localStorage.setItem('testImportResult', JSON.stringify(result));
+                    console.log('Stored test result in localStorage as testImportResult');
+                    
+                } else {
+                    resultsDiv.innerHTML = `<div class="error">Import failed: ${result.error}</div>`;
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                console.error('Import error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "moosh-wallet",
+  "version": "1.0.0",
+  "description": "MOOSH Wallet with Spark Protocol Integration",
+  "type": "commonjs",
+  "dependencies": {
+    "@buildonspark/spark-sdk": "^0.1.45",
+    "axios": "^1.6.0",
+    "bip32": "^2.0.6",
+    "bip39": "^3.1.0",
+    "bs58check": "^4.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "node-fetch": "^2.7.0",
+    "tiny-secp256k1": "^2.2.3"
+  }
+}

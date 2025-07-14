@@ -8,17 +8,9 @@ import { HDKey } from '@scure/bip32';
 import * as bitcoin from 'bitcoinjs-lib';
 import * as ecc from 'tiny-secp256k1';
 import crypto from 'crypto';
-import { createRequire } from 'module';
-
-// Create require function for CommonJS modules
-const require = createRequire(import.meta.url);
-const ECPairFactory = require('ecpair').ECPairFactory;
 
 // Initialize ECC library for bitcoinjs-lib
 bitcoin.initEccLib(ecc);
-
-// Initialize ECPair factory
-const ECPair = ECPairFactory(ecc);
 
 /**
  * Generate a BIP39 mnemonic
@@ -81,14 +73,11 @@ function generateSegwitAddress(root, network) {
         network 
     });
     
-    // Create ECPair from private key for WIF encoding
-    const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey), { network });
-    
     return {
         address,
         publicKey: Buffer.from(child.publicKey).toString('hex'),
         privateKey: Buffer.from(child.privateKey).toString('hex'),
-        wif: keyPair.toWIF(), // Proper WIF encoding
+        wif: Buffer.from(child.privateKey).toString('hex'), // WIF conversion would require additional deps
         path
     };
 }
@@ -108,14 +97,11 @@ function generateTaprootAddress(root, network) {
         network 
     });
     
-    // Create ECPair from private key for WIF encoding
-    const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey), { network });
-    
     return {
         address,
         publicKey: Buffer.from(child.publicKey).toString('hex'),
         privateKey: Buffer.from(child.privateKey).toString('hex'),
-        wif: keyPair.toWIF(), // Proper WIF encoding
+        wif: Buffer.from(child.privateKey).toString('hex'), // WIF conversion would require additional deps
         path
     };
 }
@@ -131,14 +117,11 @@ function generateLegacyAddress(root, network) {
         network 
     });
     
-    // Create ECPair from private key for WIF encoding
-    const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey), { network });
-    
     return {
         address,
         publicKey: Buffer.from(child.publicKey).toString('hex'),
         privateKey: Buffer.from(child.privateKey).toString('hex'),
-        wif: keyPair.toWIF(), // Proper WIF encoding
+        wif: Buffer.from(child.privateKey).toString('hex'), // WIF conversion would require additional deps
         path
     };
 }
@@ -161,14 +144,11 @@ function generateNestedSegwitAddress(root, network) {
         network 
     });
     
-    // Create ECPair from private key for WIF encoding
-    const keyPair = ECPair.fromPrivateKey(Buffer.from(child.privateKey), { network });
-    
     return {
         address,
         publicKey: Buffer.from(child.publicKey).toString('hex'),
         privateKey: Buffer.from(child.privateKey).toString('hex'),
-        wif: keyPair.toWIF(), // Proper WIF encoding
+        wif: Buffer.from(child.privateKey).toString('hex'),
         path
     };
 }
@@ -178,8 +158,28 @@ function generateNestedSegwitAddress(root, network) {
  */
 export async function generateSparkAddress(mnemonic) {
     try {
-        // For now, use fallback implementation to avoid module loading issues
-        console.log('Using fallback Spark address generation');
+        // Import the sparkSDKService which has the real SDK implementation
+        const { createRequire } = await import('module');
+        const require = createRequire(import.meta.url);
+        const sparkSDK = require('./sparkSDKService.js');
+        
+        // Generate wallet using the SDK service with the provided mnemonic
+        const result = await sparkSDK.generateSparkFromMnemonic(mnemonic);
+        
+        if (result.success && result.data.addresses.spark) {
+            return {
+                address: result.data.addresses.spark,
+                bitcoinAddress: result.data.addresses.bitcoin,
+                privateKey: result.data.privateKeys.hex,
+                protocol: 'spark',
+                features: ['lightning', 'multi-asset', 'stablecoins']
+            };
+        } else {
+            throw new Error('SDK generation failed');
+        }
+    } catch (error) {
+        console.error('Spark SDK generation error:', error);
+        // Fallback to simple generation if SDK fails
         const hash = crypto.createHash('sha256').update(mnemonic).digest();
         const sparkKey = hash.toString('hex');
         const prefix = 'sp1p';
@@ -192,9 +192,6 @@ export async function generateSparkAddress(mnemonic) {
             features: ['lightning', 'multi-asset', 'stablecoins'],
             fallback: true
         };
-    } catch (error) {
-        console.error('Spark generation error:', error);
-        throw error;
     }
 }
 

@@ -161,10 +161,10 @@ app.post('/api/spark/import', async (req, res) => {
 });
 
 // Get balance for address
-app.get('/api/balance/:address', async (req, res) => {
+app.get('/api/balance/:address', (req, res) => {
     try {
         const { address } = req.params;
-        const balance = await getBalance(address);
+        const balance = getBalance(address);
         res.json(balance);
     } catch (error) {
         res.status(500).json({

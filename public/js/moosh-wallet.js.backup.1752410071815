@@ -1107,22 +1107,22 @@
                     flex-wrap: nowrap !important;
                 }
 
-                /* Dashboard Button Overrides - Fixed with scaling */
+                /* Dashboard Button Overrides - Fixed */
                 .dashboard-btn {
                     flex-shrink: 0 !important;
-                    min-width: calc(60px * var(--scale-factor)) !important;
-                    max-width: calc(90px * var(--scale-factor)) !important;
+                    min-width: 60px !important;
+                    max-width: 90px !important;
                     width: auto !important;
-                    height: calc(32px * var(--scale-factor)) !important;
+                    height: 32px !important;
                     white-space: nowrap !important;
                     overflow: hidden !important;
                     text-overflow: ellipsis !important;
                     display: flex !important;
                     align-items: center !important;
                     justify-content: center !important;
-                    font-size: calc(11px * var(--scale-factor)) !important;
-                    padding: calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor)) !important;
-                    border: calc(1px * var(--scale-factor)) solid #f57315 !important;
+                    font-size: 11px !important;
+                    padding: 6px 12px !important;
+                    border: 1px solid #f57315 !important;
                     background: #000000 !important;
                     color: #f57315 !important;
                     box-sizing: border-box !important;
@@ -1136,20 +1136,20 @@
                 /* Mobile optimizations for dashboard buttons */
                 @media (max-width: 480px) {
                     .dashboard-btn {
-                        min-width: calc(50px * var(--scale-factor)) !important;
-                        max-width: calc(70px * var(--scale-factor)) !important;
-                        height: calc(28px * var(--scale-factor)) !important;
-                        font-size: calc(9px * var(--scale-factor)) !important;
-                        padding: calc(4px * var(--scale-factor)) calc(6px * var(--scale-factor)) !important;
+                        min-width: 50px !important;
+                        max-width: 70px !important;
+                        height: 28px !important;
+                        font-size: 9px !important;
+                        padding: 4px 6px !important;
                     }
                 }
 
                 @media (max-width: 360px) {
                     .dashboard-btn {
-                        min-width: calc(45px * var(--scale-factor)) !important;
-                        max-width: calc(60px * var(--scale-factor)) !important;
-                        font-size: calc(8px * var(--scale-factor)) !important;
-                        padding: calc(3px * var(--scale-factor)) calc(4px * var(--scale-factor)) !important;
+                        min-width: 45px !important;
+                        max-width: 60px !important;
+                        font-size: 8px !important;
+                        padding: 3px 4px !important;
                     }
                 }
 
@@ -2051,31 +2051,6 @@
             } catch (e) {
                 console.error('[StateManager] Failed to load accounts:', e);
             }
-            
-            // If no accounts found, create a default one with known data
-            console.log('[StateManager] No accounts found, creating default account');
-            const defaultAccount = {
-                id: 'default-account',
-                name: 'Main Wallet',
-                addresses: {
-                    segwit: 'bc1qnl8rzz6ch58ldxltjv35x2gfrglx2xmt8pszxf',
-                    bitcoin: 'bc1qnl8rzz6ch58ldxltjv35x2gfrglx2xmt8pszxf',
-                    nestedSegwit: '',
-                    legacy: '',
-                    taproot: '',
-                    spark: ''
-                },
-                balances: {
-                    bitcoin: 128000,
-                    usd: 0
-                },
-                type: 'imported'
-            };
-            
-            this.state.accounts = [defaultAccount];
-            this.state.currentAccountId = defaultAccount.id;
-            this.persistAccounts();
-            
             return false;
         }
         
@@ -2097,12 +2072,13 @@
             try {
                 console.log('[StateManager] Creating account:', { name, isImport });
                 
-                // Use import endpoint to derive addresses from existing mnemonic
-                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/import`, {
+                // Generate addresses from mnemonic using API
+                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/generate-wallet`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        mnemonic: Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic
+                        mnemonic: Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic,
+                        strength: mnemonic.split(' ').length === 12 ? 128 : 256
                     })
                 });
                 
@@ -2111,22 +2087,21 @@
                 
                 // Map all possible address formats from the API response
                 const addresses = result.data.addresses || {};
-                const bitcoinAddresses = result.data.bitcoinAddresses || {};
+                const bitcoin = result.data.bitcoin || {};
                 
                 // Log the API response to understand the structure
                 console.log('[StateManager] API response:', result.data);
-                console.log('[StateManager] Spark address from API:', result.data.addresses?.spark);
                 
                 const account = {
                     id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     name: name || `Account ${this.state.accounts.length + 1}`,
                     addresses: {
-                        spark: addresses.spark || result.data.spark?.address || '',
-                        bitcoin: addresses.bitcoin || bitcoinAddresses.segwit || '',
-                        segwit: bitcoinAddresses.segwit || addresses.bitcoin || '',
-                        taproot: bitcoinAddresses.taproot || '',
-                        legacy: bitcoinAddresses.legacy || '',
-                        nestedSegwit: bitcoinAddresses.nestedSegwit || ''
+                        spark: addresses.spark || result.data.spark?.address || result.data.addresses?.spark || '',
+                        bitcoin: addresses.bitcoin || bitcoin.address || bitcoin.segwit || result.data.addresses?.bitcoin || '',
+                        segwit: addresses.segwit || bitcoin.segwit || addresses.bitcoin || result.data.bitcoinAddresses?.segwit || result.data.addresses?.bitcoin || '',
+                        taproot: addresses.taproot || addresses.bitcoinTaproot || bitcoin.taproot || result.data.bitcoinAddresses?.taproot || '',
+                        legacy: addresses.legacy || bitcoin.legacy || result.data.bitcoinAddresses?.legacy || '',
+                        nestedSegWit: addresses.nestedSegWit || bitcoin.nestedSegWit || result.data.bitcoinAddresses?.nestedSegwit || ''
                     },
                     type: isImport ? 'Imported' : 'Generated',
                     createdAt: Date.now(),
@@ -2138,8 +2113,6 @@
                         total: 0
                     }
                 };
-                
-                console.log('[StateManager] Created account with Spark address:', account.addresses.spark);
                 
                 
                 this.state.accounts.push(account);
@@ -2509,7 +2482,6 @@
         
         async getSparkBalance(address) {
             try {
-                // First try the API server
                 const response = await fetch(`${this.baseURL}/api/balance/${address}`, {
                     method: 'GET',
                     headers: {
@@ -2524,43 +2496,8 @@
                 const data = await response.json();
                 return data;
             } catch (error) {
-                console.error('Failed to get balance from API server, trying direct blockchain API:', error);
-                
-                // Fallback to direct blockchain API call
-                try {
-                    // Try Blockstream API directly from frontend
-                    const blockstreamResponse = await fetch(`https://blockstream.info/api/address/${address}`);
-                    if (blockstreamResponse.ok) {
-                        const data = await blockstreamResponse.json();
-                        const balance = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
-                        return {
-                            success: true,
-                            data: {
-                                address,
-                                balance: balance.toFixed(8),
-                                unconfirmed: '0.00000000',
-                                total: balance.toFixed(8),
-                                currency: 'BTC',
-                                source: 'blockstream-direct'
-                            }
-                        };
-                    }
-                } catch (blockstreamError) {
-                    console.error('Blockstream API also failed:', blockstreamError);
-                }
-                
-                // Return zero balance as last resort
-                return {
-                    success: false,
-                    data: {
-                        address,
-                        balance: '0.00000000',
-                        unconfirmed: '0.00000000',
-                        total: '0.00000000',
-                        currency: 'BTC',
-                        error: 'All API calls failed'
-                    }
-                };
+                console.error('Failed to get Spark balance:', error);
+                throw error;
             }
         }
         
@@ -5592,17 +5529,12 @@
                 console.log('🔑 Generating wallet with', wordCount, 'words...');
                 const response = await this.app.apiService.generateSparkWallet(wordCount);
                 
-                console.log('[DEBUG] Raw API response:', JSON.stringify(response, null, 2));
-                
                 if (response && response.success && response.data && response.data.mnemonic) {
                     // Use the real wallet data from API
                     const walletData = response.data;
                     const generatedSeed = walletData.mnemonic.split(' ');
                     
                     console.log('✅ Real wallet generated successfully');
-                    console.log('   Mnemonic:', walletData.mnemonic);
-                    console.log('   Seed words array:', generatedSeed);
-                    console.log('   First 5 words:', generatedSeed.slice(0, 5).join(' '));
                     console.log('   Spark Address:', walletData.addresses.spark);
                     console.log('   Bitcoin Address:', walletData.addresses.bitcoin);
                     
@@ -5689,9 +5621,6 @@
         }
         
         updateDisplay(generatedSeed, wordCount) {
-            console.log('[DEBUG] updateDisplay called with:', generatedSeed);
-            console.log('[DEBUG] First 5 words in display:', generatedSeed.slice(0, 5).join(' '));
-            
             const container = document.querySelector('.card');
             if (!container) return;
             
@@ -5817,9 +5746,6 @@
         }
 
         createSeedDisplay(generatedSeed, wordCount) {
-            console.log('[DEBUG] createSeedDisplay called with:', generatedSeed);
-            console.log('[DEBUG] Creating display for', generatedSeed.length, 'words');
-            
             return $.div({
                 style: {
                     background: '#000000',
@@ -6055,9 +5981,6 @@
         copySeedToClipboard() {
             const generatedSeed = this.app.state.get('generatedSeed') || [];
             const seedText = generatedSeed.join(' ');
-            
-            console.log('[DEBUG] Copying seed to clipboard:', seedText);
-            console.log('[DEBUG] First 5 words being copied:', generatedSeed.slice(0, 5).join(' '));
             
             // Enhanced copy function with fallback
             const copyWithFallback = () => {
@@ -6726,32 +6649,22 @@
                     const walletData = response.data;
                     localStorage.setItem('importedSeed', JSON.stringify(seedWords));
                     
-                    // Log the API response to debug Spark address
-                    console.log('[ImportWallet] API Response:', response.data);
-                    console.log('[ImportWallet] Spark address from API:', response.data.addresses?.spark);
-                    
                     // Properly map all address types from the API response
                     const addresses = walletData.addresses || {};
-                    const bitcoinAddresses = walletData.bitcoinAddresses || {};
                     const bitcoin = walletData.bitcoin || {};
                     
-                    // Ensure all address types are properly stored - check bitcoinAddresses first
+                    // Ensure all address types are properly stored
                     const mappedWalletData = {
                         ...walletData,
                         addresses: {
                             spark: addresses.spark || '',
-                            bitcoin: addresses.bitcoin || bitcoinAddresses.segwit || '',
-                            segwit: bitcoinAddresses.segwit || addresses.bitcoin || '',
-                            taproot: bitcoinAddresses.taproot || '',
-                            legacy: bitcoinAddresses.legacy || '',
-                            nestedSegwit: bitcoinAddresses.nestedSegwit || ''
-                        },
-                        // Keep the original bitcoinAddresses for reference
-                        bitcoinAddresses: bitcoinAddresses
+                            bitcoin: addresses.bitcoin || bitcoin.address || '',
+                            segwit: addresses.segwit || bitcoin.segwit || addresses.bitcoin || '',
+                            taproot: addresses.taproot || addresses.bitcoinTaproot || bitcoin.taproot || '',
+                            legacy: addresses.legacy || bitcoin.legacy || '',
+                            nestedSegWit: addresses.nestedSegWit || bitcoin.nestedSegWit || ''
+                        }
                     };
-                    
-                    console.log('[ImportWallet] Mapped wallet data:', mappedWalletData);
-                    console.log('[ImportWallet] Spark address after mapping:', mappedWalletData.addresses.spark);
                     
                     localStorage.setItem('sparkWallet', JSON.stringify(mappedWalletData));
                     this.app.state.set('generatedSeed', seedWords);
@@ -6769,14 +6682,6 @@
                         isInitialized: true
                     });
                     
-                    // Create account in the multi-account system with the imported wallet data
-                    const account = await this.app.state.createAccount('Imported Wallet', walletData.mnemonic, true);
-                    
-                    // Double-check that Spark address was included
-                    if (account && mappedWalletData.addresses.spark) {
-                        console.log('[ImportWallet] Verifying Spark address in created account:', account.addresses?.spark);
-                    }
-                    
                     this.app.showNotification('[SUCCESS] Wallet import completed • HD keys derived', 'success');
                 } else {
                     // Fallback to local storage
@@ -6793,15 +6698,7 @@
             }
             
             setTimeout(() => {
-                this.app.router.navigate('dashboard');
-                // Force balance refresh after navigation
-                setTimeout(() => {
-                    const dashboardPage = this.app.router.currentPage;
-                    if (dashboardPage && dashboardPage.refreshBalances) {
-                        console.log('[ImportWallet] Triggering balance refresh after import');
-                        dashboardPage.refreshBalances();
-                    }
-                }, 2000);
+                this.app.router.navigate('wallet-imported');
             }, 1500);
         }
 
@@ -7866,28 +7763,16 @@
                     if (walletType === 'segwit') address = currentAccount.addresses.segwit;
                     else if (walletType === 'legacy') address = currentAccount.addresses.legacy;
                     
-                    const balanceData = await this.app.apiService.fetchAddressBalance(address);
-                    const btcBalance = balanceData.balance / 100000000; // Convert from satoshis
+                    const balance = await this.app.apiService.fetchAddressBalance(address);
+                    const btcBalance = balance / 100000000; // Convert from satoshis
                     const usdBalance = (btcBalance * btcPrice).toFixed(2);
                     
-                    // Update UI - check both ID variations
-                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
-                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
+                    // Update UI
+                    const btcElement = document.getElementById('btc-balance');
+                    const usdElement = document.getElementById('usd-balance');
                     
-                    if (btcElement) {
-                        if (btcElement.id === 'btcBalance') {
-                            btcElement.textContent = btcBalance.toFixed(8) + ' BTC';
-                        } else {
-                            btcElement.textContent = btcBalance.toFixed(8);
-                        }
-                    }
-                    if (usdElement) {
-                        if (usdElement.id === 'btcUsdValue') {
-                            usdElement.textContent = usdBalance;
-                        } else {
-                            usdElement.textContent = usdBalance;
-                        }
-                    }
+                    if (btcElement) btcElement.textContent = btcBalance.toFixed(8);
+                    if (usdElement) usdElement.textContent = usdBalance;
                     
                     // Update stats grid
                     const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -9755,25 +9640,6 @@
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
-                    onclick: () => {
-                        // Navigate to wallet details page to show private keys and all addresses
-                        this.app.router.navigate('wallet-details?type=all');
-                    },
-                    onmouseover: (e) => {
-                        e.currentTarget.style.background = '#1a0a00';
-                        e.currentTarget.style.borderColor = '#ff8c42';
-                        e.currentTarget.style.color = '#ff8c42';
-                    },
-                    onmouseout: (e) => {
-                        e.currentTarget.style.background = '#000000';
-                        e.currentTarget.style.borderColor = '#f57315';
-                        e.currentTarget.style.color = '#f57315';
-                    }
-                }, ['View Private Keys & Addresses']),
-                
-                $.button({
-                    className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => {
                         console.log('[WalletSettings] Button clicked, this context:', this);
@@ -9815,7 +9681,7 @@
                                         className: 'modal-container',
                                         style: {
                                             background: '#000000',
-                                            border: '2px solid #f57315',
+                                            border: '2px solid #ffffff',
                                             borderRadius: '0',
                                             padding: '30px',
                                             minWidth: '400px',
@@ -9824,7 +9690,7 @@
                                     }, [
                                         $.h3({
                                             style: {
-                                                color: '#f57315',
+                                                color: '#ffffff',
                                                 marginBottom: '20px',
                                                 fontSize: '18px'
                                             }
@@ -9846,8 +9712,8 @@
                                                 width: '100%',
                                                 padding: '12px',
                                                 background: '#000000',
-                                                border: '1px solid #f57315',
-                                                color: '#f57315',
+                                                border: '1px solid #ffffff',
+                                                color: '#ffffff',
                                                 fontSize: '14px',
                                                 borderRadius: '0',
                                                 marginBottom: '10px'
@@ -9894,7 +9760,7 @@
                                                     padding: '10px 20px',
                                                     background: '#000000',
                                                     border: '1px solid #666666',
-                                                    color: '#888888',
+                                                    color: '#ffffff',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
                                                 },
@@ -9904,8 +9770,8 @@
                                             $.button({
                                                 style: {
                                                     padding: '10px 20px',
-                                                    background: '#f57315',
-                                                    border: '1px solid #f57315',
+                                                    background: '#ffffff',
+                                                    border: '1px solid #ffffff',
                                                     color: '#000000',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
@@ -10500,28 +10366,16 @@
                     if (walletType === 'segwit') address = currentAccount.addresses.segwit;
                     else if (walletType === 'legacy') address = currentAccount.addresses.legacy;
                     
-                    const balanceData = await this.app.apiService.fetchAddressBalance(address);
-                    const btcBalance = balanceData.balance / 100000000; // Convert from satoshis
+                    const balance = await this.app.apiService.fetchAddressBalance(address);
+                    const btcBalance = balance / 100000000; // Convert from satoshis
                     const usdBalance = (btcBalance * btcPrice).toFixed(2);
                     
-                    // Update UI - check both ID variations
-                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
-                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
+                    // Update UI
+                    const btcElement = document.getElementById('btc-balance');
+                    const usdElement = document.getElementById('usd-balance');
                     
-                    if (btcElement) {
-                        if (btcElement.id === 'btcBalance') {
-                            btcElement.textContent = btcBalance.toFixed(8) + ' BTC';
-                        } else {
-                            btcElement.textContent = btcBalance.toFixed(8);
-                        }
-                    }
-                    if (usdElement) {
-                        if (usdElement.id === 'btcUsdValue') {
-                            usdElement.textContent = usdBalance;
-                        } else {
-                            usdElement.textContent = usdBalance;
-                        }
-                    }
+                    if (btcElement) btcElement.textContent = btcBalance.toFixed(8);
+                    if (usdElement) usdElement.textContent = usdBalance;
                     
                     // Update stats grid
                     const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -10879,13 +10733,7 @@
                     }
                 });
             } else {
-                // Object format - Check sparkWallet.allPrivateKeys first
-                const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
-                const allPrivateKeys = sparkWallet.allPrivateKeys || {};
-                
-                console.log('[createPrivateKeysSection] sparkWallet.allPrivateKeys:', allPrivateKeys);
-                console.log('[createPrivateKeysSection] privateKeys parameter:', privateKeys);
-                
+                // Object format - legacy support
                 // Add Spark private key if available
                 if (privateKeys.spark && privateKeys.spark.hex !== 'Not available') {
                     keyRows.push(
@@ -10897,7 +10745,7 @@
                 // Add Bitcoin private keys if available
                 if (privateKeys.bitcoin && (privateKeys.bitcoin.hex !== 'Not available' || privateKeys.bitcoin.wif !== 'Not available')) {
                     keyRows.push(
-                        $.div({ style: { marginTop: keyRows.length > 0 ? 'calc(16px * var(--scale-factor))' : '0', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['BITCOIN PRIVATE KEY']),
+                        $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, ['BITCOIN PRIVATE KEY']),
                         this.createPrivateKeyRow('HEX', privateKeys.bitcoin.hex),
                         this.createPrivateKeyRow('WIF', privateKeys.bitcoin.wif)
                     );
@@ -10905,25 +10753,15 @@
                 
                 // Add all other private keys when showing all
                 if (selectedType === 'all') {
-                    // Check all possible key types from privateKeys parameter first, then allPrivateKeys
+                    // Check all possible key types
                     const keyTypes = ['segwit', 'taproot', 'legacy', 'nestedSegwit'];
                     keyTypes.forEach(format => {
-                        // Check privateKeys parameter first
                         if (privateKeys[format] && (privateKeys[format].hex !== 'Not available' || privateKeys[format].wif !== 'Not available')) {
                             const formatName = this.getAddressTypeName(format);
                             keyRows.push(
                                 $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [formatName.toUpperCase() + ' PRIVATE KEY']),
                                 this.createPrivateKeyRow(`${format}-HEX`, privateKeys[format].hex),
                                 this.createPrivateKeyRow(`${format}-WIF`, privateKeys[format].wif)
-                            );
-                        }
-                        // If not found in privateKeys, check allPrivateKeys
-                        else if (allPrivateKeys[format] && (allPrivateKeys[format].hex !== 'Not available' || allPrivateKeys[format].wif !== 'Not available')) {
-                            const formatName = this.getAddressTypeName(format);
-                            keyRows.push(
-                                $.div({ style: { marginTop: 'calc(16px * var(--scale-factor))', marginBottom: 'calc(12px * var(--scale-factor))', color: '#FF9900', fontSize: 'calc(12px * var(--scale-factor))', fontWeight: '600' } }, [formatName.toUpperCase() + ' PRIVATE KEY']),
-                                this.createPrivateKeyRow(`${format}-HEX`, allPrivateKeys[format].hex || 'Not available'),
-                                this.createPrivateKeyRow(`${format}-WIF`, allPrivateKeys[format].wif || 'Not available')
                             );
                         }
                     });
@@ -11272,17 +11110,15 @@
             // Priority: sparkWallet > currentWallet
             if (sparkWallet && sparkWallet.addresses) {
                 addresses.spark = sparkWallet.addresses.spark || 'Not available';
+                addresses.bitcoin = sparkWallet.addresses.bitcoin || 'Not available';
                 
                 // Check for additional bitcoin addresses in different formats
                 if (sparkWallet.bitcoinAddresses) {
-                    // Only include each address type once
-                    addresses.segwit = sparkWallet.bitcoinAddresses.segwit || sparkWallet.addresses.bitcoin || 'Not available';
-                    addresses.taproot = sparkWallet.bitcoinAddresses.taproot || 'Not available';
-                    addresses.nestedSegwit = sparkWallet.bitcoinAddresses.nestedSegwit || sparkWallet.bitcoinAddresses.nestedSegWit || 'Not available';
+                    addresses.taproot = sparkWallet.bitcoinAddresses.taproot || addresses.bitcoin;
+                    addresses.segwit = sparkWallet.bitcoinAddresses.segwit || addresses.bitcoin;
+                    addresses.nestedSegwit = sparkWallet.bitcoinAddresses.nestedSegwit || 'Not available';
                     addresses.legacy = sparkWallet.bitcoinAddresses.legacy || 'Not available';
                 } else {
-                    // Fallback if bitcoinAddresses not available
-                    addresses.segwit = sparkWallet.addresses.bitcoin || 'Not available';
                     // Infer from bitcoin address format
                     if (addresses.bitcoin.startsWith('bc1p') || addresses.bitcoin.startsWith('tb1p')) {
                         addresses.taproot = addresses.bitcoin;
@@ -11292,10 +11128,10 @@
                 }
             } else if (currentWallet) {
                 addresses.spark = currentWallet.sparkAddress || 'Not available';
-                // Only include segwit once
-                addresses.segwit = currentWallet.addresses?.segwit || currentWallet.bitcoinAddress || 'Not available';
-                addresses.taproot = currentWallet.addresses?.taproot || 'Not available';
-                addresses.nestedSegwit = currentWallet.addresses?.nestedSegwit || currentWallet.addresses?.nestedSegWit || 'Not available';
+                addresses.bitcoin = currentWallet.bitcoinAddress || 'Not available';
+                addresses.taproot = currentWallet.addresses?.taproot || addresses.bitcoin;
+                addresses.segwit = currentWallet.addresses?.segwit || addresses.bitcoin;
+                addresses.nestedSegwit = currentWallet.addresses?.nestedSegwit || 'Not available';
                 addresses.legacy = currentWallet.addresses?.legacy || 'Not available';
             }
             
@@ -11840,25 +11676,6 @@
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
-                    onclick: () => {
-                        // Navigate to wallet details page to show private keys and all addresses
-                        this.app.router.navigate('wallet-details?type=all');
-                    },
-                    onmouseover: (e) => {
-                        e.currentTarget.style.background = '#1a0a00';
-                        e.currentTarget.style.borderColor = '#ff8c42';
-                        e.currentTarget.style.color = '#ff8c42';
-                    },
-                    onmouseout: (e) => {
-                        e.currentTarget.style.background = '#000000';
-                        e.currentTarget.style.borderColor = '#f57315';
-                        e.currentTarget.style.color = '#f57315';
-                    }
-                }, ['View Private Keys & Addresses']),
-                
-                $.button({
-                    className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => {
                         console.log('[WalletSettings] Button clicked, this context:', this);
@@ -11900,7 +11717,7 @@
                                         className: 'modal-container',
                                         style: {
                                             background: '#000000',
-                                            border: '2px solid #f57315',
+                                            border: '2px solid #ffffff',
                                             borderRadius: '0',
                                             padding: '30px',
                                             minWidth: '400px',
@@ -11909,7 +11726,7 @@
                                     }, [
                                         $.h3({
                                             style: {
-                                                color: '#f57315',
+                                                color: '#ffffff',
                                                 marginBottom: '20px',
                                                 fontSize: '18px'
                                             }
@@ -11931,8 +11748,8 @@
                                                 width: '100%',
                                                 padding: '12px',
                                                 background: '#000000',
-                                                border: '1px solid #f57315',
-                                                color: '#f57315',
+                                                border: '1px solid #ffffff',
+                                                color: '#ffffff',
                                                 fontSize: '14px',
                                                 borderRadius: '0',
                                                 marginBottom: '10px'
@@ -11979,7 +11796,7 @@
                                                     padding: '10px 20px',
                                                     background: '#000000',
                                                     border: '1px solid #666666',
-                                                    color: '#888888',
+                                                    color: '#ffffff',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
                                                 },
@@ -11989,8 +11806,8 @@
                                             $.button({
                                                 style: {
                                                     padding: '10px 20px',
-                                                    background: '#f57315',
-                                                    border: '1px solid #f57315',
+                                                    background: '#ffffff',
+                                                    border: '1px solid #ffffff',
                                                     color: '#000000',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
@@ -12585,28 +12402,16 @@
                     if (walletType === 'segwit') address = currentAccount.addresses.segwit;
                     else if (walletType === 'legacy') address = currentAccount.addresses.legacy;
                     
-                    const balanceData = await this.app.apiService.fetchAddressBalance(address);
-                    const btcBalance = balanceData.balance / 100000000; // Convert from satoshis
+                    const balance = await this.app.apiService.fetchAddressBalance(address);
+                    const btcBalance = balance / 100000000; // Convert from satoshis
                     const usdBalance = (btcBalance * btcPrice).toFixed(2);
                     
-                    // Update UI - check both ID variations
-                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
-                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
+                    // Update UI
+                    const btcElement = document.getElementById('btc-balance');
+                    const usdElement = document.getElementById('usd-balance');
                     
-                    if (btcElement) {
-                        if (btcElement.id === 'btcBalance') {
-                            btcElement.textContent = btcBalance.toFixed(8) + ' BTC';
-                        } else {
-                            btcElement.textContent = btcBalance.toFixed(8);
-                        }
-                    }
-                    if (usdElement) {
-                        if (usdElement.id === 'btcUsdValue') {
-                            usdElement.textContent = usdBalance;
-                        } else {
-                            usdElement.textContent = usdBalance;
-                        }
-                    }
+                    if (btcElement) btcElement.textContent = btcBalance.toFixed(8);
+                    if (usdElement) usdElement.textContent = usdBalance;
                     
                     // Update stats grid
                     const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -13208,69 +13013,22 @@
         }
         
         toggleBalanceVisibility() {
-            // Toggle the hidden state
-            const isHidden = this.app.state.get('isBalanceHidden');
-            this.app.state.set('isBalanceHidden', !isHidden);
+            const balances = document.querySelectorAll('#btcBalance, #btcUsdValue, #lightningBalance, #stablecoinBalance, #ordinalsCount');
+            const btn = document.querySelector('.hide-btn');
             
-            // Get all balance elements
-            const btcBalance = document.getElementById('btcBalance');
-            const btcUsdValue = document.getElementById('btcUsdValue');
-            const lightningBalance = document.getElementById('lightningBalance');
-            const stablecoinBalance = document.getElementById('stablecoinBalance');
-            const ordinalsCount = document.getElementById('ordinalsCount');
-            
-            if (!isHidden) {
-                // Hide balances
-                if (btcBalance) {
-                    btcBalance.setAttribute('data-original', btcBalance.textContent);
-                    btcBalance.textContent = '••••••••';
-                }
-                if (btcUsdValue) {
-                    btcUsdValue.setAttribute('data-original', btcUsdValue.textContent);
-                    btcUsdValue.textContent = '••••••••';
-                }
-                if (lightningBalance) {
-                    lightningBalance.setAttribute('data-original', lightningBalance.textContent);
-                    lightningBalance.textContent = '••••••••';
-                }
-                if (stablecoinBalance) {
-                    stablecoinBalance.setAttribute('data-original', stablecoinBalance.textContent);
-                    stablecoinBalance.textContent = '••••••••';
-                }
-                if (ordinalsCount) {
-                    ordinalsCount.setAttribute('data-original', ordinalsCount.textContent);
-                    ordinalsCount.textContent = '••••••••';
-                }
-            } else {
-                // Show balances
-                if (btcBalance) {
-                    const original = btcBalance.getAttribute('data-original');
-                    if (original) btcBalance.textContent = original;
-                }
-                if (btcUsdValue) {
-                    const original = btcUsdValue.getAttribute('data-original');
-                    if (original) btcUsdValue.textContent = original;
-                }
-                if (lightningBalance) {
-                    const original = lightningBalance.getAttribute('data-original');
-                    if (original) lightningBalance.textContent = original;
-                }
-                if (stablecoinBalance) {
-                    const original = stablecoinBalance.getAttribute('data-original');
-                    if (original) stablecoinBalance.textContent = original;
-                }
-                if (ordinalsCount) {
-                    const original = ordinalsCount.getAttribute('data-original');
-                    if (original) ordinalsCount.textContent = original;
-                }
-                
-                // Refresh balances to get latest values
-                if (this.refreshBalances) {
-                    this.refreshBalances();
-                }
+            if (btn && btn.textContent === 'Hide') {
+                balances.forEach(el => {
+                    el.setAttribute('data-original', el.textContent);
+                    el.textContent = '••••••••';
+                });
+                btn.textContent = 'Show';
+            } else if (btn) {
+                balances.forEach(el => {
+                    const original = el.getAttribute('data-original');
+                    if (original) el.textContent = original;
+                });
+                btn.textContent = 'Hide';
             }
-            
-            this.app.showNotification(isHidden ? 'Balances shown' : 'Balances hidden', 'success');
         }
         
         switchWalletType(e) {
@@ -13296,24 +13054,15 @@
             const currentAccount = this.app.state.getCurrentAccount();
             if (address && currentAccount && currentAccount.addresses) {
                 const addressMap = {
-                    'taproot': currentAccount.addresses.taproot || '',
-                    'nativeSegWit': currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '',
-                    'nestedSegWit': currentAccount.addresses.nestedSegwit || '',
-                    'legacy': currentAccount.addresses.legacy || '',
-                    'spark': currentAccount.addresses.spark || ''
+                    'taproot': currentAccount.addresses.taproot,
+                    'nativeSegWit': currentAccount.addresses.segwit || currentAccount.addresses.bitcoin,
+                    'nestedSegWit': currentAccount.addresses.nestedSegWit,
+                    'legacy': currentAccount.addresses.legacy,
+                    'spark': currentAccount.addresses.spark
                 };
                 
-                let selectedAddress = addressMap[type] || '';
-                
-                // Special handling for Spark addresses - check sparkWallet if missing
-                if (type === 'spark' && (!selectedAddress || selectedAddress === '')) {
-                    const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
-                    if (sparkWallet.addresses?.spark) {
-                        selectedAddress = sparkWallet.addresses.spark;
-                    }
-                }
-                
-                address.textContent = selectedAddress || 'Not available';
+                const selectedAddress = addressMap[type] || 'No address found';
+                address.textContent = selectedAddress;
             }
             
             // Show/hide ordinals section for taproot
@@ -13329,29 +13078,8 @@
         }
         
         openSelectedWalletExplorer() {
-            const addressElement = document.getElementById('selectedWalletAddress');
-            if (!addressElement || !addressElement.textContent) {
-                this.app.showNotification('No address selected', 'error');
-                return;
-            }
-            
-            const address = addressElement.textContent;
-            const selectedType = this.app.state.get('selectedWalletType') || localStorage.getItem('selectedWalletType') || 'nativeSegWit';
-            
-            let explorerUrl = '';
-            
-            // Choose explorer based on wallet type
-            if (selectedType === 'spark') {
-                // Spark Protocol uses their own explorer
-                explorerUrl = `https://sparkscan.io/address/${address}`;
-            } else {
-                // All Bitcoin address types use Mempool.space
-                explorerUrl = `https://mempool.space/address/${address}`;
-            }
-            
-            // Open in new tab
-            window.open(explorerUrl, '_blank');
-            this.app.showNotification('Opening blockchain explorer...', 'success');
+            this.app.showNotification('Opening blockchain explorer...', 'info');
+            // TODO: Open actual explorer
         }
         
         showSendPayment() {
@@ -18478,22 +18206,6 @@
                 this.loadCurrentAccountData();
             });
             
-            // Load initial account data after mount
-            setTimeout(() => {
-                this.loadCurrentAccountData();
-                // Also refresh balances on initial load
-                if (this.refreshBalances) {
-                    this.refreshBalances();
-                } else {
-                    // Ensure refreshBalances is called even if not yet defined
-                    setTimeout(() => {
-                        if (this.refreshBalances) {
-                            this.refreshBalances();
-                        }
-                    }, 1000);
-                }
-            }, 100);
-            
             // Also listen for accounts array changes (for renaming)
             this.listenToState('accounts', (newAccounts, oldAccounts) => {
                 console.log('[DashboardPage] Accounts array changed');
@@ -18512,8 +18224,8 @@
             
             // Initialize the address display and wallet type on mount
             setTimeout(() => {
-                // Ensure correct wallet type is selected (default to nativeSegWit for your address)
-                const savedType = localStorage.getItem('selectedWalletType') || 'nativeSegWit';
+                // Ensure correct wallet type is selected
+                const savedType = localStorage.getItem('selectedWalletType') || 'taproot';
                 this.app.state.set('selectedWalletType', savedType);
                 
                 // Update the selector if it exists
@@ -18523,11 +18235,6 @@
                 }
                 
                 this.updateAddressDisplay();
-                
-                // Also refresh balances for the selected wallet type
-                if (this.refreshBalances) {
-                    setTimeout(() => this.refreshBalances(), 500);
-                }
             }, 100);
         }
         
@@ -18539,34 +18246,6 @@
             
             // Call parent unmount
             super.unmount();
-        }
-        
-        destroy() {
-            console.log('[DashboardPage] Destroying dashboard - cleaning up intervals');
-            
-            // Stop all intervals
-            if (this.stopAutoRefresh) {
-                this.stopAutoRefresh();
-            }
-            
-            // Clean up any other intervals that might be running
-            if (this.refreshInterval) {
-                clearInterval(this.refreshInterval);
-                this.refreshInterval = null;
-            }
-            
-            if (this.priceInterval) {
-                clearInterval(this.priceInterval);
-                this.priceInterval = null;
-            }
-            
-            if (this.mempoolInterval) {
-                clearInterval(this.mempoolInterval);
-                this.mempoolInterval = null;
-            }
-            
-            // Call parent destroy to clean up state listeners
-            super.destroy();
         }
         
         render() {
@@ -18772,39 +18451,37 @@
                         className: 'dashboard-header-row',
                         style: {
                             display: 'flex',
-                            justifyContent: 'center',
+                            justifyContent: 'space-between',
                             alignItems: 'center',
                             width: '100%',
-                            marginBottom: 'calc(12px * var(--scale-factor))',
-                            gap: 'calc(12px * var(--scale-factor))',
-                            flexWrap: 'nowrap',
-                            padding: '0 calc(16px * var(--scale-factor))'
+                            marginBottom: '12px',
+                            gap: '8px',
+                            flexWrap: 'nowrap'
                         }
                     }, [
-                        // Centered container for all controls
+                        // Left side: Account indicator
                         $.div({ 
                             style: {
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 'calc(12px * var(--scale-factor))',
                                 flexShrink: 0
                             }
                         }, [
-                            // Account indicator
                             $.div({ 
                                 id: 'currentAccountIndicator',
                                 style: {
-                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
+                                    fontSize: isXS ? '10px' : '11px',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     color: '#69fd97',
-                                    padding: isXS ? 'calc(5px * var(--scale-factor)) calc(10px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))',
+                                    padding: isXS ? '5px 10px' : '6px 10px',
                                     background: 'rgba(105, 253, 151, 0.1)',
-                                    border: 'calc(1px * var(--scale-factor)) solid #69fd97',
+                                    border: '1px solid #69fd97',
                                     borderRadius: '0',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
+                                    marginRight: '20px',
+                                    height: isXS ? '22px' : '26px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     boxSizing: 'border-box'
@@ -18812,25 +18489,44 @@
                                 onclick: () => this.showMultiAccountManager(),
                                 onmouseover: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.2)',
                                 onmouseout: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.1)'
-                            }, [this.getAccountDisplayName()]),
-                            
-                            // Action buttons
+                            }, [this.getAccountDisplayName()])
+                        ]),
+                        
+                        // Center: Spacer
+                        $.div({ 
+                            style: {
+                                flex: '1 1 auto',
+                                minWidth: '20px'
+                            }
+                        }),
+                        
+                        // Right: Action buttons
+                        $.div({ 
+                            className: 'header-buttons',
+                            style: {
+                                display: 'flex',
+                                gap: '8px',
+                                flexShrink: 0,
+                                alignItems: 'center',
+                                paddingRight: '8px'
+                            }
+                        }, [
                             // + Accounts button
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: isXS ? 'calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))',
-                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
+                                    padding: isXS ? '4px 8px' : '6px 10px',
+                                    fontSize: isXS ? '10px' : '11px',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
-                                    border: 'calc(1px * var(--scale-factor)) solid #f57315',
+                                    border: '1px solid #f57315',
                                     color: '#f57315',
                                     borderRadius: '0',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    minWidth: isXS ? 'calc(28px * var(--scale-factor))' : 'calc(70px * var(--scale-factor))',
-                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
+                                    minWidth: isXS ? '28px' : '70px',
+                                    height: isXS ? '22px' : '26px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -18852,18 +18548,18 @@
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: isXS ? 'calc(4px * var(--scale-factor)) calc(6px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(8px * var(--scale-factor))',
-                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
+                                    padding: isXS ? '4px 6px' : '6px 8px',
+                                    fontSize: isXS ? '10px' : '11px',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
-                                    border: 'calc(1px * var(--scale-factor)) solid #f57315',
+                                    border: '1px solid #f57315',
                                     color: '#f57315',
                                     borderRadius: '0',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    minWidth: isXS ? 'calc(28px * var(--scale-factor))' : 'calc(55px * var(--scale-factor))',
-                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
+                                    minWidth: isXS ? '28px' : '55px',
+                                    height: isXS ? '22px' : '26px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -18885,17 +18581,17 @@
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: isXS ? 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor))',
-                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
+                                    padding: isXS ? '6px 10px' : '6px 12px',
+                                    fontSize: isXS ? '10px' : '11px',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: '#000000',
-                                    border: 'calc(1px * var(--scale-factor)) solid #f57315',
+                                    border: '1px solid #f57315',
                                     color: '#f57315',
                                     borderRadius: '0',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
+                                    height: isXS ? '22px' : '26px',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -18941,8 +18637,8 @@
         }
         
         getCurrentWalletAddress() {
-            // Get the selected wallet type - default to nativeSegWit to match the user's address
-            const selectedType = this.app.state.get('selectedWalletType') || localStorage.getItem('selectedWalletType') || 'nativeSegWit';
+            // Get the selected wallet type - default to taproot
+            const selectedType = this.app.state.get('selectedWalletType') || localStorage.getItem('selectedWalletType') || 'taproot';
             
             console.log('[Dashboard] Getting wallet address for type:', selectedType);
             
@@ -18950,36 +18646,23 @@
             const currentAccount = this.app.state.getCurrentAccount();
             
             if (currentAccount && currentAccount.addresses) {
-                console.log('[Dashboard] Current account:', currentAccount);
                 console.log('[Dashboard] Current account addresses:', currentAccount.addresses);
-                console.log('[Dashboard] Spark address value:', currentAccount.addresses.spark);
                 
                 // Map wallet types to their addresses from current account
                 const addressMap = {
                     'taproot': currentAccount.addresses.taproot || '',
                     'nativeSegWit': currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '',
-                    'segwit': currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '',
-                    'nestedSegWit': currentAccount.addresses.nestedSegwit || '',
+                    'nestedSegWit': currentAccount.addresses.nestedSegWit || '',
                     'legacy': currentAccount.addresses.legacy || '',
                     'spark': currentAccount.addresses.spark || ''
                 };
                 
-                // Return the selected address without fallback
+                // Return the selected address
                 const selectedAddress = addressMap[selectedType];
-                console.log('[Dashboard] Returning address for type', selectedType, ':', selectedAddress || 'Not available');
-                
-                // Special handling for Spark addresses - check if it's truly missing
-                if (selectedType === 'spark' && (!selectedAddress || selectedAddress === '')) {
-                    console.log('[Dashboard] Spark address missing, checking sparkWallet in localStorage...');
-                    // Try to get from sparkWallet as fallback
-                    const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
-                    if (sparkWallet.addresses?.spark) {
-                        console.log('[Dashboard] Found Spark address in sparkWallet:', sparkWallet.addresses.spark);
-                        return sparkWallet.addresses.spark;
-                    }
+                if (selectedAddress) {
+                    console.log('[Dashboard] Returning address for type', selectedType, ':', selectedAddress);
+                    return selectedAddress;
                 }
-                
-                return selectedAddress || 'Not available';
                 
                 // Fallback to any available address
                 const fallbackAddress = currentAccount.addresses.spark || 
@@ -19002,12 +18685,12 @@
             
             console.log('[Dashboard] Checking legacy wallet data - sparkWallet:', sparkWallet);
             
-            // Map wallet types to their addresses - check bitcoinAddresses first
+            // Map wallet types to their addresses
             const addressMap = {
-                'taproot': currentWallet.taprootAddress || sparkWallet.bitcoinAddresses?.taproot || sparkWallet.addresses?.taproot || '',
-                'nativeSegWit': currentWallet.bitcoinAddress || sparkWallet.bitcoinAddresses?.segwit || sparkWallet.addresses?.bitcoin || sparkWallet.addresses?.segwit || '',
-                'nestedSegWit': currentWallet.nestedSegWitAddress || sparkWallet.bitcoinAddresses?.nestedSegwit || sparkWallet.addresses?.nestedSegWit || '',
-                'legacy': currentWallet.legacyAddress || sparkWallet.bitcoinAddresses?.legacy || sparkWallet.addresses?.legacy || '',
+                'taproot': currentWallet.taprootAddress || sparkWallet.addresses?.taproot || '',
+                'nativeSegWit': currentWallet.bitcoinAddress || sparkWallet.addresses?.bitcoin || sparkWallet.addresses?.segwit || '',
+                'nestedSegWit': currentWallet.nestedSegWitAddress || sparkWallet.addresses?.nestedSegWit || '',
+                'legacy': currentWallet.legacyAddress || sparkWallet.addresses?.legacy || '',
                 'spark': currentWallet.sparkAddress || sparkWallet.addresses?.spark || ''
             };
             
@@ -19152,25 +18835,6 @@
                 
                 $.button({
                     className: 'btn-secondary',
-                    style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid #f57315; color: #f57315; border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
-                    onclick: () => {
-                        // Navigate to wallet details page to show private keys and all addresses
-                        this.app.router.navigate('wallet-details?type=all');
-                    },
-                    onmouseover: (e) => {
-                        e.currentTarget.style.background = '#1a0a00';
-                        e.currentTarget.style.borderColor = '#ff8c42';
-                        e.currentTarget.style.color = '#ff8c42';
-                    },
-                    onmouseout: (e) => {
-                        e.currentTarget.style.background = '#000000';
-                        e.currentTarget.style.borderColor = '#f57315';
-                        e.currentTarget.style.color = '#f57315';
-                    }
-                }, ['View Private Keys & Addresses']),
-                
-                $.button({
-                    className: 'btn-secondary',
                     style: 'width: 100%; font-size: calc(14px * var(--scale-factor)); background: #000000; border: 2px solid var(--border-active); color: var(--text-primary); border-radius: 0; padding: calc(12px * var(--scale-factor)); transition: all 0.2s ease; cursor: pointer;',
                     onclick: () => {
                         console.log('[WalletSettings] Button clicked, this context:', this);
@@ -19212,7 +18876,7 @@
                                         className: 'modal-container',
                                         style: {
                                             background: '#000000',
-                                            border: '2px solid #f57315',
+                                            border: '2px solid #ffffff',
                                             borderRadius: '0',
                                             padding: '30px',
                                             minWidth: '400px',
@@ -19221,7 +18885,7 @@
                                     }, [
                                         $.h3({
                                             style: {
-                                                color: '#f57315',
+                                                color: '#ffffff',
                                                 marginBottom: '20px',
                                                 fontSize: '18px'
                                             }
@@ -19243,8 +18907,8 @@
                                                 width: '100%',
                                                 padding: '12px',
                                                 background: '#000000',
-                                                border: '1px solid #f57315',
-                                                color: '#f57315',
+                                                border: '1px solid #ffffff',
+                                                color: '#ffffff',
                                                 fontSize: '14px',
                                                 borderRadius: '0',
                                                 marginBottom: '10px'
@@ -19291,7 +18955,7 @@
                                                     padding: '10px 20px',
                                                     background: '#000000',
                                                     border: '1px solid #666666',
-                                                    color: '#888888',
+                                                    color: '#ffffff',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
                                                 },
@@ -19301,8 +18965,8 @@
                                             $.button({
                                                 style: {
                                                     padding: '10px 20px',
-                                                    background: '#f57315',
-                                                    border: '1px solid #f57315',
+                                                    background: '#ffffff',
+                                                    border: '1px solid #ffffff',
                                                     color: '#000000',
                                                     cursor: 'pointer',
                                                     borderRadius: '0'
@@ -19897,28 +19561,16 @@
                     if (walletType === 'segwit') address = currentAccount.addresses.segwit;
                     else if (walletType === 'legacy') address = currentAccount.addresses.legacy;
                     
-                    const balanceData = await this.app.apiService.fetchAddressBalance(address);
-                    const btcBalance = balanceData.balance / 100000000; // Convert from satoshis
+                    const balance = await this.app.apiService.fetchAddressBalance(address);
+                    const btcBalance = balance / 100000000; // Convert from satoshis
                     const usdBalance = (btcBalance * btcPrice).toFixed(2);
                     
-                    // Update UI - check both ID variations
-                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
-                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
+                    // Update UI
+                    const btcElement = document.getElementById('btc-balance');
+                    const usdElement = document.getElementById('usd-balance');
                     
-                    if (btcElement) {
-                        if (btcElement.id === 'btcBalance') {
-                            btcElement.textContent = btcBalance.toFixed(8) + ' BTC';
-                        } else {
-                            btcElement.textContent = btcBalance.toFixed(8);
-                        }
-                    }
-                    if (usdElement) {
-                        if (usdElement.id === 'btcUsdValue') {
-                            usdElement.textContent = usdBalance;
-                        } else {
-                            usdElement.textContent = usdBalance;
-                        }
-                    }
+                    if (btcElement) btcElement.textContent = btcBalance.toFixed(8);
+                    if (usdElement) usdElement.textContent = usdBalance;
                     
                     // Update stats grid
                     const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -20418,14 +20070,10 @@
             this.updateWalletAddresses(currentAccount);
             
             // Refresh balances for current account
-            if (this.refreshBalances) {
-                this.refreshBalances();
-            }
+            this.refreshBalances();
             
             // Update account indicator
             this.updateAccountIndicator();
-            
-            console.log('[DashboardPage] Loaded account data for:', currentAccount.name);
         }
         
         updateWalletAddresses(account) {
@@ -20708,8 +20356,6 @@
         
         async refreshBalances() {
             try {
-                console.log('[Dashboard] Starting balance refresh...');
-                
                 // Fetch Bitcoin price
                 const priceData = await this.app.apiService.fetchBitcoinPrice();
                 const btcPrice = priceData.usd || 0;
@@ -20725,7 +20371,7 @@
                 const currentAccount = this.app.state.getCurrentAccount();
                 if (currentAccount && currentAccount.addresses) {
                     // Get the selected wallet type to determine which address to use
-                    const walletType = this.app.state.get('selectedWalletType') || localStorage.getItem('selectedWalletType') || 'nativeSegWit'; // Default to nativeSegWit
+                    const walletType = this.app.state.get('selectedWalletType') || 'taproot';
                     let address = '';
                     
                     // Select the appropriate address based on wallet type
@@ -20733,9 +20379,6 @@
                         case 'segwit':
                         case 'nativeSegWit':
                             address = currentAccount.addresses.segwit || currentAccount.addresses.bitcoin || '';
-                            break;
-                        case 'nestedSegWit':
-                            address = currentAccount.addresses.nestedSegWit || currentAccount.addresses.nestedSegwit || '';
                             break;
                         case 'legacy':
                             address = currentAccount.addresses.legacy || '';
@@ -20750,155 +20393,31 @@
                     }
                     
                     if (address) {
-                        console.log('[Dashboard] Fetching balance for address:', address, 'Type:', walletType);
-                        
-                        // Don't fetch balance for Spark addresses using Bitcoin API
-                        if (walletType === 'spark') {
-                            console.log('[Dashboard] Spark Protocol address - setting balance to 0');
-                            // For Spark Protocol, we would need a different API
-                            // For now, just show 0 balance
-                            const btcBalance = 0;
-                            const usdValue = 0;
-                            
-                            // Update UI elements
-                            this.updateBalanceDisplay(btcBalance, usdValue, btcPrice);
-                            
-                            // Also update the wallet selector balance display
-                            const balanceElement = document.getElementById('selectedWalletBalance');
-                            if (balanceElement) {
-                                balanceElement.textContent = '0.00000000 BTC';
-                            }
-                            
-                            return;
-                        }
-                        
                         // Fetch fresh balance from blockchain
-                        const balanceData = await this.app.apiService.getSparkBalance(address);
-                        console.log('[Dashboard] Balance data received:', balanceData);
-                        
-                        // Balance from API is already in BTC format, not satoshis
-                        const btcBalanceFromAPI = balanceData.data ? parseFloat(balanceData.data.balance) : 0;
-                        const balanceSats = btcBalanceFromAPI * 100000000; // Convert to satoshis for storage
+                        const balanceSats = await this.app.apiService.fetchAddressBalance(address);
                         const btcBalance = balanceSats / 100000000; // Convert from satoshis
                         const usdValue = btcBalance * btcPrice;
-                        
-                        console.log('[Dashboard] Balance calculations:', { balanceSats, btcBalance, usdValue });
                         
                         // Update the account's balance in state
                         currentAccount.balances = currentAccount.balances || {};
                         currentAccount.balances.bitcoin = balanceSats;
                         currentAccount.balances.usd = usdValue;
                         
-                        // Update UI elements - check both ID variations
-                        const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
-                        const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
+                        // Update UI elements
+                        const btcElement = document.getElementById('btc-balance');
+                        const usdElement = document.getElementById('usd-balance');
                         
-                        if (btcElement) {
-                            // Update the complete text for BTC balance display
-                            if (btcElement.id === 'btcBalance') {
-                                const balanceText = `${btcBalance.toFixed(8)} BTC`;
-                                btcElement.setAttribute('data-original', balanceText);
-                                // Only show if not hidden
-                                if (!this.app.state.get('isBalanceHidden')) {
-                                    btcElement.textContent = balanceText;
-                                } else {
-                                    btcElement.textContent = '••••••••';
-                                }
-                            } else {
-                                btcElement.setAttribute('data-original', btcBalance.toFixed(8));
-                                if (!this.app.state.get('isBalanceHidden')) {
-                                    btcElement.textContent = btcBalance.toFixed(8);
-                                } else {
-                                    btcElement.textContent = '••••••••';
-                                }
-                            }
-                            console.log('[Dashboard] Updated BTC balance display:', btcBalance.toFixed(8));
-                        } else {
-                            console.warn('[Dashboard] BTC balance element not found');
+                        if (btcElement && !this.app.state.get('isBalanceHidden')) {
+                            btcElement.textContent = btcBalance.toFixed(8);
                         }
-                        
-                        if (usdElement) {
-                            // Update just the value for USD display
-                            const usdText = usdValue.toFixed(2);
-                            usdElement.setAttribute('data-original', usdText);
-                            // Only show if not hidden
-                            if (!this.app.state.get('isBalanceHidden')) {
-                                usdElement.textContent = usdText;
-                            } else {
-                                usdElement.textContent = '••••••••';
-                            }
-                            console.log('[Dashboard] Updated USD balance display:', usdText);
-                        } else {
-                            console.warn('[Dashboard] USD balance element not found');
+                        if (usdElement && !this.app.state.get('isBalanceHidden')) {
+                            usdElement.textContent = usdValue.toFixed(2);
                         }
-                        
-                        // Also update wallet selector balance displays
-                        const walletSelectorBalances = document.querySelectorAll('#selectedWalletBalance, #selected-wallet-balance');
-                        walletSelectorBalances.forEach(element => {
-                            if (element) {
-                                const balanceText = `${btcBalance.toFixed(8)} BTC`;
-                                element.setAttribute('data-original', balanceText);
-                                // Only show if not hidden
-                                if (!this.app.state.get('isBalanceHidden')) {
-                                    element.textContent = balanceText;
-                                } else {
-                                    element.textContent = '••••••••';
-                                }
-                            }
-                        });
-                        console.log('[Dashboard] Updated wallet selector balances');
-                    } else {
-                        // No address available for selected wallet type
-                        console.log('[Dashboard] No address available for wallet type:', walletType);
-                        this.updateBalanceDisplay(0, 0, btcPrice);
                     }
                 }
             } catch (error) {
                 console.error('Failed to refresh balances:', error);
             }
-        }
-        
-        updateBalanceDisplay(btcBalance, usdValue, btcPrice) {
-            // Update UI elements - check both ID variations
-            const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
-            const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
-            
-            if (btcElement) {
-                const balanceText = btcElement.id === 'btcBalance' ? `${btcBalance.toFixed(8)} BTC` : btcBalance.toFixed(8);
-                btcElement.setAttribute('data-original', balanceText);
-                // Only show if not hidden
-                if (!this.app.state.get('isBalanceHidden')) {
-                    btcElement.textContent = balanceText;
-                } else {
-                    btcElement.textContent = '••••••••';
-                }
-            }
-            
-            if (usdElement) {
-                const usdText = usdValue.toFixed(2);
-                usdElement.setAttribute('data-original', usdText);
-                // Only show if not hidden
-                if (!this.app.state.get('isBalanceHidden')) {
-                    usdElement.textContent = usdText;
-                } else {
-                    usdElement.textContent = '••••••••';
-                }
-            }
-            
-            // Also update wallet selector balance displays
-            const walletSelectorBalances = document.querySelectorAll('#selectedWalletBalance, #selected-wallet-balance');
-            walletSelectorBalances.forEach(element => {
-                if (element) {
-                    const balanceText = `${btcBalance.toFixed(8)} BTC`;
-                    element.setAttribute('data-original', balanceText);
-                    // Only show if not hidden
-                    if (!this.app.state.get('isBalanceHidden')) {
-                        element.textContent = balanceText;
-                    } else {
-                        element.textContent = '••••••••';
-                    }
-                }
-            });
         }
         
         async fetchTransactionHistory() {
@@ -21012,41 +20531,11 @@
             });
             
             // Also trigger balance refresh for the selected address type
-            if (this.refreshBalances) {
-                this.refreshBalances();
-            }
+            this.refreshBalances();
         }
         
         openSelectedWalletExplorer() {
-            const addressElement = document.getElementById('selected-wallet-address') || document.getElementById('selectedWalletAddress');
-            if (!addressElement || !addressElement.textContent || addressElement.textContent === 'Select wallet to view address') {
-                this.app.showNotification('No address selected', 'error');
-                return;
-            }
-            
-            const address = addressElement.textContent;
-            const selectedType = this.app.state.get('selectedWalletType') || localStorage.getItem('selectedWalletType') || 'nativeSegWit';
-            
-            let explorerUrl = '';
-            
-            // Choose explorer based on wallet type and network
-            const isMainnet = this.app.state.get('isMainnet');
-            
-            if (selectedType === 'spark') {
-                // Spark Protocol uses their own explorer
-                explorerUrl = `https://sparkscan.io/address/${address}`;
-            } else {
-                // All Bitcoin address types use Mempool.space
-                if (isMainnet) {
-                    explorerUrl = `https://mempool.space/address/${address}`;
-                } else {
-                    explorerUrl = `https://mempool.space/testnet/address/${address}`;
-                }
-            }
-            
-            // Open in new tab
-            window.open(explorerUrl, '_blank');
-            this.app.showNotification('Opening blockchain explorer...', 'success');
+            this.app.showNotification('Opening blockchain explorer...', 'info');
         }
         
         copySelectedWalletAddress() {
@@ -21088,99 +20577,6 @@
         showTokenMenu() {
             const modal = new TokenMenuModal(this.app);
             modal.show();
-        }
-        
-        toggleBalanceVisibility() {
-            // Toggle the hidden state
-            const isHidden = this.app.state.get('isBalanceHidden');
-            this.app.state.set('isBalanceHidden', !isHidden);
-            
-            // Get all balance elements
-            const btcBalance = document.getElementById('btcBalance');
-            const btcUsdValue = document.getElementById('btcUsdValue');
-            const lightningBalance = document.getElementById('lightningBalance');
-            const stablecoinBalance = document.getElementById('stablecoinBalance');
-            const ordinalsCount = document.getElementById('ordinalsCount');
-            
-            // Also get wallet selector balance elements
-            const walletSelectorBalances = document.querySelectorAll('#selectedWalletBalance, #selected-wallet-balance');
-            
-            if (!isHidden) {
-                // Hide balances
-                if (btcBalance) {
-                    btcBalance.setAttribute('data-original', btcBalance.textContent);
-                    btcBalance.textContent = '••••••••';
-                }
-                if (btcUsdValue) {
-                    btcUsdValue.setAttribute('data-original', btcUsdValue.textContent);
-                    btcUsdValue.textContent = '••••••••';
-                }
-                if (lightningBalance) {
-                    lightningBalance.setAttribute('data-original', lightningBalance.textContent);
-                    lightningBalance.textContent = '••••••••';
-                }
-                if (stablecoinBalance) {
-                    stablecoinBalance.setAttribute('data-original', stablecoinBalance.textContent);
-                    stablecoinBalance.textContent = '••••••••';
-                }
-                if (ordinalsCount) {
-                    ordinalsCount.setAttribute('data-original', ordinalsCount.textContent);
-                    ordinalsCount.textContent = '••••••••';
-                }
-                
-                // Hide wallet selector balances
-                walletSelectorBalances.forEach(element => {
-                    if (element) {
-                        element.setAttribute('data-original', element.textContent);
-                        element.textContent = '••••••••';
-                    }
-                });
-            } else {
-                // Show balances
-                if (btcBalance) {
-                    const original = btcBalance.getAttribute('data-original');
-                    if (original) btcBalance.textContent = original;
-                }
-                if (btcUsdValue) {
-                    const original = btcUsdValue.getAttribute('data-original');
-                    if (original) btcUsdValue.textContent = original;
-                }
-                if (lightningBalance) {
-                    const original = lightningBalance.getAttribute('data-original');
-                    if (original) lightningBalance.textContent = original;
-                }
-                if (stablecoinBalance) {
-                    const original = stablecoinBalance.getAttribute('data-original');
-                    if (original) stablecoinBalance.textContent = original;
-                }
-                if (ordinalsCount) {
-                    const original = ordinalsCount.getAttribute('data-original');
-                    if (original) ordinalsCount.textContent = original;
-                }
-                
-                // Show wallet selector balances
-                walletSelectorBalances.forEach(element => {
-                    if (element) {
-                        const original = element.getAttribute('data-original');
-                        if (original) element.textContent = original;
-                    }
-                });
-                
-                // Refresh balances to get latest values
-                if (this.refreshBalances) {
-                    this.refreshBalances();
-                }
-            }
-            
-            // Update the button text
-            const hideShowButtons = document.querySelectorAll('.dashboard-btn');
-            hideShowButtons.forEach(btn => {
-                if (btn.textContent === 'Hide' || btn.textContent === 'Show') {
-                    btn.textContent = isHidden ? 'Hide' : 'Show';
-                }
-            });
-            
-            this.app.showNotification(isHidden ? 'Balances shown' : 'Balances hidden', 'success');
         }
         
         showStablecoinSwap() {

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Balance Refresh</title>
+</head>
+<body>
+    <h1>Force Balance Refresh</h1>
+    <p>This will refresh the balance for your imported wallet.</p>
+    <button onclick="refreshBalance()">Refresh Balance Now</button>
+    <div id="result"></div>
+
+    <script>
+        async function refreshBalance() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // Get the current wallet from localStorage
+                const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
+                const currentAddress = sparkWallet.data?.addresses?.bitcoin || 'bc1qnl8rzz6ch58ldxltjv35x2gfrglx2xmt8pszxf';
+                
+                resultDiv.innerHTML = `<p>Fetching balance for: ${currentAddress}</p>`;
+                
+                // Fetch from Blockstream API
+                const response = await fetch(`https://mempool.space/api/address/${currentAddress}`);
+                const data = await response.json();
+                
+                const balance = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+                const btcBalance = balance / 100000000; // Convert satoshis to BTC
+                
+                resultDiv.innerHTML += `
+                    <p><strong>Balance: ${btcBalance.toFixed(8)} BTC</strong></p>
+                    <p>Satoshis: ${balance}</p>
+                    <p>Transactions: ${data.chain_stats.tx_count}</p>
+                `;
+                
+                // Try to update the dashboard if it's loaded
+                if (window.location.hash === '#dashboard') {
+                    const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
+                    if (btcElement) {
+                        btcElement.textContent = btcBalance.toFixed(8);
+                    }
+                    
+                    const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
+                    if (usdElement) {
+                        // Fetch BTC price
+                        const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+                        const priceData = await priceResponse.json();
+                        const btcPrice = priceData.bitcoin.usd;
+                        const usdValue = btcBalance * btcPrice;
+                        usdElement.textContent = `≈ $${usdValue.toFixed(2)} USD`;
+                    }
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Auto-refresh on load
+        window.onload = () => {
+            refreshBalance();
+        };
+    </script>
+</body>
+</html>
