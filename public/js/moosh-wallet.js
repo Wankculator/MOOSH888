@@ -13843,26 +13843,30 @@
             const $ = window.ElementFactory || ElementFactory;
             
             return $.div({}, [
-                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Create New Account']),
+                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary); font-family: "JetBrains Mono", monospace;' }, ['Create New Account']),
                 $.div({ style: 'margin-bottom: 20px;' }, [
-                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Account Name']),
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: var(--text-dim); font-family: "JetBrains Mono", monospace; font-size: 12px;' }, ['Account Name']),
                     $.input({
                         id: 'newAccountName',
                         type: 'text',
                         placeholder: 'Enter account name',
-                        style: 'width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff;',
-                        value: `Account ${(this.app.state.get('accounts') || []).length + 1}`
+                        style: 'width: 100%; padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        value: `Account ${(this.app.state.get('accounts') || []).length + 1}`,
+                        onfocus: (e) => { e.target.style.borderColor = 'var(--text-primary)'; },
+                        onblur: (e) => { e.target.style.borderColor = 'var(--border-color)'; }
                     })
                 ]),
                 $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
                     $.button({
-                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
-                        onmouseover: (e) => { e.target.style.background = '#f57315'; e.target.style.color = '#000'; },
-                        onmouseout: (e) => { e.target.style.background = '#000'; e.target.style.color = '#f57315'; },
+                        style: 'background: transparent; border: 2px solid var(--text-primary); color: var(--text-primary); padding: 12px 24px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onmouseover: (e) => { e.target.style.background = 'var(--text-primary)'; e.target.style.color = 'var(--bg-primary)'; },
+                        onmouseout: (e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--text-primary)'; },
                         onclick: () => this.handleCreateAccount()
                     }, ['Create Account']),
                     $.button({
-                        style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
+                        style: 'background: transparent; border: 2px solid var(--text-dim); color: var(--text-dim); padding: 12px 24px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onmouseover: (e) => { e.target.style.borderColor = 'var(--text-secondary)'; e.target.style.color = 'var(--text-secondary)'; },
+                        onmouseout: (e) => { e.target.style.borderColor = 'var(--text-dim)'; e.target.style.color = 'var(--text-dim)'; },
                         onclick: () => { this.isCreating = false; this.show(); }
                     }, ['Cancel'])
                 ])
@@ -13873,30 +13877,38 @@
             const $ = window.ElementFactory || ElementFactory;
             
             return $.div({}, [
-                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Import Account']),
+                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary); font-family: "JetBrains Mono", monospace;' }, ['Import Account']),
                 $.div({ style: 'margin-bottom: 20px;' }, [
-                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Account Name']),
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: var(--text-dim); font-family: "JetBrains Mono", monospace; font-size: 12px;' }, ['Account Name']),
                     $.input({
                         id: 'importAccountName',
                         type: 'text',
                         placeholder: 'Enter account name',
-                        style: 'width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; margin-bottom: 15px;',
-                        value: `Imported ${(this.app.state.get('accounts') || []).length + 1}`
+                        style: 'width: 100%; padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); margin-bottom: 15px; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        value: `Imported ${(this.app.state.get('accounts') || []).length + 1}`,
+                        onfocus: (e) => { e.target.style.borderColor = 'var(--text-primary)'; },
+                        onblur: (e) => { e.target.style.borderColor = 'var(--border-color)'; }
                     }),
-                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Seed Phrase']),
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: var(--text-dim); font-family: "JetBrains Mono", monospace; font-size: 12px;' }, ['Seed Phrase']),
                     $.textarea({
                         id: 'importSeedPhrase',
                         placeholder: 'Enter your 12 or 24 word seed phrase',
-                        style: 'width: 100%; height: 80px; padding: 10px; background: #000; border: 1px solid #333; color: #fff; resize: none;'
+                        style: 'width: 100%; height: 80px; padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); resize: none; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onfocus: (e) => { e.target.style.borderColor = 'var(--text-primary)'; },
+                        onblur: (e) => { e.target.style.borderColor = 'var(--border-color)'; }
                     })
                 ]),
                 $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
                     $.button({
-                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer;',
+                        style: 'background: transparent; border: 2px solid var(--text-primary); color: var(--text-primary); padding: 12px 24px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onmouseover: (e) => { e.target.style.background = 'var(--text-primary)'; e.target.style.color = 'var(--bg-primary)'; },
+                        onmouseout: (e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--text-primary)'; },
                         onclick: () => this.handleImportAccount()
                     }, ['Import Account']),
                     $.button({
-                        style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
+                        style: 'background: transparent; border: 2px solid var(--text-dim); color: var(--text-dim); padding: 12px 24px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onmouseover: (e) => { e.target.style.borderColor = 'var(--text-secondary)'; e.target.style.color = 'var(--text-secondary)'; },
+                        onmouseout: (e) => { e.target.style.borderColor = 'var(--text-dim)'; e.target.style.color = 'var(--text-dim)'; },
                         onclick: () => { 
                             console.log('[MultiAccountModal] Cancel clicked in import form');
                             this.isImporting = false;
@@ -14877,26 +14889,30 @@
             const $ = window.ElementFactory || ElementFactory;
             
             return $.div({}, [
-                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Create New Account']),
+                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary); font-family: "JetBrains Mono", monospace;' }, ['Create New Account']),
                 $.div({ style: 'margin-bottom: 20px;' }, [
-                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Account Name']),
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: var(--text-dim); font-family: "JetBrains Mono", monospace; font-size: 12px;' }, ['Account Name']),
                     $.input({
                         id: 'newAccountName',
                         type: 'text',
                         placeholder: 'Enter account name',
-                        style: 'width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff;',
-                        value: `Account ${(this.app.state.get('accounts') || []).length + 1}`
+                        style: 'width: 100%; padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        value: `Account ${(this.app.state.get('accounts') || []).length + 1}`,
+                        onfocus: (e) => { e.target.style.borderColor = 'var(--text-primary)'; },
+                        onblur: (e) => { e.target.style.borderColor = 'var(--border-color)'; }
                     })
                 ]),
                 $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
                     $.button({
-                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer; transition: all 0.2s;',
-                        onmouseover: (e) => { e.target.style.background = '#f57315'; e.target.style.color = '#000'; },
-                        onmouseout: (e) => { e.target.style.background = '#000'; e.target.style.color = '#f57315'; },
+                        style: 'background: transparent; border: 2px solid var(--text-primary); color: var(--text-primary); padding: 12px 24px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onmouseover: (e) => { e.target.style.background = 'var(--text-primary)'; e.target.style.color = 'var(--bg-primary)'; },
+                        onmouseout: (e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--text-primary)'; },
                         onclick: () => this.handleCreateAccount()
                     }, ['Create Account']),
                     $.button({
-                        style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
+                        style: 'background: transparent; border: 2px solid var(--text-dim); color: var(--text-dim); padding: 12px 24px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onmouseover: (e) => { e.target.style.borderColor = 'var(--text-secondary)'; e.target.style.color = 'var(--text-secondary)'; },
+                        onmouseout: (e) => { e.target.style.borderColor = 'var(--text-dim)'; e.target.style.color = 'var(--text-dim)'; },
                         onclick: () => { this.isCreating = false; this.show(); }
                     }, ['Cancel'])
                 ])
@@ -14907,30 +14923,38 @@
             const $ = window.ElementFactory || ElementFactory;
             
             return $.div({}, [
-                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary);' }, ['Import Account']),
+                $.h3({ style: 'margin-bottom: 20px; color: var(--text-primary); font-family: "JetBrains Mono", monospace;' }, ['Import Account']),
                 $.div({ style: 'margin-bottom: 20px;' }, [
-                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Account Name']),
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: var(--text-dim); font-family: "JetBrains Mono", monospace; font-size: 12px;' }, ['Account Name']),
                     $.input({
                         id: 'importAccountName',
                         type: 'text',
                         placeholder: 'Enter account name',
-                        style: 'width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; margin-bottom: 15px;',
-                        value: `Imported ${(this.app.state.get('accounts') || []).length + 1}`
+                        style: 'width: 100%; padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); margin-bottom: 15px; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        value: `Imported ${(this.app.state.get('accounts') || []).length + 1}`,
+                        onfocus: (e) => { e.target.style.borderColor = 'var(--text-primary)'; },
+                        onblur: (e) => { e.target.style.borderColor = 'var(--border-color)'; }
                     }),
-                    $.label({ style: 'display: block; margin-bottom: 5px; color: #666;' }, ['Seed Phrase']),
+                    $.label({ style: 'display: block; margin-bottom: 5px; color: var(--text-dim); font-family: "JetBrains Mono", monospace; font-size: 12px;' }, ['Seed Phrase']),
                     $.textarea({
                         id: 'importSeedPhrase',
                         placeholder: 'Enter your 12 or 24 word seed phrase',
-                        style: 'width: 100%; height: 80px; padding: 10px; background: #000; border: 1px solid #333; color: #fff; resize: none;'
+                        style: 'width: 100%; height: 80px; padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); resize: none; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onfocus: (e) => { e.target.style.borderColor = 'var(--text-primary)'; },
+                        onblur: (e) => { e.target.style.borderColor = 'var(--border-color)'; }
                     })
                 ]),
                 $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
                     $.button({
-                        style: 'background: #000; border: 2px solid #f57315; color: #f57315; padding: 10px 20px; cursor: pointer;',
+                        style: 'background: transparent; border: 2px solid var(--text-primary); color: var(--text-primary); padding: 12px 24px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onmouseover: (e) => { e.target.style.background = 'var(--text-primary)'; e.target.style.color = 'var(--bg-primary)'; },
+                        onmouseout: (e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--text-primary)'; },
                         onclick: () => this.handleImportAccount()
                     }, ['Import Account']),
                     $.button({
-                        style: 'background: #000; border: 2px solid #666; color: #666; padding: 10px 20px; cursor: pointer;',
+                        style: 'background: transparent; border: 2px solid var(--text-dim); color: var(--text-dim); padding: 12px 24px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; border-radius: 0; transition: all 0.2s ease;',
+                        onmouseover: (e) => { e.target.style.borderColor = 'var(--text-secondary)'; e.target.style.color = 'var(--text-secondary)'; },
+                        onmouseout: (e) => { e.target.style.borderColor = 'var(--text-dim)'; e.target.style.color = 'var(--text-dim)'; },
                         onclick: () => { 
                             console.log('[MultiAccountModal] Cancel clicked in import form');
                             this.isImporting = false;
