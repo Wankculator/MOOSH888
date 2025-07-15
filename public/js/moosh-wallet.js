@@ -4476,7 +4476,18 @@
                 }, [
                     ElementFactory.div({
                         style: { fontSize: '24px', marginBottom: '10px' }
-                    }, [icon]),
+                    }, [
+                    icon === 'MOOSH' ? 
+                    $.span({ 
+                        style: { 
+                            color: 'var(--text-accent)', 
+                            fontWeight: 'bold', 
+                            fontSize: 'calc(24px * var(--scale-factor))',
+                            letterSpacing: '2px'
+                        } 
+                    }, ['MOOSH']) : 
+                    icon
+                ]),
                     ElementFactory.div({
                         style: { fontSize: '12px', color: '#00D4FF', marginBottom: '5px' }
                     }, [title]),
@@ -4947,7 +4958,7 @@
                                 textAlign: 'center'
                             }
                         }, [
-                            ElementFactory.h2({}, ['⚡ Lightning Network Manager']),
+                            ElementFactory.h2({}, [ElementFactory.span({ style: { color: 'var(--text-accent)', fontWeight: 'bold' } }, ['MOOSH']), ' Lightning Network Manager']),
                             ElementFactory.p({}, ['Manage Lightning channels and instant payments'])
                         ]),
                         ElementFactory.div({
@@ -4996,7 +5007,18 @@
                 }, [
                     ElementFactory.div({
                         style: { fontSize: '24px', marginBottom: '10px' }
-                    }, [icon]),
+                    }, [
+                    icon === 'MOOSH' ? 
+                    $.span({ 
+                        style: { 
+                            color: 'var(--text-accent)', 
+                            fontWeight: 'bold', 
+                            fontSize: 'calc(24px * var(--scale-factor))',
+                            letterSpacing: '2px'
+                        } 
+                    }, ['MOOSH']) : 
+                    icon
+                ]),
                     ElementFactory.div({
                         style: { fontSize: '12px', color: '#FFD700', marginBottom: '5px' }
                     }, [title]),
@@ -11691,7 +11713,18 @@
                         fontSize: 'calc(24px * var(--scale-factor))',
                         marginBottom: 'calc(8px * var(--scale-factor))'
                     }
-                }, [icon]),
+                }, [
+                    icon === 'MOOSH' ? 
+                    $.span({ 
+                        style: { 
+                            color: 'var(--text-accent)', 
+                            fontWeight: 'bold', 
+                            fontSize: 'calc(24px * var(--scale-factor))',
+                            letterSpacing: '2px'
+                        } 
+                    }, ['MOOSH']) : 
+                    icon
+                ]),
                 $.div({
                     style: {
                         fontSize: 'calc(14px * var(--scale-factor))',
@@ -16555,7 +16588,15 @@
             
             setTimeout(() => {
                 this.modal.classList.add('show');
-                this.loadInscriptions();
+                
+                // If we already have inscriptions pre-populated, just update the display
+                if (this.inscriptions && this.inscriptions.length > 0 && !this.isLoading) {
+                    console.log('[OrdinalsModal] Using pre-populated inscriptions');
+                    this.updateInscriptionList();
+                } else {
+                    // Otherwise load them
+                    this.loadInscriptions();
+                }
             }, 10);
         }
         
@@ -16784,13 +16825,31 @@
                         marginBottom: 'calc(16px * var(--scale-factor))',
                         animation: 'pulse 2s ease-in-out infinite'
                     }
-                }, ['⚡']),
+                }, [
+                    $.div({
+                        style: {
+                            fontSize: 'calc(32px * var(--scale-factor))',
+                            fontWeight: 'bold',
+                            color: 'var(--text-accent)',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            letterSpacing: '2px'
+                        }
+                    }, ['MOOSH'])
+                ]),
                 $.div({
                     style: {
                         fontSize: 'calc(14px * var(--scale-factor))',
                         fontFamily: "'JetBrains Mono', monospace"
                     }
-                }, ['Scanning blockchain for inscriptions...'])
+                }, ['Scanning blockchain for inscriptions...']),
+                $.div({
+                    style: {
+                        marginTop: 'calc(16px * var(--scale-factor))',
+                        fontSize: 'calc(12px * var(--scale-factor))',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        color: 'var(--text-dim)'
+                    }
+                }, ['This may take a few seconds...'])
             ]);
         }
         
@@ -16917,13 +16976,13 @@
             // For unknown content types, try to load as image first
             const isUnknown = contentType === 'application/octet-stream' || contentType === 'unknown' || !contentType;
             
-            let icon = '📦';
+            let icon = 'MOOSH';
             if (isImage) icon = '🖼️';
             else if (isText) icon = '📝';
             else if (isJson) icon = '{ }';
             else if (isHtml) icon = '🌐';
             else if (isCss) icon = '🎨';
-            else if (isJs) icon = '⚡';
+            else if (isJs) icon = 'JS';
             else if (isUnknown) icon = '❓';
             const isSelected = this.selectedInscriptions.has(inscription.id);
             
@@ -16983,7 +17042,18 @@
                         borderBottom: '1px solid var(--border-color)',
                         background: 'var(--bg-primary)'
                     }
-                }, [icon]),
+                }, [
+                    icon === 'MOOSH' ? 
+                    $.span({ 
+                        style: { 
+                            color: 'var(--text-accent)', 
+                            fontWeight: 'bold', 
+                            fontSize: 'calc(24px * var(--scale-factor))',
+                            letterSpacing: '2px'
+                        } 
+                    }, ['MOOSH']) : 
+                    icon
+                ]),
                 $.div({
                     style: {
                         padding: 'calc(16px * var(--scale-factor))'
@@ -17020,6 +17090,22 @@
                             }
                         }, [`#${inscription.number || 'Unknown'}`])
                     ]),
+                    // Collection name if available
+                    inscription.collection && $.div({
+                        style: {
+                            color: 'var(--text-accent)',
+                            fontSize: 'calc(12px * var(--scale-factor))',
+                            fontWeight: '600',
+                            marginBottom: 'calc(6px * var(--scale-factor))',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            background: 'rgba(var(--text-accent-rgb), 0.1)',
+                            padding: 'calc(2px * var(--scale-factor)) calc(6px * var(--scale-factor))',
+                            borderRadius: 'calc(2px * var(--scale-factor))',
+                            display: 'inline-block'
+                        }
+                    }, [inscription.collection]),
                     $.div({
                         style: {
                             color: 'var(--text-primary)',
@@ -17051,35 +17137,73 @@
         createInscriptionImage(inscription) {
             const $ = window.ElementFactory || ElementFactory;
             
-            // Generate multiple fallback URLs
-            const contentUrls = [
-                inscription.preview,
-                inscription.content,
-                `https://ordinals.com/preview/${inscription.id}`,
-                `https://ordinals.com/content/${inscription.id}`,
-                `https://ord.io/inscription/${inscription.id}`,
-                `https://ordiscan.com/inscription/${inscription.id}/content`
-            ].filter(url => url);
+            // Check if this is a recursive inscription (330 bytes)
+            const isRecursive = inscription.content_type === 'application/octet-stream' && 
+                               inscription.content_length === 330;
             
-            let currentUrlIndex = 0;
+            // For recursive inscriptions, use iframe
+            if (isRecursive) {
+                const container = $.div({
+                    style: {
+                        width: '100%',
+                        height: '100%',
+                        position: 'relative',
+                        background: '#000',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }
+                });
+                
+                // Create iframe for recursive content
+                const iframe = $.create('iframe', {
+                    src: `https://ordinals.com/content/${inscription.id}`,
+                    style: {
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        background: '#000'
+                    },
+                    sandbox: 'allow-scripts allow-same-origin',
+                    loading: 'lazy',
+                    onload: function() {
+                        // Remove loading indicator when loaded
+                        const loading = this.parentNode.querySelector('.loading-indicator');
+                        if (loading) loading.remove();
+                    }
+                });
+                
+                // Add loading indicator
+                const loading = $.div({
+                    className: 'loading-indicator',
+                    style: {
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        color: '#666',
+                        fontSize: '14px',
+                        fontFamily: 'monospace'
+                    }
+                }, ['Loading recursive content...']);
+                
+                container.appendChild(loading);
+                container.appendChild(iframe);
+                
+                return container;
+            }
             
-            // Generate multiple possible image URLs
+            // For regular inscriptions, try multiple image sources
             const inscriptionId = inscription.id;
             const imageUrls = [
-                // Magic Eden CDN (most reliable for images)
-                `https://ord-mirror.magiceden.dev/content/${inscriptionId}`,
-                // Ordinals.com CDN
+                // Primary sources
                 `https://ordinals.com/content/${inscriptionId}`,
-                `https://ordinals.com/preview/${inscriptionId}`,
-                // Ord.io CDN
-                `https://ord.io/${inscriptionId}`,
-                // OrdinalsWallet CDN
-                `https://ordinalswallets.com/content/${inscriptionId}`,
-                // Direct inscription URLs if provided
+                `https://ord-mirror.magiceden.dev/content/${inscriptionId}`,
+                // Fallback sources
                 inscription.content,
                 inscription.preview,
-                inscription.image_url,
-                inscription.preview_url
+                `https://ordinals.com/preview/${inscriptionId}`,
+                `https://ord.io/${inscriptionId}`
             ].filter(url => url && url.startsWith('http'));
             
             // Create image with proper error handling
@@ -17092,31 +17216,26 @@
                     objectFit: 'contain',
                     display: 'block'
                 },
+                loading: 'lazy',
                 onerror: function() {
                     // Try next URL on error
                     const currentIndex = imageUrls.indexOf(this.src);
                     if (currentIndex < imageUrls.length - 1) {
                         this.src = imageUrls[currentIndex + 1];
                     } else {
-                        // All URLs failed, show placeholder
-                        this.style.display = 'none';
-                        const placeholder = document.createElement('div');
-                        placeholder.style.cssText = `
-                            width: 100%;
-                            height: 100%;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            background: var(--bg-secondary);
-                            color: var(--text-dim);
-                        `;
-                        placeholder.innerHTML = `
-                            <div style="text-align: center;">
-                                <div style="font-size: calc(48px * var(--scale-factor)); margin-bottom: 8px;">🖼️</div>
-                                <div style="font-size: calc(12px * var(--scale-factor));">Image unavailable</div>
-                            </div>
-                        `;
-                        this.parentNode.appendChild(placeholder);
+                        // All URLs failed, use iframe as last resort
+                        const iframe = $.create('iframe', {
+                            src: `https://ordinals.com/content/${inscriptionId}`,
+                            style: {
+                                width: '100%',
+                                height: '100%',
+                                border: 'none',
+                                background: '#000'
+                            },
+                            sandbox: 'allow-scripts allow-same-origin',
+                            loading: 'lazy'
+                        });
+                        this.parentNode.replaceChild(iframe, this);
                     }
                 },
                 onload: function() {
@@ -17227,6 +17346,41 @@
             const address = currentAccount.addresses.taproot;
             console.log('[OrdinalsModal] Loading inscriptions for address:', address);
             
+            // Check if we already have cached data from dashboard
+            const dashboardCache = window.app?.pages?.dashboard?._ordinalsCache || 
+                                  window.CURRENT_ORDINALS_DATA;
+            
+            if (dashboardCache) {
+                const inscriptions = Array.isArray(dashboardCache) ? dashboardCache : dashboardCache.inscriptions;
+                if (inscriptions && inscriptions.length > 0) {
+                    console.log('[OrdinalsModal] Using cached data from dashboard');
+                    this.inscriptions = inscriptions;
+                    this.isLoading = false;
+                    this.updateInscriptionList();
+                    this.app.showNotification(`Loaded ${inscriptions.length} inscriptions from cache`, 'success');
+                    return;
+                }
+            }
+            
+            // Check sessionStorage cache
+            const cacheKey = 'ordinals_cache';
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const data = JSON.parse(cached);
+                    if (data.timestamp && Date.now() - data.timestamp < 60000) { // 1 minute cache
+                        console.log('[OrdinalsModal] Using sessionStorage cache');
+                        this.inscriptions = data.inscriptions || [];
+                        this.isLoading = false;
+                        this.updateInscriptionList();
+                        this.app.showNotification(`Loaded ${this.inscriptions.length} inscriptions from cache`, 'success');
+                        return;
+                    }
+                } catch (e) {
+                    console.error('[OrdinalsModal] Cache parse error:', e);
+                }
+            }
+            
             this.isLoading = true;
             this.updateInscriptionList();
             
@@ -17242,7 +17396,7 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({ address }),
-                        signal: AbortSignal.timeout(5000) // 5 second timeout
+                        signal: AbortSignal.timeout(30000) // 30 second timeout
                     });
                     
                     if (!response.ok) {
@@ -17485,7 +17639,7 @@
                         }, [
                             isImage ? '🖼️' : 
                             isText ? '📝' : 
-                            isRecursive ? '🔄' : '📦',
+                            isRecursive ? '🔄' : $.span({ style: { color: 'var(--text-accent)', fontWeight: 'bold' } }, ['MOOSH']),
                             `Inscription #${inscription.number}`
                         ]),
                         $.button({
@@ -17627,6 +17781,70 @@
                     }, ['Loading text content...']),
                     
                     // Note: Recursive inscriptions are now handled above by trying image first, then iframe fallback
+                    
+                    // Collection section (if available)
+                    inscription.collection && $.div({
+                        style: {
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            padding: 'calc(16px * var(--scale-factor))',
+                            marginBottom: 'calc(20px * var(--scale-factor))',
+                            fontSize: 'calc(13px * var(--scale-factor))',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        }
+                    }, [
+                        $.div({ 
+                            style: { 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 'calc(12px * var(--scale-factor))' 
+                            } 
+                        }, [
+                            $.div({ 
+                                style: { 
+                                    color: 'var(--text-accent)', 
+                                    fontWeight: 'bold' 
+                                } 
+                            }, ['Collection:']),
+                            $.div({ 
+                                style: { 
+                                    background: 'rgba(var(--text-accent-rgb), 0.1)',
+                                    padding: 'calc(4px * var(--scale-factor)) calc(12px * var(--scale-factor))',
+                                    borderRadius: 'calc(4px * var(--scale-factor))',
+                                    color: 'var(--text-accent)',
+                                    fontWeight: '600'
+                                } 
+                            }, [inscription.collection])
+                        ]),
+                        inscription.attributes && $.div({
+                            style: {
+                                marginTop: 'calc(12px * var(--scale-factor))',
+                                paddingTop: 'calc(12px * var(--scale-factor))',
+                                borderTop: '1px solid var(--border-color)'
+                            }
+                        }, [
+                            $.div({ 
+                                style: { 
+                                    color: 'var(--text-dim)', 
+                                    fontSize: 'calc(11px * var(--scale-factor))',
+                                    marginBottom: 'calc(8px * var(--scale-factor))'
+                                } 
+                            }, ['Attributes:']),
+                            ...Object.entries(inscription.attributes || {}).map(([key, value]) => 
+                                $.div({
+                                    style: {
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginBottom: 'calc(4px * var(--scale-factor))',
+                                        fontSize: 'calc(11px * var(--scale-factor))'
+                                    }
+                                }, [
+                                    $.span({ style: { color: 'var(--text-dim)' } }, [key + ':']),
+                                    $.span({ style: { color: 'var(--text-primary)' } }, [String(value)])
+                                ])
+                            )
+                        ])
+                    ]),
                     
                     // Description section (if available)
                     inscription.description && $.div({
@@ -18172,7 +18390,7 @@
                             fontSize: 'calc(20px * var(--scale-factor))',
                             textShadow: '0 0 5px var(--text-accent)'
                         }
-                    }, ['⚡']),
+                    }, [$.span({ style: { color: 'var(--text-accent)', fontWeight: 'bold' } }, ['MOOSH'])]),
                     $.span({
                         style: {
                             color: 'var(--text-primary)',
@@ -19038,7 +19256,7 @@
                                 display: 'inline-block',
                                 animation: 'pulse 2s infinite'
                             }
-                        }, ['⚡']),
+                        }, [$.span({ style: { color: 'var(--text-accent)', fontWeight: 'bold' } }, ['MOOSH'])]),
                         
                         // Text
                         $.span({}, [
@@ -20155,7 +20373,7 @@
                     address: addresses.spark || 'Not generated',
                     type: 'Lightning', 
                     permission: 'drwxr-xr-x',
-                    icon: '⚡'
+                    icon: 'MOOSH'
                 },
                 { 
                     value: 'taproot', 
@@ -21171,7 +21389,7 @@
                             className: 'payment-type-btn active',
                             style: 'flex: 1; background: var(--text-primary); color: #000000; border: 1px solid var(--text-primary); border-radius: 0; padding: 8px; font-family: JetBrains Mono, monospace; font-size: 11px; cursor: pointer; min-width: 80px;',
                             onclick: () => this.selectPaymentType('spark')
-                        }, ['⚡ Spark']),
+                        }, [$.span({ style: { color: 'var(--text-accent)', fontWeight: 'bold' } }, ['MOOSH']), ' Spark']),
                         $.button({
                             id: 'btnOnchain',
                             className: 'payment-type-btn',
@@ -23454,11 +23672,25 @@
                 console.log('[Dashboard] Showing ordinals section for taproot wallet');
                 ordinalsSection.style.display = 'block';
                 
+                // Immediately show loading state
+                this.updateOrdinalsDisplay('Loading...');
+                
                 // Fetch ordinals count in the background
                 if (this.fetchOrdinalsCount) {
-                    this.fetchOrdinalsCount().catch(err => {
-                        console.error('[Dashboard] Failed to fetch ordinals on init:', err);
-                    });
+                    // Start prefetch immediately
+                    this.fetchOrdinalsCount()
+                        .then(count => {
+                            console.log(`[Dashboard] Prefetched ${count} ordinals`);
+                            // Pre-initialize ordinals modal if we have ordinals
+                            if (count > 0 && !this.app.ordinalsModal && typeof OrdinalsModal !== 'undefined') {
+                                console.log('[Dashboard] Pre-initializing ordinals modal');
+                                this.app.ordinalsModal = new OrdinalsModal(this.app);
+                            }
+                        })
+                        .catch(err => {
+                            console.error('[Dashboard] Failed to fetch ordinals on init:', err);
+                            this.updateOrdinalsDisplay(0);
+                        });
                 }
             } else {
                 console.log('[Dashboard] Not showing ordinals - wallet type is:', selectedWalletType);
@@ -24558,83 +24790,126 @@
         async fetchOrdinalsCount() {
             console.log('[Dashboard] fetchOrdinalsCount called');
             
+            // Check cache first
+            const cacheKey = 'ordinals_cache';
+            const cached = this._ordinalsCache || sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const data = typeof cached === 'string' ? JSON.parse(cached) : cached;
+                if (data.timestamp && Date.now() - data.timestamp < 60000) { // 1 minute cache
+                    console.log('[Dashboard] Using cached ordinals data');
+                    this.updateOrdinalsDisplay(data.count);
+                    this.ordinalsData = data.inscriptions;
+                    window.CURRENT_ORDINALS_DATA = data.inscriptions;
+                    return data.count;
+                }
+            }
+            
+            // Prevent multiple simultaneous requests
+            if (this._fetchingOrdinals) {
+                console.log('[Dashboard] Already fetching ordinals, skipping...');
+                return this._fetchingOrdinals;
+            }
+            
             try {
                 const currentAccount = this.app.state.getCurrentAccount();
                 if (!currentAccount || !currentAccount.addresses?.taproot) {
                     console.log('[Dashboard] No taproot address found');
+                    this.updateOrdinalsDisplay(0);
                     return 0;
                 }
                 
                 const address = currentAccount.addresses.taproot;
                 console.log('[Dashboard] Fetching ordinals for:', address);
                 
-                // Call the API
-                const response = await fetch('http://localhost:3001/api/ordinals/inscriptions', {
+                // Set loading state
+                this.updateOrdinalsDisplay('Loading...');
+                
+                // Mark as fetching
+                this._fetchingOrdinals = fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/ordinals/inscriptions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ address })
+                    body: JSON.stringify({ address }),
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error(`API error: ${response.status}`);
+                    return response.json();
+                })
+                .then(result => {
+                    if (result.success && result.data) {
+                        const inscriptions = result.data.inscriptions || [];
+                        const count = inscriptions.length;
+                        console.log(`[Dashboard] Found ${count} ordinals`);
+                        
+                        // Cache the result
+                        const cacheData = {
+                            count,
+                            inscriptions,
+                            timestamp: Date.now()
+                        };
+                        this._ordinalsCache = cacheData;
+                        sessionStorage.setItem(cacheKey, JSON.stringify(cacheData));
+                        
+                        // Update display
+                        this.updateOrdinalsDisplay(count);
+                        
+                        // Store the data
+                        this.ordinalsData = inscriptions;
+                        window.CURRENT_ORDINALS_DATA = inscriptions;
+                        
+                        return count;
+                    }
+                    return 0;
+                })
+                .catch(error => {
+                    console.error('[Dashboard] Error fetching ordinals:', error);
+                    this.updateOrdinalsDisplay(0);
+                    return 0;
+                })
+                .finally(() => {
+                    this._fetchingOrdinals = null;
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`API error: ${response.status}`);
-                }
+                return await this._fetchingOrdinals;
                 
-                const result = await response.json();
-                
-                if (result.success && result.data) {
-                    const inscriptions = result.data.inscriptions || [];
-                    const count = inscriptions.length;
-                    console.log(`[Dashboard] Found ${count} ordinals`);
-                    
-                    // Update the display - find all possible ordinals count elements
-                    const updateElements = [
-                        document.getElementById('ordinalsCount'),
-                        document.getElementById('ordinals-count'),
-                        ...document.querySelectorAll('.ordinals-count'),
-                        ...document.querySelectorAll('[data-ordinals-count]')
-                    ];
-                    
-                    updateElements.forEach(el => {
-                        if (el) {
-                            el.textContent = count > 0 ? `${count} NFTs` : '0 NFTs';
-                            el.style.color = '#f57315';
-                        }
-                    });
-                    
-                    // Also update any text nodes that say "0 NFTs"
-                    const walker = document.createTreeWalker(
-                        document.body,
-                        NodeFilter.SHOW_TEXT,
-                        null,
-                        false
-                    );
-                    
-                    let node;
-                    while (node = walker.nextNode()) {
-                        if (node.nodeValue && node.nodeValue.includes('0 NFTs')) {
-                            node.nodeValue = node.nodeValue.replace('0 NFTs', `${count} NFTs`);
-                        }
-                    }
-                    
-                    // Show ordinals section if hidden
-                    const ordinalsSection = document.getElementById('ordinalsSection') || 
-                                          document.querySelector('.ordinals-section');
-                    if (ordinalsSection) {
-                        ordinalsSection.style.display = 'block';
-                        ordinalsSection.style.cursor = 'pointer';
-                    }
-                    
-                    // Store the data for later use
-                    this.ordinalsData = inscriptions;
-                    window.CURRENT_ORDINALS_DATA = inscriptions;
-                    
-                    return count;
-                }
-                
-                return 0;
             } catch (error) {
-                console.error('[Dashboard] Error fetching ordinals:', error);
+                console.error('[Dashboard] Error in fetchOrdinalsCount:', error);
+                this.updateOrdinalsDisplay(0);
                 return 0;
+            }
+        }
+        
+        updateOrdinalsDisplay(count) {
+            const displayText = typeof count === 'number' ? `${count} NFTs` : count;
+            
+            // Update all possible elements
+            const updateElements = [
+                document.getElementById('ordinalsCount'),
+                document.getElementById('ordinals-count'),
+                ...document.querySelectorAll('.ordinals-count'),
+                ...document.querySelectorAll('[data-ordinals-count]')
+            ];
+            
+            updateElements.forEach(el => {
+                if (el) {
+                    el.textContent = displayText;
+                    el.style.color = '#f57315';
+                }
+            });
+            
+            // Update text nodes
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.nodeValue && (node.nodeValue.includes('0 NFTs') || node.nodeValue.includes('Loading...'))) {
+                    node.nodeValue = node.nodeValue.replace(/(?:0 NFTs|Loading\.\.\.)/, displayText);
+                }
             }
         }
         
@@ -24655,6 +24930,15 @@
                     this.app.showNotification('Ordinals gallery not available', 'error');
                     return;
                 }
+            }
+            
+            // Pre-populate with cached data if available
+            if (this.ordinalsData && this.ordinalsData.length > 0) {
+                console.log('[Dashboard] Pre-populating gallery with cached data');
+                this.app.ordinalsModal.inscriptions = this.ordinalsData;
+                this.app.ordinalsModal.isLoading = false;
+            } else {
+                this.app.ordinalsModal.isLoading = true;
             }
             
             this.app.ordinalsModal.show();
