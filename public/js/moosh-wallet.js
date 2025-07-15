@@ -16502,6 +16502,7 @@
             this.sortBy = 'newest';
             this.selectionMode = false;
             this.selectedInscriptions = new Set();
+            this.viewSize = localStorage.getItem('moosh_ordinals_view_size') || 'medium';
         }
         
         async show() {
@@ -16548,6 +16549,9 @@
             ]);
             
             document.body.appendChild(this.modal);
+            
+            // Add custom scrollbar styling for ordinals gallery
+            this.injectOrdinalsScrollbarStyles();
             
             setTimeout(() => {
                 this.modal.classList.add('show');
@@ -16657,6 +16661,26 @@
                         onclick: () => this.toggleSelectionMode()
                     }, [this.selectionMode ? `✓ ${this.selectedInscriptions.size} Selected` : 'Select Mode'])
                 ]),
+                // Size selector
+                $.div({
+                    style: {
+                        display: 'flex',
+                        gap: 'calc(4px * var(--scale-factor))',
+                        alignItems: 'center',
+                        marginLeft: 'auto'
+                    }
+                }, [
+                    $.span({
+                        style: {
+                            color: 'var(--text-dim)',
+                            fontSize: 'calc(12px * var(--scale-factor))',
+                            marginRight: 'calc(8px * var(--scale-factor))'
+                        }
+                    }, ['View:']),
+                    this.createSizeButton('Small', 'small'),
+                    this.createSizeButton('Medium', 'medium'),
+                    this.createSizeButton('Large', 'large')
+                ]),
                 $.select({
                     style: {
                         background: 'var(--bg-primary)',
@@ -16701,6 +16725,31 @@
                     this.updateInscriptionList();
                 }
             }, [label]);
+        }
+        
+        createSizeButton(text, size) {
+            const $ = window.ElementFactory || ElementFactory;
+            const isActive = this.viewSize === size;
+            
+            return $.button({
+                style: {
+                    background: isActive ? 'var(--text-accent)' : 'transparent',
+                    border: `1px solid ${isActive ? 'var(--text-accent)' : 'var(--border-color)'}`,
+                    color: isActive ? 'var(--bg-primary)' : 'var(--text-primary)',
+                    padding: 'calc(4px * var(--scale-factor)) calc(12px * var(--scale-factor))',
+                    fontSize: 'calc(12px * var(--scale-factor))',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    borderRadius: '0',
+                    minWidth: 'calc(60px * var(--scale-factor))'
+                },
+                onclick: () => {
+                    this.viewSize = size;
+                    localStorage.setItem('moosh_ordinals_view_size', size);
+                    this.updateInscriptionList();
+                }
+            }, [text]);
         }
         
         createInscriptionList() {
@@ -16825,10 +16874,30 @@
                 }
             });
             
+            // Set grid size based on view size
+            let gridMinWidth;
+            let cardHeight;
+            switch(this.viewSize) {
+                case 'small':
+                    gridMinWidth = 'calc(160px * var(--scale-factor))';
+                    cardHeight = 'calc(140px * var(--scale-factor))';
+                    break;
+                case 'large':
+                    gridMinWidth = 'calc(320px * var(--scale-factor))';
+                    cardHeight = 'calc(280px * var(--scale-factor))';
+                    break;
+                default: // medium
+                    gridMinWidth = 'calc(240px * var(--scale-factor))';
+                    cardHeight = 'calc(200px * var(--scale-factor))';
+            }
+            
+            // Store card height for use in createInscriptionCard
+            this.cardHeight = cardHeight;
+            
             return $.div({
                 style: {
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(calc(240px * var(--scale-factor)), 1fr))',
+                    gridTemplateColumns: `repeat(auto-fill, minmax(${gridMinWidth}, 1fr))`,
                     gap: 'calc(16px * var(--scale-factor))'
                 }
             }, filteredInscriptions.map(inscription => this.createInscriptionCard(inscription)));
@@ -16892,7 +16961,7 @@
                 (isImage || isUnknown) ? $.div({
                     style: {
                         width: '100%',
-                        height: 'calc(200px * var(--scale-factor))',
+                        height: this.cardHeight || 'calc(200px * var(--scale-factor))',
                         background: 'var(--bg-primary)',
                         borderBottom: '1px solid var(--border-color)',
                         position: 'relative',
@@ -16906,7 +16975,7 @@
                 ]) : $.div({
                     style: {
                         width: '100%',
-                        height: 'calc(120px * var(--scale-factor))',
+                        height: this.cardHeight || 'calc(200px * var(--scale-factor))',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -17018,9 +17087,9 @@
                 src: imageUrls[0] || '',
                 alt: `Inscription #${inscription.number}`,
                 style: {
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
                     display: 'block'
                 },
                 onerror: function() {
@@ -17060,28 +17129,18 @@
                 }
             });
             
-            // Add loading state
+            // Return the image in a container for proper sizing
             return $.div({
                 style: {
                     width: '100%',
                     height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
                     position: 'relative'
                 }
-            }, [
-                $.div({
-                    style: {
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: 'calc(14px * var(--scale-factor))',
-                        color: 'var(--text-dim)',
-                        display: 'block'
-                    },
-                    className: 'loading-indicator'
-                }, ['Loading...']),
-                img
-            ]);
+            }, [img]);
         }
         
         createActions() {
@@ -17303,9 +17362,19 @@
                 const buttons = this.modal.querySelectorAll('button');
                 buttons.forEach(button => {
                     const text = button.textContent;
-                    const types = { 'All': 'all', 'Images': 'images', 'Text': 'text', 'Other': 'other' };
+                    // Update filter buttons
+                    const types = { 'All': 'all', 'Images': 'images', 'Text': 'text', 'JSON': 'json', 'HTML': 'html', 'Other': 'other' };
                     if (types[text]) {
                         const isActive = this.filterType === types[text];
+                        button.style.background = isActive ? 'var(--text-accent)' : 'transparent';
+                        button.style.border = `1px solid ${isActive ? 'var(--text-accent)' : 'var(--border-color)'}`;
+                        button.style.color = isActive ? 'var(--bg-primary)' : 'var(--text-primary)';
+                    }
+                    
+                    // Update size buttons
+                    const sizes = { 'Small': 'small', 'Medium': 'medium', 'Large': 'large' };
+                    if (sizes[text]) {
+                        const isActive = this.viewSize === sizes[text];
                         button.style.background = isActive ? 'var(--text-accent)' : 'transparent';
                         button.style.border = `1px solid ${isActive ? 'var(--text-accent)' : 'var(--border-color)'}`;
                         button.style.color = isActive ? 'var(--bg-primary)' : 'var(--text-primary)';
@@ -17314,8 +17383,49 @@
             }
         }
         
+        injectOrdinalsScrollbarStyles() {
+            if (document.getElementById('ordinals-scrollbar-styles')) return;
+            
+            const style = document.createElement('style');
+            style.id = 'ordinals-scrollbar-styles';
+            style.textContent = `
+                /* Ordinals gallery scrollbar styling */
+                #ordinals-inscription-list::-webkit-scrollbar {
+                    width: 8px;
+                }
+                
+                #ordinals-inscription-list::-webkit-scrollbar-track {
+                    background: #000000;
+                    border: 1px solid #333333;
+                }
+                
+                #ordinals-inscription-list::-webkit-scrollbar-thumb {
+                    background: #f57315;
+                    border-radius: 0;
+                }
+                
+                #ordinals-inscription-list::-webkit-scrollbar-thumb:hover {
+                    background: #ff8c42;
+                }
+                
+                /* Firefox scrollbar support */
+                #ordinals-inscription-list {
+                    scrollbar-width: thin;
+                    scrollbar-color: #f57315 #000000;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
         showInscriptionDetails(inscription) {
             const $ = window.ElementFactory || ElementFactory;
+            
+            // Check if this is a recursive inscription
+            const isRecursive = inscription.content_type === 'application/octet-stream' && inscription.content_length === 330;
+            const isImage = inscription.content_type?.startsWith('image/');
+            const isText = inscription.content_type?.startsWith('text/');
+            // For application/octet-stream, we'll try to display as image first
+            const shouldTryImage = isImage || inscription.content_type === 'application/octet-stream';
             
             const detailModal = $.div({
                 className: 'modal-overlay',
@@ -17325,12 +17435,13 @@
                     left: '0',
                     right: '0',
                     bottom: '0',
-                    background: 'rgba(0, 0, 0, 0.8)',
+                    background: 'rgba(0, 0, 0, 0.9)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     zIndex: '2000',
-                    padding: 'calc(20px * var(--scale-factor))'
+                    padding: 'calc(20px * var(--scale-factor))',
+                    overflowY: 'auto'
                 },
                 onclick: (e) => {
                     if (e.target.className === 'modal-overlay') {
@@ -17343,40 +17454,196 @@
                         background: 'var(--bg-primary)',
                         border: '2px solid var(--text-primary)',
                         borderRadius: '0',
-                        maxWidth: 'calc(600px * var(--scale-factor))',
+                        maxWidth: shouldTryImage ? 'calc(700px * var(--scale-factor))' : 'calc(600px * var(--scale-factor))',
                         width: '90%',
-                        padding: 'calc(24px * var(--scale-factor))'
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        padding: 'calc(24px * var(--scale-factor))',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column'
                     }
                 }, [
-                    $.h3({
+                    // Header with close button
+                    $.div({
                         style: {
-                            color: 'var(--text-primary)',
-                            marginBottom: 'calc(20px * var(--scale-factor))',
-                            fontSize: 'calc(18px * var(--scale-factor))',
                             display: 'flex',
+                            justifyContent: 'space-between',
                             alignItems: 'center',
-                            gap: 'calc(12px * var(--scale-factor))'
+                            marginBottom: 'calc(20px * var(--scale-factor))'
                         }
                     }, [
-                        inscription.content_type?.startsWith('image/') ? '🖼️' : 
-                        inscription.content_type?.startsWith('text/') ? '📝' : '📦',
-                        `Inscription #${inscription.number}`
+                        $.h3({
+                            style: {
+                                color: 'var(--text-primary)',
+                                fontSize: 'calc(18px * var(--scale-factor))',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'calc(12px * var(--scale-factor))',
+                                margin: '0'
+                            }
+                        }, [
+                            isImage ? '🖼️' : 
+                            isText ? '📝' : 
+                            isRecursive ? '🔄' : '📦',
+                            `Inscription #${inscription.number}`
+                        ]),
+                        $.button({
+                            style: {
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--text-dim)',
+                                fontSize: 'calc(24px * var(--scale-factor))',
+                                cursor: 'pointer',
+                                padding: '0',
+                                width: 'calc(32px * var(--scale-factor))',
+                                height: 'calc(32px * var(--scale-factor))',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            },
+                            onclick: () => detailModal.remove()
+                        }, ['×'])
                     ]),
                     
-                    inscription.content_type?.startsWith('image/') && $.div({
+                    // Full size display for images and application/octet-stream (which might be images)
+                    shouldTryImage && $.div({
                         style: {
                             width: '100%',
-                            height: 'calc(300px * var(--scale-factor))',
                             marginBottom: 'calc(20px * var(--scale-factor))',
                             border: '1px solid var(--border-color)',
                             borderRadius: '0',
+                            background: '#000000',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: 'calc(500px * var(--scale-factor))',
+                            height: 'calc(600px * var(--scale-factor))',
                             overflow: 'hidden',
-                            background: 'var(--bg-primary)'
-                        }
+                            position: 'relative',
+                            flexShrink: 0
+                        },
+                        id: 'inscription-content-container'
                     }, [
-                        this.createInscriptionImage(inscription)
+                        $.img({
+                            src: `https://ordinals.com/content/${inscription.id}`,
+                            style: {
+                                width: 'auto',
+                                height: 'auto',
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain',
+                                display: 'block',
+                                cursor: 'pointer',
+                                margin: 'auto'
+                            },
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                window.open(`https://ordinals.com/content/${inscription.id}`, '_blank');
+                            },
+                            onerror: function() {
+                                // If it's a recursive inscription and image fails, try iframe
+                                if (isRecursive) {
+                                    const container = document.getElementById('inscription-content-container');
+                                    if (container) {
+                                        container.innerHTML = '';
+                                        container.style.padding = '0';
+                                        
+                                        // Add header for recursive inscription
+                                        const header = $.div({
+                                            style: {
+                                                padding: 'calc(16px * var(--scale-factor))',
+                                                borderBottom: '1px solid var(--border-color)',
+                                                textAlign: 'center',
+                                                background: 'var(--bg-primary)'
+                                            }
+                                        }, [
+                                            $.div({ style: { fontSize: 'calc(24px * var(--scale-factor))', marginBottom: 'calc(8px * var(--scale-factor))' } }, ['🔄']),
+                                            $.div({ style: { fontSize: 'calc(14px * var(--scale-factor))', color: 'var(--text-primary)', fontWeight: 'bold' } }, ['Recursive Inscription']),
+                                            $.div({ style: { fontSize: 'calc(11px * var(--scale-factor))', color: 'var(--text-dim)', marginTop: 'calc(4px * var(--scale-factor))' } }, ['This inscription renders content dynamically'])
+                                        ]);
+                                        
+                                        // Add iframe
+                                        const iframe = $.create('iframe', {
+                                            src: `https://ordinals.com/content/${inscription.id}`,
+                                            style: {
+                                                width: '100%',
+                                                height: 'calc(550px * var(--scale-factor))',
+                                                border: 'none',
+                                                background: 'white'
+                                            },
+                                            sandbox: 'allow-scripts allow-same-origin',
+                                            loading: 'lazy'
+                                        });
+                                        
+                                        container.appendChild(header);
+                                        container.appendChild(iframe);
+                                    }
+                                } else {
+                                    // Regular error for non-recursive inscriptions
+                                    this.style.display = 'none';
+                                    const errorDiv = $.div({
+                                        style: {
+                                            padding: 'calc(40px * var(--scale-factor))',
+                                            textAlign: 'center'
+                                        }
+                                    }, [
+                                        $.div({ style: { fontSize: 'calc(48px * var(--scale-factor))', marginBottom: 'calc(10px * var(--scale-factor))' } }, ['❌']),
+                                        $.div({ style: { fontSize: 'calc(14px * var(--scale-factor))', color: 'var(--text-secondary)' } }, ['Failed to load content']),
+                                        $.a({
+                                            href: `https://ordinals.com/inscription/${inscription.id}`,
+                                            target: '_blank',
+                                            style: {
+                                                color: 'var(--text-accent)',
+                                                fontSize: 'calc(12px * var(--scale-factor))',
+                                                marginTop: 'calc(10px * var(--scale-factor))',
+                                                display: 'inline-block'
+                                            }
+                                        }, ['View on Ordinals.com'])
+                                    ]);
+                                    this.parentNode.appendChild(errorDiv);
+                                }
+                            }
+                        })
                     ]),
                     
+                    // Text content display
+                    isText && $.div({
+                        style: {
+                            width: '100%',
+                            marginBottom: 'calc(20px * var(--scale-factor))',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '0',
+                            background: 'var(--bg-secondary)',
+                            padding: 'calc(16px * var(--scale-factor))',
+                            maxHeight: 'calc(400px * var(--scale-factor))',
+                            overflowY: 'auto',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 'calc(12px * var(--scale-factor))',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word'
+                        },
+                        id: 'inscription-text-content'
+                    }, ['Loading text content...']),
+                    
+                    // Note: Recursive inscriptions are now handled above by trying image first, then iframe fallback
+                    
+                    // Description section (if available)
+                    inscription.description && $.div({
+                        style: {
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            padding: 'calc(16px * var(--scale-factor))',
+                            marginBottom: 'calc(20px * var(--scale-factor))',
+                            fontSize: 'calc(13px * var(--scale-factor))',
+                            fontFamily: "'JetBrains Mono', monospace"
+                        }
+                    }, [
+                        $.div({ style: { color: 'var(--text-accent)', marginBottom: 'calc(8px * var(--scale-factor))', fontWeight: 'bold' } }, ['Description:']),
+                        $.div({ style: { color: 'var(--text-primary)' } }, [inscription.description])
+                    ]),
+                    
+                    // Detailed information
                     $.div({
                         style: {
                             background: 'var(--bg-secondary)',
@@ -17387,12 +17654,30 @@
                             fontFamily: "'JetBrains Mono', monospace"
                         }
                     }, [
-                        $.div({ style: { marginBottom: '8px' } }, [`ID: ${inscription.id}`]),
-                        $.div({ style: { marginBottom: '8px' } }, [`Type: ${inscription.content_type}`]),
-                        $.div({ style: { marginBottom: '8px' } }, [`Size: ${inscription.content_length || inscription.size || inscription.file_size || 0} bytes`]),
-                        $.div({ style: { marginBottom: '8px' } }, [`Sat: ${inscription.sat}`]),
-                        $.div({ style: { marginBottom: '8px' } }, [`Fee: ${inscription.fee} sats`]),
-                        $.div({}, [`Date: ${new Date(inscription.timestamp).toLocaleString()}`])
+                        $.div({ style: { marginBottom: '8px' } }, [
+                            $.span({ style: { color: 'var(--text-dim)', marginRight: '8px' } }, ['ID:']),
+                            $.span({ style: { color: 'var(--text-primary)', wordBreak: 'break-all' } }, [inscription.id])
+                        ]),
+                        $.div({ style: { marginBottom: '8px' } }, [
+                            $.span({ style: { color: 'var(--text-dim)', marginRight: '8px' } }, ['Type:']),
+                            $.span({ style: { color: 'var(--text-primary)' } }, [inscription.content_type || 'Unknown'])
+                        ]),
+                        $.div({ style: { marginBottom: '8px' } }, [
+                            $.span({ style: { color: 'var(--text-dim)', marginRight: '8px' } }, ['Size:']),
+                            $.span({ style: { color: 'var(--text-primary)' } }, [`${inscription.content_length || inscription.size || inscription.file_size || 0} bytes`])
+                        ]),
+                        inscription.sat && $.div({ style: { marginBottom: '8px' } }, [
+                            $.span({ style: { color: 'var(--text-dim)', marginRight: '8px' } }, ['Sat:']),
+                            $.span({ style: { color: 'var(--text-primary)' } }, [inscription.sat.toLocaleString()])
+                        ]),
+                        inscription.fee && $.div({ style: { marginBottom: '8px' } }, [
+                            $.span({ style: { color: 'var(--text-dim)', marginRight: '8px' } }, ['Fee:']),
+                            $.span({ style: { color: 'var(--text-primary)' } }, [`${inscription.fee.toLocaleString()} sats`])
+                        ]),
+                        $.div({}, [
+                            $.span({ style: { color: 'var(--text-dim)', marginRight: '8px' } }, ['Date:']),
+                            $.span({ style: { color: 'var(--text-primary)' } }, [inscription.timestamp ? new Date(inscription.timestamp).toLocaleString() : 'Unknown'])
+                        ])
                     ]),
                     
                     $.div({
@@ -17449,6 +17734,66 @@
             ]);
             
             document.body.appendChild(detailModal);
+            
+            // Inject scrollbar styles for the detail modal
+            this.injectDetailModalScrollbarStyles();
+            
+            // Load text content if it's a text inscription
+            if (isText) {
+                fetch(`https://ordinals.com/content/${inscription.id}`)
+                    .then(response => response.text())
+                    .then(text => {
+                        const textContainer = document.getElementById('inscription-text-content');
+                        if (textContainer) {
+                            textContainer.textContent = text;
+                        }
+                    })
+                    .catch(error => {
+                        const textContainer = document.getElementById('inscription-text-content');
+                        if (textContainer) {
+                            textContainer.innerHTML = `<div style="color: var(--text-dim); text-align: center;">Failed to load text content<br><a href="https://ordinals.com/inscription/${inscription.id}" target="_blank" style="color: var(--text-accent); font-size: calc(12px * var(--scale-factor));">View on Ordinals.com</a></div>`;
+                        }
+                    });
+            }
+        }
+        
+        injectDetailModalScrollbarStyles() {
+            if (document.getElementById('detail-modal-scrollbar-styles')) return;
+            
+            const style = document.createElement('style');
+            style.id = 'detail-modal-scrollbar-styles';
+            style.textContent = `
+                /* Detail modal scrollbar styling */
+                .modal-overlay > div::-webkit-scrollbar,
+                #inscription-text-content::-webkit-scrollbar {
+                    width: 8px;
+                }
+                
+                .modal-overlay > div::-webkit-scrollbar-track,
+                #inscription-text-content::-webkit-scrollbar-track {
+                    background: #000000;
+                    border: 1px solid #333333;
+                }
+                
+                .modal-overlay > div::-webkit-scrollbar-thumb,
+                #inscription-text-content::-webkit-scrollbar-thumb {
+                    background: #f57315;
+                    border-radius: 0;
+                }
+                
+                .modal-overlay > div::-webkit-scrollbar-thumb:hover,
+                #inscription-text-content::-webkit-scrollbar-thumb:hover {
+                    background: #ff8c42;
+                }
+                
+                /* Firefox scrollbar support */
+                .modal-overlay > div,
+                #inscription-text-content {
+                    scrollbar-width: thin;
+                    scrollbar-color: #f57315 #000000;
+                }
+            `;
+            document.head.appendChild(style);
         }
         
         exportInscriptions() {
