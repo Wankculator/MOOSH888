@@ -81,6 +81,10 @@
             return this.create('h3', attrs, children);
         }
 
+        static h4(attrs = {}, children = []) {
+            return this.create('h4', attrs, children);
+        }
+
         static p(attrs = {}, children = []) {
             return this.create('p', attrs, children);
         }
@@ -2539,6 +2543,7 @@
                 
                 // Use cache if fresh (5 minutes)
                 if (cache.prices?.bitcoin && cache.lastUpdate && (now - cache.lastUpdate) < 300000) {
+                    console.log('[APIService] Using cached Bitcoin price');
                     return cache.prices.bitcoin;
                 }
                 
@@ -2547,14 +2552,16 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
+                console.log('[APIService] Bitcoin price API response:', data);
                 
                 // Update cache
-                cache.prices = { bitcoin: data.bitcoin };
+                cache.prices = { bitcoin: data.bitcoin || data };
                 cache.lastUpdate = now;
                 this.stateManager.set('apiCache', cache);
                 
                 // Return the bitcoin price data directly
-                return data.bitcoin;
+                // Handle both { bitcoin: { usd: ... } } and { usd: ... } formats
+                return data.bitcoin || data;
             } catch (error) {
                 console.error('Failed to fetch Bitcoin price:', error);
                 return { usd: 0, usd_24h_change: 0 };
@@ -3853,7 +3860,127 @@
             }
         }
 
+        addAccountSwitcherStyles() {
+            if (document.getElementById('account-switcher-styles')) return;
+            
+            const style = document.createElement('style');
+            style.id = 'account-switcher-styles';
+            style.textContent = `
+                /* Account Switcher Styles */
+                .account-switcher {
+                    position: relative;
+                    display: inline-block;
+                }
+                
+                .account-switcher-trigger {
+                    min-width: 150px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    padding: calc(8px * var(--scale-factor)) calc(16px * var(--scale-factor));
+                    background: transparent;
+                    border: 1px solid #69fd97;
+                    color: #69fd97;
+                    cursor: pointer;
+                    font-family: inherit;
+                    font-size: calc(14px * var(--scale-factor));
+                    transition: all 0.3s ease;
+                }
+                
+                .account-switcher-trigger:hover {
+                    background: rgba(105, 253, 151, 0.1);
+                    border-color: #f57315;
+                    color: #f57315;
+                }
+                
+                .account-dropdown {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    margin-top: 4px;
+                    background: #000000;
+                    border: 1px solid #69fd97;
+                    min-width: 200px;
+                    max-width: 300px;
+                    z-index: 1000;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                    max-height: 400px;
+                    overflow-y: auto;
+                    display: none;
+                }
+                
+                .account-dropdown.show {
+                    display: block;
+                }
+                
+                .account-item {
+                    padding: calc(12px * var(--scale-factor));
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    border-bottom: 1px solid rgba(105, 253, 151, 0.1);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .account-item:last-child {
+                    border-bottom: none;
+                }
+                
+                .account-item:hover {
+                    background: rgba(105, 253, 151, 0.1);
+                    color: #f57315;
+                }
+                
+                .account-item.active {
+                    background: rgba(245, 115, 21, 0.1);
+                    color: #f57315;
+                }
+                
+                .account-item .account-name {
+                    font-weight: 500;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    max-width: 150px;
+                }
+                
+                .account-item .account-balance {
+                    font-size: calc(12px * var(--scale-factor));
+                    color: #69fd97;
+                    opacity: 0.8;
+                }
+                
+                .account-item.active .account-balance {
+                    color: #f57315;
+                }
+                
+                .add-account-btn {
+                    background: transparent;
+                    border: 1px dashed #69fd97;
+                    color: #69fd97;
+                    padding: calc(12px * var(--scale-factor));
+                    width: 100%;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-family: inherit;
+                    font-size: calc(14px * var(--scale-factor));
+                    text-align: center;
+                }
+                
+                .add-account-btn:hover {
+                    background: rgba(105, 253, 151, 0.1);
+                    border-color: #f57315;
+                    color: #f57315;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
         mount(container) {
+            // Add styles if not already added
+            this.addAccountSwitcherStyles();
+            
             this.element = this.render();
             container.appendChild(this.element);
             
@@ -8958,7 +9085,10 @@
             try {
                 // Fetch Bitcoin price
                 const priceData = await this.app.apiService.fetchBitcoinPrice();
-                const btcPrice = priceData.usd || 0;
+                console.log('[Dashboard] Price data received:', priceData);
+                // Handle both nested and flat response structures
+                const btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
+                console.log('[Dashboard] BTC price extracted:', btcPrice);
                 
                 // Get current account
                 const currentAccount = this.app.state.getCurrentAccount();
@@ -11834,7 +11964,10 @@
             try {
                 // Fetch Bitcoin price
                 const priceData = await this.app.apiService.fetchBitcoinPrice();
-                const btcPrice = priceData.usd || 0;
+                console.log('[Dashboard] Price data received:', priceData);
+                // Handle both nested and flat response structures
+                const btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
+                console.log('[Dashboard] BTC price extracted:', btcPrice);
                 
                 // Get current account
                 const currentAccount = this.app.state.getCurrentAccount();
@@ -13964,7 +14097,10 @@
             try {
                 // Fetch Bitcoin price
                 const priceData = await this.app.apiService.fetchBitcoinPrice();
-                const btcPrice = priceData.usd || 0;
+                console.log('[Dashboard] Price data received:', priceData);
+                // Handle both nested and flat response structures
+                const btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
+                console.log('[Dashboard] BTC price extracted:', btcPrice);
                 
                 // Get current account
                 const currentAccount = this.app.state.getCurrentAccount();
@@ -15292,7 +15428,7 @@
             }, [
                 $.div({ style: 'display: flex; justify-content: space-between; align-items: center;' }, [
                     $.div({}, [
-                        $.h4({ style: 'color: var(--text-primary); margin-bottom: 5px;' }, [
+                        $.div({ tag: 'h4', style: 'color: var(--text-primary); margin-bottom: 5px;' }, [
                             account.name,
                             isActive ? $.span({ style: 'color: #f57315; margin-left: 10px; font-size: 12px;' }, ['(Active)']) : null
                         ]),
@@ -15803,7 +15939,7 @@
                 detection.activePaths.length > 0 && $.div({ 
                     style: 'margin-bottom: 20px; background: var(--bg-secondary); padding: 15px;' 
                 }, [
-                    $.h4({ style: 'color: var(--text-primary); margin-bottom: 10px;' }, ['Found Activity On:']),
+                    $.div({ tag: 'h4', style: 'color: var(--text-primary); margin-bottom: 10px;' }, ['Found Activity On:']),
                     ...detection.activePaths.map(path => 
                         $.div({ 
                             style: 'display: flex; justify-content: space-between; padding: 5px 0; color: var(--text-dim);' 
@@ -17541,7 +17677,8 @@
                                 this.saveAccountName(account.id, e.target.value);
                             }
                         }) :
-                        $.h4({ 
+                        $.div({ 
+                            tag: 'h4',
                             style: { 
                                 color: isActive ? '#f57315' : '#fff',
                                 margin: '0',
@@ -22779,7 +22916,8 @@
                     }, [
                         $.div({ style: 'display: flex; justify-content: space-between; align-items: center;' }, [
                             $.div({}, [
-                                $.h4({ 
+                                $.div({ 
+                                    tag: 'h4',
                                     style: 'color: #f57315; margin: 0 0 6px 0; font-size: 18px; font-family: "JetBrains Mono", monospace;' 
                                 }, [wallet.label]),
                                 $.p({ 
@@ -25596,7 +25734,10 @@
             try {
                 // Fetch Bitcoin price
                 const priceData = await this.app.apiService.fetchBitcoinPrice();
-                const btcPrice = priceData.usd || 0;
+                console.log('[Dashboard] Price data received:', priceData);
+                // Handle both nested and flat response structures
+                const btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
+                console.log('[Dashboard] BTC price extracted:', btcPrice);
                 
                 // Get current account
                 const currentAccount = this.app.state.getCurrentAccount();
@@ -25709,7 +25850,7 @@
         initializeDashboard() {
             // Add dashboard-specific styles
             this.addDashboardStyles();
-            this.addAccountSwitcherStyles();
+            // AccountSwitcher will add its own styles when mounted
             
             // Mount the AccountSwitcher component
             const accountSwitcherContainer = document.getElementById('accountSwitcherContainer');
@@ -26495,7 +26636,10 @@
                 
                 // Fetch Bitcoin price
                 const priceData = await this.app.apiService.fetchBitcoinPrice();
-                const btcPrice = priceData.usd || 0;
+                console.log('[Dashboard] Price data received:', priceData);
+                // Handle both nested and flat response structures
+                const btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
+                console.log('[Dashboard] BTC price extracted:', btcPrice);
                 
                 // Update network info
                 const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -26686,6 +26830,7 @@
         }
         
         updateBalanceDisplay(btcBalance, usdValue, btcPrice) {
+            console.log('[Dashboard] updateBalanceDisplay called with:', { btcBalance, usdValue, btcPrice });
             // Update UI elements - check both ID variations
             const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
             const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
@@ -27072,15 +27217,19 @@
                 const priceElement = document.getElementById('btcPrice');
                 const changeElement = document.getElementById('priceChange');
                 
-                if (priceElement && priceData && priceData.usd) {
-                    priceElement.textContent = priceData.usd.toLocaleString('en-US', {
+                // Handle both response formats
+                const btcPriceValue = priceData?.bitcoin?.usd || priceData?.usd || 0;
+                const priceChange = priceData?.bitcoin?.usd_24h_change || priceData?.usd_24h_change || 0;
+                
+                if (priceElement && btcPriceValue) {
+                    priceElement.textContent = btcPriceValue.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     });
                 }
                 
-                if (changeElement && priceData && priceData.usd_24h_change !== undefined) {
-                    const change = priceData.usd_24h_change;
+                if (changeElement && priceChange !== undefined) {
+                    const change = priceChange;
                     const arrow = change >= 0 ? '↑' : '↓';
                     const color = change >= 0 ? '#69fd97' : '#ff4444';
                     changeElement.textContent = `${arrow} ${Math.abs(change).toFixed(1)}%`;

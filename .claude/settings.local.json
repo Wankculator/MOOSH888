@@ -80,7 +80,8 @@
       "Bash(sudo apt-get install:*)",
       "Bash(time curl:*)",
       "Bash(xdg-open:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(git tag:*)"
     ],
     "deny": []
   }

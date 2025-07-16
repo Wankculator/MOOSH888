@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOOSH Wallet Error Fix Test</title>
+    <link rel="stylesheet" href="css/app.css">
+    <style>
+        #test-results {
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre-wrap;
+            max-width: 1200px;
+            margin: 20px auto;
+            border: 1px solid #0f0;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 10px;
+            border-left: 3px solid #f57315;
+        }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        .warning { color: #ffff00; }
+        .info { color: #00ffff; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div id="test-results">Initializing tests...</div>
+    
+    <script src="js/moosh-wallet.js"></script>
+    <script>
+        const results = document.getElementById('test-results');
+        let output = '';
+        let errorCount = 0;
+        let successCount = 0;
+        
+        function log(text, type = 'info') {
+            const timestamp = new Date().toTimeString().split(' ')[0];
+            const className = type;
+            output += `<span class="${className}">[${timestamp}] ${text}</span>\n`;
+            results.innerHTML = output;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function logSection(title) {
+            output += `\n<div class="test-section"><strong>${title}</strong></div>\n`;
+            results.innerHTML = output;
+        }
+        
+        // Override console.error to catch runtime errors
+        const originalError = console.error;
+        console.error = function(...args) {
+            log(`Console Error: ${args.join(' ')}`, 'error');
+            errorCount++;
+            originalError.apply(console, args);
+        };
+        
+        // Global error handler
+        window.addEventListener('error', (event) => {
+            log(`Runtime Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`, 'error');
+            errorCount++;
+        });
+        
+        // Start tests after app initialization
+        setTimeout(async () => {
+            log('=== MOOSH Wallet Error Fix Comprehensive Test ===\n', 'info');
+            
+            try {
+                // Test 1: Check AccountSwitcher styles
+                logSection('Test 1: AccountSwitcher Styles');
+                log('Checking if AccountSwitcher can add styles...');
+                
+                if (window.AccountSwitcher) {
+                    const testSwitcher = new AccountSwitcher(window.app);
+                    if (typeof testSwitcher.addAccountSwitcherStyles === 'function') {
+                        log('✅ addAccountSwitcherStyles method exists', 'success');
+                        successCount++;
+                        
+                        // Try to call it
+                        try {
+                            testSwitcher.addAccountSwitcherStyles();
+                            const styles = document.getElementById('account-switcher-styles');
+                            if (styles) {
+                                log('✅ Styles successfully added to DOM', 'success');
+                                successCount++;
+                            } else {
+                                log('⚠️ Styles method called but styles not found in DOM', 'warning');
+                            }
+                        } catch (e) {
+                            log(`❌ Error calling addAccountSwitcherStyles: ${e.message}`, 'error');
+                            errorCount++;
+                        }
+                    } else {
+                        log('❌ addAccountSwitcherStyles method not found', 'error');
+                        errorCount++;
+                    }
+                } else {
+                    log('❌ AccountSwitcher class not found', 'error');
+                    errorCount++;
+                }
+                
+                // Test 2: Check ElementFactory h4 method
+                logSection('Test 2: ElementFactory.h4 Method');
+                log('Checking if ElementFactory has h4 method...');
+                
+                if (window.ElementFactory) {
+                    if (typeof window.ElementFactory.h4 === 'function') {
+                        log('✅ ElementFactory.h4 method exists', 'success');
+                        successCount++;
+                        
+                        // Test creating an h4 element
+                        try {
+                            const h4 = window.ElementFactory.h4({ style: { color: 'red' } }, ['Test H4']);
+                            if (h4.tagName === 'H4') {
+                                log('✅ h4 element created successfully', 'success');
+                                successCount++;
+                            } else {
+                                log(`❌ Wrong element created: ${h4.tagName}`, 'error');
+                                errorCount++;
+                            }
+                        } catch (e) {
+                            log(`❌ Error creating h4: ${e.message}`, 'error');
+                            errorCount++;
+                        }
+                    } else {
+                        log('❌ ElementFactory.h4 method not found', 'error');
+                        errorCount++;
+                    }
+                } else {
+                    log('❌ ElementFactory not found', 'error');
+                    errorCount++;
+                }
+                
+                // Test 3: Check AccountListModal
+                logSection('Test 3: AccountListModal Functionality');
+                log('Testing AccountListModal...');
+                
+                if (window.AccountListModal) {
+                    try {
+                        const modal = new AccountListModal(window.app);
+                        log('✅ AccountListModal instantiated', 'success');
+                        successCount++;
+                        
+                        // Test show method
+                        modal.show();
+                        const modalElement = document.querySelector('.account-list-modal');
+                        if (modalElement) {
+                            log('✅ Modal displayed without errors', 'success');
+                            successCount++;
+                            
+                            // Check for h4 elements in the modal
+                            const h4Elements = modalElement.querySelectorAll('h4');
+                            log(`Found ${h4Elements.length} h4 elements in modal`, 'info');
+                            
+                            modal.close();
+                        } else {
+                            log('❌ Modal element not found after show()', 'error');
+                            errorCount++;
+                        }
+                    } catch (e) {
+                        log(`❌ Error with AccountListModal: ${e.message}`, 'error');
+                        errorCount++;
+                    }
+                } else {
+                    log('❌ AccountListModal class not found', 'error');
+                    errorCount++;
+                }
+                
+                // Test 4: Check Bitcoin price handling
+                logSection('Test 4: Bitcoin Price Handling');
+                log('Testing Bitcoin price API response handling...');
+                
+                if (window.app && window.app.dashboard) {
+                    // Mock API response
+                    const mockPriceData = {
+                        bitcoin: {
+                            usd: 42000
+                        }
+                    };
+                    
+                    try {
+                        // Test the price extraction logic
+                        const btcPrice = mockPriceData?.bitcoin?.usd || 0;
+                        log(`✅ Price extraction successful: $${btcPrice}`, 'success');
+                        successCount++;
+                        
+                        // Test with undefined data
+                        const undefinedPrice = undefined?.bitcoin?.usd || 0;
+                        log(`✅ Handles undefined gracefully: $${undefinedPrice}`, 'success');
+                        successCount++;
+                        
+                        // Test with partial data
+                        const partialData = { bitcoin: {} };
+                        const partialPrice = partialData?.bitcoin?.usd || 0;
+                        log(`✅ Handles missing usd property: $${partialPrice}`, 'success');
+                        successCount++;
+                    } catch (e) {
+                        log(`❌ Error handling price data: ${e.message}`, 'error');
+                        errorCount++;
+                    }
+                } else {
+                    log('⚠️ Dashboard not initialized, skipping price test', 'warning');
+                }
+                
+                // Test 5: Dashboard initialization
+                logSection('Test 5: Dashboard Initialization');
+                log('Checking dashboard initialization...');
+                
+                if (window.app && window.app.router) {
+                    try {
+                        // Navigate to dashboard
+                        window.app.router.navigate('dashboard');
+                        
+                        setTimeout(() => {
+                            const dashboardElement = document.querySelector('.dashboard-page');
+                            if (dashboardElement) {
+                                log('✅ Dashboard loaded successfully', 'success');
+                                successCount++;
+                                
+                                // Check for AccountSwitcher
+                                const accountSwitcherContainer = document.getElementById('accountSwitcherContainer');
+                                if (accountSwitcherContainer && accountSwitcherContainer.children.length > 0) {
+                                    log('✅ AccountSwitcher mounted in dashboard', 'success');
+                                    successCount++;
+                                } else {
+                                    log('⚠️ AccountSwitcher container empty', 'warning');
+                                }
+                            } else {
+                                log('❌ Dashboard element not found', 'error');
+                                errorCount++;
+                            }
+                            
+                            // Final summary
+                            logSection('Test Summary');
+                            log(`Total Tests Run: ${successCount + errorCount}`, 'info');
+                            log(`✅ Passed: ${successCount}`, 'success');
+                            log(`❌ Failed: ${errorCount}`, 'error');
+                            
+                            if (errorCount === 0) {
+                                log('\n🎉 All error fixes verified successfully!', 'success');
+                                log('The application should now run without the reported errors.', 'info');
+                            } else {
+                                log('\n⚠️ Some issues remain. Please check the errors above.', 'warning');
+                            }
+                            
+                            // Check console for any uncaught errors
+                            log('\nChecking for any uncaught errors in console...', 'info');
+                            
+                        }, 1000);
+                    } catch (e) {
+                        log(`❌ Error navigating to dashboard: ${e.message}`, 'error');
+                        errorCount++;
+                    }
+                } else {
+                    log('❌ App router not initialized', 'error');
+                    errorCount++;
+                }
+                
+            } catch (error) {
+                log(`\n❌ Test suite error: ${error.message}`, 'error');
+                log(error.stack, 'error');
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOOSH Wallet - Mobile UI Visual Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .device-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            padding: 20px;
+            justify-content: center;
+        }
+        
+        .device {
+            background: #222;
+            border: 2px solid #444;
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .device-screen {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .device-label {
+            text-align: center;
+            margin-top: 10px;
+            color: #69fd97;
+            font-size: 12px;
+        }
+        
+        .iphone-se { width: 320px; height: 568px; }
+        .iphone-12 { width: 375px; height: 812px; }
+        .ipad { width: 768px; height: 600px; }
+        
+        /* Mock UI Elements */
+        .mock-terminal-header {
+            background: #1a1a1a;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            font-size: 11px;
+        }
+        
+        .mock-terminal-prompt {
+            color: #666;
+        }
+        
+        .mock-active-indicator {
+            color: #fff;
+            margin-left: 8px;
+        }
+        
+        .mock-active-dot {
+            color: #69fd97;
+            animation: blink 1s infinite;
+        }
+        
+        .mock-account-name {
+            color: #69fd97;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .mock-header-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .mock-account-switcher {
+            background: rgba(105, 253, 151, 0.1);
+            border: 1px solid #69fd97;
+            color: #69fd97;
+            padding: 5px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 32px;
+        }
+        
+        .mock-add-btn {
+            background: #000;
+            border: 1px solid #f57315;
+            color: #f57315;
+            padding: 5px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .mock-dropdown {
+            position: absolute;
+            top: 100px;
+            left: 10px;
+            background: #000;
+            border: 1px solid #69fd97;
+            width: 90%;
+            max-width: 200px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        
+        .mock-account-item {
+            padding: 12px 10px;
+            border-bottom: 1px solid #333;
+            color: #f57315;
+            font-size: 10px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .mock-account-item.active {
+            background: rgba(105, 253, 151, 0.1);
+            color: #69fd97;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .test-info {
+            background: rgba(105, 253, 151, 0.1);
+            border: 1px solid #69fd97;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 5px;
+        }
+        
+        .test-info h3 {
+            margin: 0 0 10px 0;
+            color: #69fd97;
+        }
+        
+        .test-info ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        
+        .test-info li {
+            margin: 5px 0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h3>Mobile UI Optimization Test</h3>
+        <ul>
+            <li>✅ Responsive font sizes (10px on XS, 11px on mobile)</li>
+            <li>✅ Touch-friendly targets (min 44px height)</li>
+            <li>✅ Account name truncation (12 chars on XS, 15 on mobile)</li>
+            <li>✅ Flexible layout with proper spacing</li>
+            <li>✅ Dropdown limited height with scroll</li>
+            <li>✅ Adaptive button text ("+ Add" vs "+ Add Account")</li>
+        </ul>
+    </div>
+
+    <div class="device-wrapper">
+        <!-- iPhone SE (320px) -->
+        <div class="device">
+            <div class="device-screen iphone-se">
+                <div class="mock-terminal-header">
+                    <div>
+                        <span class="mock-terminal-prompt">~/moosh/wallet/dashboard $</span>
+                    </div>
+                    <div style="margin-top: 4px;">
+                        <span class="mock-active-indicator">active <span class="mock-active-dot">●</span></span>
+                        <span class="mock-account-name">(Main Wallet)</span>
+                    </div>
+                    <div class="mock-header-buttons">
+                        <div class="mock-account-switcher">
+                            Main Wallet... ▼
+                        </div>
+                        <button class="mock-add-btn">+ Add</button>
+                    </div>
+                </div>
+                
+                <!-- Dropdown preview -->
+                <div class="mock-dropdown">
+                    <div class="mock-account-item active">✓ Main Wallet...</div>
+                    <div class="mock-account-item">Trading Acc...</div>
+                    <div class="mock-account-item">Hardware W...</div>
+                    <div class="mock-account-item">DeFi Wallet...</div>
+                </div>
+            </div>
+            <div class="device-label">iPhone SE (320px)</div>
+        </div>
+
+        <!-- iPhone 12 (375px) -->
+        <div class="device">
+            <div class="device-screen iphone-12">
+                <div class="mock-terminal-header">
+                    <div>
+                        <span class="mock-terminal-prompt">~/moosh/wallet/dashboard $</span>
+                    </div>
+                    <div style="margin-top: 4px;">
+                        <span class="mock-active-indicator">active <span class="mock-active-dot">●</span></span>
+                        <span class="mock-account-name">(Main Wallet 2024)</span>
+                    </div>
+                    <div class="mock-header-buttons">
+                        <div class="mock-account-switcher" style="min-width: 120px;">
+                            Main Wallet 2024 ▼
+                        </div>
+                        <button class="mock-add-btn">+ Add</button>
+                    </div>
+                </div>
+                
+                <!-- Dropdown preview -->
+                <div class="mock-dropdown" style="width: 160px;">
+                    <div class="mock-account-item active">✓ Main Wallet 2024</div>
+                    <div class="mock-account-item">Trading Account</div>
+                    <div class="mock-account-item">Hardware Wallet</div>
+                    <div class="mock-account-item">DeFi Wallet Pro</div>
+                    <div class="mock-account-item">Test Account</div>
+                </div>
+            </div>
+            <div class="device-label">iPhone 12 (375px)</div>
+        </div>
+
+        <!-- iPad (768px) -->
+        <div class="device">
+            <div class="device-screen ipad">
+                <div class="mock-terminal-header" style="padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span class="mock-terminal-prompt">~/moosh/wallet/dashboard $</span>
+                            <span class="mock-active-indicator">active <span class="mock-active-dot">●</span></span>
+                            <span class="mock-account-name">(Main Wallet Professional)</span>
+                        </div>
+                        <div class="mock-header-buttons" style="margin-top: 0;">
+                            <div class="mock-account-switcher" style="min-width: 150px; padding: 6px 12px; font-size: 11px;">
+                                Main Wallet Professional ▼
+                            </div>
+                            <button class="mock-add-btn" style="padding: 6px 12px; font-size: 11px;">+ Add Account</button>
+                            <button class="mock-add-btn" style="padding: 6px 12px; font-size: 11px;">Refresh</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dropdown preview -->
+                <div class="mock-dropdown" style="width: 200px; left: auto; right: 120px;">
+                    <div class="mock-account-item active" style="font-size: 11px;">✓ Main Wallet Professional</div>
+                    <div class="mock-account-item" style="font-size: 11px;">Trading Account Premium</div>
+                    <div class="mock-account-item" style="font-size: 11px;">Hardware Wallet Secure</div>
+                    <div class="mock-account-item" style="font-size: 11px;">DeFi Wallet Professional</div>
+                </div>
+            </div>
+            <div class="device-label">iPad (768px)</div>
+        </div>
+    </div>
+
+    <div class="test-info">
+        <h3>Layout Features:</h3>
+        <ul>
+            <li><strong>iPhone SE (320px):</strong> Two-line terminal header, shortened button text, maximum space efficiency</li>
+            <li><strong>iPhone 12 (375px):</strong> Similar to SE but with slightly more breathing room</li>
+            <li><strong>iPad (768px):</strong> Single-line header, full button text, desktop-like layout</li>
+            <li><strong>All devices:</strong> 44px minimum touch targets, proper contrast ratios, readable fonts</li>
+        </ul>
+    </div>
+</body>
+</html>

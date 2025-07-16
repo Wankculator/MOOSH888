@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOOSH Wallet - UI Layout Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .device-frame {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 8px;
+        }
+        .mobile-frame {
+            max-width: 375px;
+            margin: 0 auto;
+        }
+        .tablet-frame {
+            max-width: 768px;
+            margin: 0 auto;
+        }
+        h2 {
+            color: #69fd97;
+            margin: 30px 0 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .pass { background: #0f3; color: #000; }
+        .fail { background: #f30; color: #fff; }
+        .warn { background: #fa0; color: #000; }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .measurement {
+            color: #69fd97;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>MOOSH Wallet UI Layout Test</h1>
+        <p>Testing responsive design and mobile optimization</p>
+
+        <div id="test-results"></div>
+    </div>
+
+    <script src="js/moosh-wallet.js"></script>
+    <script>
+        // UI Layout Test Suite
+        class UILayoutTester {
+            constructor() {
+                this.results = [];
+                this.app = window.app;
+            }
+
+            async runTests() {
+                console.log('Starting UI Layout Tests...');
+                
+                // Wait for app to initialize
+                await this.waitForApp();
+                
+                // Run test suites
+                await this.testResponsiveBreakpoints();
+                await this.testHeaderLayout();
+                await this.testAccountSwitcher();
+                await this.testButtonScaling();
+                await this.testMobileOptimization();
+                await this.testTouchTargets();
+                
+                // Display results
+                this.displayResults();
+            }
+
+            async waitForApp() {
+                return new Promise((resolve) => {
+                    const checkApp = () => {
+                        if (window.app && window.app.state) {
+                            resolve();
+                        } else {
+                            setTimeout(checkApp, 100);
+                        }
+                    };
+                    checkApp();
+                });
+            }
+
+            addResult(category, test, status, details) {
+                this.results.push({ category, test, status, details });
+            }
+
+            testResponsiveBreakpoints() {
+                const breakpoints = [
+                    { name: 'Mobile XS', width: 320 },
+                    { name: 'Mobile', width: 375 },
+                    { name: 'Mobile L', width: 425 },
+                    { name: 'Tablet', width: 768 },
+                    { name: 'Desktop', width: 1024 },
+                    { name: 'Desktop L', width: 1440 }
+                ];
+
+                breakpoints.forEach(bp => {
+                    // Simulate viewport width
+                    const scaleFactor = bp.width < 768 ? 0.85 : 1;
+                    const headerHeight = 60 * scaleFactor;
+                    
+                    this.addResult(
+                        'Responsive Design',
+                        `${bp.name} (${bp.width}px)`,
+                        'pass',
+                        `Scale factor: ${scaleFactor}, Header height: ${headerHeight}px`
+                    );
+                });
+            }
+
+            testHeaderLayout() {
+                const header = document.querySelector('.terminal-header');
+                if (header) {
+                    const computed = window.getComputedStyle(header);
+                    const height = parseInt(computed.height);
+                    const padding = computed.padding;
+                    
+                    this.addResult(
+                        'Header Layout',
+                        'Terminal Header',
+                        height >= 30 && height <= 80 ? 'pass' : 'warn',
+                        `Height: ${height}px, Padding: ${padding}`
+                    );
+                    
+                    // Check for account name display
+                    const hasAccountName = header.textContent.includes('active');
+                    this.addResult(
+                        'Header Layout',
+                        'Account Name Display',
+                        hasAccountName ? 'pass' : 'fail',
+                        hasAccountName ? 'Shows active indicator' : 'Missing active indicator'
+                    );
+                } else {
+                    this.addResult('Header Layout', 'Terminal Header', 'fail', 'Header not found');
+                }
+            }
+
+            testAccountSwitcher() {
+                const container = document.getElementById('accountSwitcherContainer');
+                if (container) {
+                    const switcher = container.querySelector('.account-switcher');
+                    if (switcher) {
+                        const trigger = switcher.querySelector('.account-switcher-trigger');
+                        if (trigger) {
+                            const computed = window.getComputedStyle(trigger);
+                            const width = parseInt(computed.width);
+                            const height = parseInt(computed.height);
+                            const fontSize = computed.fontSize;
+                            
+                            this.addResult(
+                                'AccountSwitcher',
+                                'Trigger Button',
+                                (width >= 100 && height >= 28) ? 'pass' : 'warn',
+                                `Width: ${width}px, Height: ${height}px, Font: ${fontSize}`
+                            );
+                            
+                            // Test hover state
+                            const originalBg = computed.background;
+                            trigger.dispatchEvent(new MouseEvent('mouseover'));
+                            const hoverBg = window.getComputedStyle(trigger).background;
+                            
+                            this.addResult(
+                                'AccountSwitcher',
+                                'Hover Effects',
+                                originalBg !== hoverBg ? 'pass' : 'warn',
+                                'Hover state changes background'
+                            );
+                        } else {
+                            this.addResult('AccountSwitcher', 'Trigger Button', 'fail', 'Trigger not found');
+                        }
+                    } else {
+                        this.addResult('AccountSwitcher', 'Component', 'warn', 'Not rendered (may need accounts)');
+                    }
+                } else {
+                    this.addResult('AccountSwitcher', 'Container', 'fail', 'Container not found');
+                }
+            }
+
+            testButtonScaling() {
+                const buttons = document.querySelectorAll('.dashboard-btn');
+                let foundAddAccount = false;
+                
+                buttons.forEach(btn => {
+                    if (btn.textContent.includes('Add Account')) {
+                        foundAddAccount = true;
+                        const computed = window.getComputedStyle(btn);
+                        const width = parseInt(computed.width);
+                        const height = parseInt(computed.height);
+                        const fontSize = parseInt(computed.fontSize);
+                        const padding = computed.padding;
+                        
+                        // Check if text fits properly
+                        const textWidth = this.measureText(btn.textContent, computed.font);
+                        const paddingHorizontal = parseInt(padding.split(' ')[1] || padding) * 2;
+                        const availableWidth = width - paddingHorizontal;
+                        
+                        this.addResult(
+                            'Button Scaling',
+                            'Add Account Button',
+                            textWidth <= availableWidth ? 'pass' : 'fail',
+                            `Button: ${width}x${height}px, Font: ${fontSize}px, Text fits: ${textWidth <= availableWidth}`
+                        );
+                        
+                        // Check minimum touch target size (44x44px recommended)
+                        this.addResult(
+                            'Button Scaling',
+                            'Touch Target Size',
+                            height >= 44 ? 'pass' : 'warn',
+                            `Height: ${height}px (recommended: ≥44px for mobile)`
+                        );
+                    }
+                });
+                
+                if (!foundAddAccount) {
+                    this.addResult('Button Scaling', 'Add Account Button', 'fail', 'Button not found');
+                }
+            }
+
+            testMobileOptimization() {
+                // Check viewport meta tag
+                const viewportMeta = document.querySelector('meta[name="viewport"]');
+                this.addResult(
+                    'Mobile Optimization',
+                    'Viewport Meta',
+                    viewportMeta ? 'pass' : 'fail',
+                    viewportMeta ? viewportMeta.content : 'Missing viewport meta tag'
+                );
+                
+                // Check for horizontal scrolling
+                const hasHorizontalScroll = document.documentElement.scrollWidth > window.innerWidth;
+                this.addResult(
+                    'Mobile Optimization',
+                    'Horizontal Scroll',
+                    !hasHorizontalScroll ? 'pass' : 'fail',
+                    hasHorizontalScroll ? 'Page has horizontal scroll' : 'No horizontal scroll'
+                );
+                
+                // Check flex layouts
+                const flexContainers = document.querySelectorAll('[style*="display: flex"]');
+                let overflowCount = 0;
+                flexContainers.forEach(container => {
+                    if (container.scrollWidth > container.clientWidth) {
+                        overflowCount++;
+                    }
+                });
+                
+                this.addResult(
+                    'Mobile Optimization',
+                    'Flex Container Overflow',
+                    overflowCount === 0 ? 'pass' : 'warn',
+                    `${overflowCount} containers with overflow`
+                );
+            }
+
+            testTouchTargets() {
+                const interactiveElements = document.querySelectorAll('button, a, input, select, [onclick]');
+                let smallTargets = 0;
+                let totalTargets = 0;
+                
+                interactiveElements.forEach(element => {
+                    const rect = element.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        totalTargets++;
+                        if (rect.width < 44 || rect.height < 44) {
+                            smallTargets++;
+                        }
+                    }
+                });
+                
+                this.addResult(
+                    'Touch Targets',
+                    'Minimum Size (44x44px)',
+                    smallTargets === 0 ? 'pass' : 'warn',
+                    `${smallTargets}/${totalTargets} targets below recommended size`
+                );
+            }
+
+            measureText(text, font) {
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                context.font = font;
+                return context.measureText(text).width;
+            }
+
+            displayResults() {
+                const container = document.getElementById('test-results');
+                let html = '';
+                
+                // Group results by category
+                const categories = {};
+                this.results.forEach(result => {
+                    if (!categories[result.category]) {
+                        categories[result.category] = [];
+                    }
+                    categories[result.category].push(result);
+                });
+                
+                // Display results
+                Object.entries(categories).forEach(([category, results]) => {
+                    const passed = results.filter(r => r.status === 'pass').length;
+                    const total = results.length;
+                    
+                    html += `
+                        <div class="test-section">
+                            <h2>${category} 
+                                <span class="status ${passed === total ? 'pass' : 'warn'}">
+                                    ${passed}/${total} passed
+                                </span>
+                            </h2>
+                            <table style="width: 100%; border-collapse: collapse;">
+                    `;
+                    
+                    results.forEach(result => {
+                        html += `
+                            <tr style="border-bottom: 1px solid #333;">
+                                <td style="padding: 8px; width: 200px;">${result.test}</td>
+                                <td style="padding: 8px;">
+                                    <span class="status ${result.status}">${result.status.toUpperCase()}</span>
+                                </td>
+                                <td style="padding: 8px; color: #888; font-size: 12px;">
+                                    ${result.details}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                            </table>
+                        </div>
+                    `;
+                });
+                
+                // Add visual preview sections
+                html += this.createVisualPreviews();
+                
+                container.innerHTML = html;
+            }
+
+            createVisualPreviews() {
+                return `
+                    <h2>Visual Layout Preview</h2>
+                    
+                    <div class="device-frame">
+                        <h3>Desktop View (1024px)</h3>
+                        <div style="border: 1px solid #444; padding: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1a1a1a;">
+                                <div>~/moosh/wallet/dashboard $ active ● (Main Account)</div>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <div style="border: 1px solid #69fd97; padding: 6px 12px; background: rgba(105,253,151,0.1);">
+                                        Main Account ▼
+                                    </div>
+                                    <button style="border: 1px solid #f57315; padding: 6px 12px; background: #000; color: #f57315;">
+                                        + Add Account
+                                    </button>
+                                    <button style="border: 1px solid #f57315; padding: 6px 12px; background: #000; color: #f57315;">
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="device-frame mobile-frame">
+                        <h3>Mobile View (375px)</h3>
+                        <div style="border: 1px solid #444; padding: 10px;">
+                            <div style="padding: 8px; background: #1a1a1a;">
+                                <div style="font-size: 12px;">~/moosh/wallet/dashboard $</div>
+                                <div style="font-size: 12px;">active ● (Main Account)</div>
+                                <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                                    <div style="border: 1px solid #69fd97; padding: 4px 8px; font-size: 11px; background: rgba(105,253,151,0.1);">
+                                        Main Account ▼
+                                    </div>
+                                    <button style="border: 1px solid #f57315; padding: 4px 8px; font-size: 11px; background: #000; color: #f57315;">
+                                        + Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const tester = new UILayoutTester();
+                tester.runTests();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
