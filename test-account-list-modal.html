@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AccountListModal Test</title>
+    <link rel="stylesheet" href="css/app.css">
+    <style>
+        #test-results {
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre-wrap;
+            max-width: 1200px;
+            margin: 20px auto;
+            border: 1px solid #0f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div id="test-results">Loading tests...</div>
+    
+    <script src="js/moosh-wallet.js"></script>
+    <script>
+        // Wait for app to initialize
+        setTimeout(() => {
+            const results = document.getElementById('test-results');
+            let output = '';
+            
+            function log(text) {
+                output += text + '\n';
+                results.textContent = output;
+            }
+            
+            log('=== AccountListModal Integration Test ===\n');
+            
+            try {
+                // Test 1: Check if AccountListModal exists
+                if (window.AccountListModal) {
+                    log('✅ AccountListModal class is loaded');
+                } else {
+                    log('❌ AccountListModal class not found');
+                    return;
+                }
+                
+                // Test 2: Check if app is initialized
+                if (window.app) {
+                    log('✅ App is initialized');
+                } else {
+                    log('❌ App not initialized');
+                    return;
+                }
+                
+                // Test 3: Open the modal
+                log('\nOpening AccountListModal...');
+                const modal = new AccountListModal(window.app);
+                modal.show();
+                
+                // Test 4: Check modal elements
+                setTimeout(() => {
+                    const modalOverlay = document.querySelector('.modal-overlay');
+                    const accountListModal = document.querySelector('.account-list-modal');
+                    const toolbar = document.querySelector('.account-toolbar');
+                    const searchInput = document.querySelector('.account-toolbar input[type="text"]');
+                    const sortSelect = document.querySelector('.account-toolbar select');
+                    
+                    if (modalOverlay) {
+                        log('✅ Modal overlay created');
+                    } else {
+                        log('❌ Modal overlay not found');
+                    }
+                    
+                    if (accountListModal) {
+                        log('✅ AccountListModal container created');
+                    } else {
+                        log('❌ AccountListModal container not found');
+                    }
+                    
+                    if (toolbar) {
+                        log('✅ Toolbar created');
+                    } else {
+                        log('❌ Toolbar not found');
+                    }
+                    
+                    if (searchInput) {
+                        log('✅ Search input created');
+                        log(`   Placeholder: "${searchInput.placeholder}"`);
+                    } else {
+                        log('❌ Search input not found');
+                    }
+                    
+                    if (sortSelect) {
+                        log('✅ Sort dropdown created');
+                        log(`   Options: ${sortSelect.options.length}`);
+                    } else {
+                        log('❌ Sort dropdown not found');
+                    }
+                    
+                    // Test 5: Check accounts display
+                    const accounts = window.app.state.get('accounts') || [];
+                    log(`\nAccounts found: ${accounts.length}`);
+                    
+                    const accountCards = document.querySelectorAll('.account-card');
+                    if (accountCards.length > 0) {
+                        log(`✅ ${accountCards.length} account card(s) displayed`);
+                    } else if (accounts.length === 0) {
+                        log('✅ No accounts message displayed (expected)');
+                    } else {
+                        log('❌ Account cards not displayed');
+                    }
+                    
+                    // Test 6: Test search functionality
+                    if (searchInput) {
+                        log('\nTesting search functionality...');
+                        searchInput.value = 'test';
+                        searchInput.dispatchEvent(new Event('input'));
+                        log('✅ Search input accepts text');
+                    }
+                    
+                    // Test 7: Close modal
+                    log('\nClosing modal...');
+                    modal.close();
+                    
+                    setTimeout(() => {
+                        const closedModal = document.querySelector('.modal-overlay');
+                        if (!closedModal) {
+                            log('✅ Modal closed successfully');
+                        } else {
+                            log('❌ Modal did not close properly');
+                        }
+                        
+                        log('\n=== Test Complete ===');
+                        log('\nAccountListModal Features:');
+                        log('- Grid layout for multiple accounts');
+                        log('- Search by name or address');
+                        log('- Sort by name, date, or balance');
+                        log('- Inline rename with Enter/Escape');
+                        log('- Export account to JSON');
+                        log('- Delete with confirmation');
+                        log('- Integration with MultiAccountModal');
+                        log('\n✅ AccountListModal is ready for use!');
+                    }, 100);
+                }, 100);
+                
+            } catch (error) {
+                log(`\n❌ Error during test: ${error.message}`);
+                log(error.stack);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

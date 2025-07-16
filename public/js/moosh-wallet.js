@@ -3853,17 +3853,83 @@
             }
         }
 
+        mount(container) {
+            this.element = this.render();
+            container.appendChild(this.element);
+            
+            // Listen for account changes
+            this.listenToState('currentAccountId', () => {
+                this.update();
+            });
+            
+            this.listenToState('accounts', () => {
+                this.update();
+            });
+        }
+
         render() {
             const $ = window.ElementFactory || ElementFactory;
             const currentAccount = this.app.state.getCurrentAccount();
             const accounts = this.app.state.getAccounts();
             
-            if (!currentAccount) {
-                return $.div({ style: 'display: none;' });
+            // Check if mobile
+            const isMobile = window.innerWidth <= 768;
+            const isXS = window.innerWidth <= 375;
+            
+            // Show "No Accounts" if there are no accounts
+            if (!currentAccount || accounts.length === 0) {
+                return $.div({ 
+                    className: 'account-switcher',
+                    style: {
+                        position: 'relative',
+                        display: 'inline-block'
+                    }
+                }, [
+                    $.button({
+                        className: 'account-switcher-trigger',
+                        style: {
+                            fontSize: isXS ? '10px' : '11px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            color: '#888',
+                            padding: isXS ? '5px 8px' : '6px 12px',
+                            background: 'rgba(105, 253, 151, 0.05)',
+                            border: '1px solid #444',
+                            borderRadius: '0',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            minWidth: isXS ? '100px' : '150px',
+                            minHeight: isMobile ? '32px' : '36px',
+                            justifyContent: 'space-between'
+                        },
+                        onclick: () => {
+                            if (this.app.dashboard && this.app.dashboard.showMultiAccountManager) {
+                                this.app.dashboard.showMultiAccountManager();
+                            }
+                        },
+                        onmouseover: function() {
+                            this.style.background = 'rgba(105, 253, 151, 0.1)';
+                            this.style.borderColor = '#69fd97';
+                            this.style.color = '#69fd97';
+                        },
+                        onmouseout: function() {
+                            this.style.background = 'rgba(105, 253, 151, 0.05)';
+                            this.style.borderColor = '#444';
+                            this.style.color = '#888';
+                        }
+                    }, [
+                        $.span({}, ['No Accounts']),
+                        $.span({ style: { fontSize: '10px' } }, ['+'])
+                    ])
+                ]);
             }
 
             const accountName = currentAccount.name || 'Unnamed Account';
-            const truncatedName = accountName.length > 20 ? accountName.substring(0, 20) + '...' : accountName;
+            const maxLength = isXS ? 12 : (isMobile ? 15 : 20);
+            const truncatedName = accountName.length > maxLength ? accountName.substring(0, maxLength) + '...' : accountName;
 
             return $.div({ 
                 className: 'account-switcher',
@@ -3876,10 +3942,10 @@
                 $.button({
                     className: 'account-switcher-trigger',
                     style: {
-                        fontSize: '11px',
+                        fontSize: isXS ? '10px' : '11px',
                         fontFamily: 'JetBrains Mono, monospace',
                         color: '#69fd97',
-                        padding: '6px 12px',
+                        padding: isXS ? '5px 8px' : '6px 12px',
                         background: 'rgba(105, 253, 151, 0.1)',
                         border: '1px solid #69fd97',
                         borderRadius: '0',
@@ -3889,7 +3955,8 @@
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        minWidth: '150px',
+                        minWidth: isXS ? '100px' : '150px',
+                        minHeight: isMobile ? '32px' : '36px',
                         justifyContent: 'space-between'
                     },
                     onclick: () => this.toggleDropdown(),
@@ -3922,10 +3989,12 @@
                         background: '#000000',
                         border: '1px solid #69fd97',
                         borderRadius: '0',
-                        minWidth: '200px',
-                        maxWidth: '300px',
+                        minWidth: isXS ? '120px' : (isMobile ? '160px' : '200px'),
+                        maxWidth: isMobile ? '90vw' : '300px',
                         zIndex: '1000',
-                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
+                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
+                        maxHeight: isMobile ? '200px' : '300px',
+                        overflowY: 'auto'
                     }
                 }, [
                     // Account list
@@ -3934,13 +4003,14 @@
                         return $.div({
                             className: `account-item ${isActive ? 'active' : ''}`,
                             style: {
-                                padding: '10px 12px',
+                                padding: isMobile ? '12px 10px' : '10px 12px',
+                                minHeight: isMobile ? '44px' : 'auto',
                                 cursor: 'pointer',
                                 borderBottom: '1px solid #333333',
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                fontSize: '11px',
+                                fontSize: isXS ? '10px' : '11px',
                                 fontFamily: 'JetBrains Mono, monospace',
                                 color: isActive ? '#69fd97' : '#f57315',
                                 background: isActive ? 'rgba(105, 253, 151, 0.1)' : 'transparent',
@@ -3992,9 +4062,8 @@
                         },
                         onclick: () => {
                             this.closeDropdown();
-                            if (this.app.dashboard && this.app.dashboard.showMultiAccountManager) {
-                                this.app.dashboard.showMultiAccountManager();
-                            }
+                            const modal = new AccountListModal(this.app);
+                            modal.show();
                         },
                         onmouseover: function() {
                             this.style.background = 'rgba(105, 253, 151, 0.1)';
@@ -14514,7 +14583,7 @@
         
         // Dashboard event handlers
         showMultiAccountManager() {
-            const modal = new MultiAccountModal(this.app);
+            const modal = new AccountListModal(this.app);
             modal.show();
         }
         
@@ -17169,6 +17238,612 @@
                     this.modal = null;
                 }, 300);
             }
+        }
+    }
+    
+    // ACCOUNT LIST MODAL - Phase 1 Account Management
+    // ═══════════════════════════════════════════════════════════════════════
+    class AccountListModal {
+        constructor(app) {
+            this.app = app;
+            this.modal = null;
+            this.searchQuery = '';
+            this.selectedAccounts = new Set();
+            this.editingAccountId = null;
+            this.sortBy = 'name'; // name, created, balance
+            this.sortOrder = 'asc'; // asc, desc
+        }
+        
+        show() {
+            console.log('[AccountListModal] Opening account management interface');
+            
+            // Clean up any existing modal
+            if (this.modal && this.modal.parentNode) {
+                this.modal.parentNode.removeChild(this.modal);
+                this.modal = null;
+            }
+            
+            const $ = window.ElementFactory || ElementFactory;
+            const accounts = this.app.state.get('accounts') || [];
+            const currentAccountId = this.app.state.get('currentAccountId');
+            
+            this.modal = $.div({
+                className: 'modal-overlay',
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0, 0, 0, 0.95)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: '10000'
+                },
+                onclick: (e) => {
+                    if (e.target === this.modal) this.close();
+                }
+            }, [
+                $.div({
+                    className: 'account-list-modal terminal-box',
+                    style: {
+                        background: 'var(--bg-primary)',
+                        border: '2px solid #f57315',
+                        borderRadius: '0',
+                        width: '90%',
+                        maxWidth: '900px',
+                        height: '90vh',
+                        maxHeight: '800px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                    }
+                }, [
+                    this.createHeader(),
+                    this.createToolbar(),
+                    this.createAccountGrid(accounts, currentAccountId),
+                    this.createFooter()
+                ])
+            ]);
+            
+            document.body.appendChild(this.modal);
+        }
+        
+        createHeader() {
+            const $ = window.ElementFactory || ElementFactory;
+            const accounts = this.app.state.get('accounts') || [];
+            
+            return $.div({ 
+                className: 'terminal-header',
+                style: {
+                    padding: '10px 15px',
+                    borderBottom: '1px solid #333',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }
+            }, [
+                $.span({}, [`~/moosh/accounts $ manage (${accounts.length} account${accounts.length !== 1 ? 's' : ''})`]),
+                $.button({
+                    style: {
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#f57315',
+                        cursor: 'pointer',
+                        fontSize: '20px',
+                        padding: '5px'
+                    },
+                    onclick: () => this.close()
+                }, ['×'])
+            ]);
+        }
+        
+        createToolbar() {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            return $.div({
+                className: 'account-toolbar',
+                style: {
+                    padding: '15px',
+                    borderBottom: '1px solid #333',
+                    display: 'flex',
+                    gap: '15px',
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                }
+            }, [
+                // Search bar
+                $.div({ style: { flex: '1', minWidth: '200px' } }, [
+                    $.input({
+                        type: 'text',
+                        placeholder: 'Search accounts...',
+                        value: this.searchQuery,
+                        style: {
+                            width: '100%',
+                            padding: '8px 12px',
+                            background: '#111',
+                            border: '1px solid #333',
+                            color: '#fff',
+                            fontSize: '14px'
+                        },
+                        oninput: (e) => {
+                            this.searchQuery = e.target.value;
+                            this.updateAccountGrid();
+                        }
+                    })
+                ]),
+                
+                // Sort dropdown
+                $.div({ style: { display: 'flex', gap: '10px', alignItems: 'center' } }, [
+                    $.span({ style: { color: '#666', fontSize: '14px' } }, ['Sort by:']),
+                    $.select({
+                        style: {
+                            padding: '6px 10px',
+                            background: '#111',
+                            border: '1px solid #333',
+                            color: '#fff',
+                            fontSize: '14px'
+                        },
+                        onchange: (e) => {
+                            this.sortBy = e.target.value;
+                            this.updateAccountGrid();
+                        }
+                    }, [
+                        $.option({ value: 'name' }, ['Name']),
+                        $.option({ value: 'created' }, ['Date Created']),
+                        $.option({ value: 'balance' }, ['Balance'])
+                    ]),
+                    $.button({
+                        style: {
+                            padding: '6px 10px',
+                            background: '#111',
+                            border: '1px solid #333',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                        },
+                        onclick: () => {
+                            this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+                            this.updateAccountGrid();
+                        }
+                    }, [this.sortOrder === 'asc' ? '↑' : '↓'])
+                ]),
+                
+                // Actions
+                $.div({ style: { display: 'flex', gap: '10px' } }, [
+                    $.button({
+                        style: {
+                            padding: '8px 16px',
+                            background: '#f57315',
+                            border: 'none',
+                            color: '#000',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                        },
+                        onclick: () => this.createNewAccount()
+                    }, ['+ New Account']),
+                    $.button({
+                        style: {
+                            padding: '8px 16px',
+                            background: '#333',
+                            border: 'none',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                        },
+                        onclick: () => this.importAccount()
+                    }, ['Import'])
+                ])
+            ]);
+        }
+        
+        createAccountGrid(accounts, currentAccountId) {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Filter and sort accounts
+            let filteredAccounts = this.filterAccounts(accounts);
+            filteredAccounts = this.sortAccounts(filteredAccounts);
+            
+            if (filteredAccounts.length === 0) {
+                return $.div({
+                    style: {
+                        flex: '1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#666',
+                        fontSize: '16px',
+                        padding: '20px'
+                    }
+                }, [
+                    this.searchQuery ? 
+                        `No accounts found matching "${this.searchQuery}"` : 
+                        'No accounts yet. Create your first account!'
+                ]);
+            }
+            
+            return $.div({
+                className: 'account-grid',
+                style: {
+                    flex: '1',
+                    overflow: 'auto',
+                    padding: '15px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                    gap: '15px',
+                    alignContent: 'start'
+                }
+            }, filteredAccounts.map(account => this.createAccountCard(account, account.id === currentAccountId)));
+        }
+        
+        createAccountCard(account, isActive) {
+            const $ = window.ElementFactory || ElementFactory;
+            const isEditing = this.editingAccountId === account.id;
+            
+            return $.div({
+                className: 'account-card',
+                style: {
+                    background: isActive ? 'rgba(245, 115, 21, 0.1)' : '#111',
+                    border: `2px solid ${isActive ? '#f57315' : '#333'}`,
+                    padding: '15px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    position: 'relative'
+                },
+                onmouseover: (e) => {
+                    if (!isActive) e.currentTarget.style.borderColor = '#666';
+                },
+                onmouseout: (e) => {
+                    if (!isActive) e.currentTarget.style.borderColor = '#333';
+                },
+                onclick: (e) => {
+                    // Don't switch if clicking on buttons or editing
+                    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+                    if (!isActive && !isEditing) {
+                        this.switchToAccount(account);
+                    }
+                }
+            }, [
+                // Header
+                $.div({ 
+                    style: { 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '10px'
+                    } 
+                }, [
+                    isEditing ? 
+                        $.input({
+                            type: 'text',
+                            value: account.name,
+                            style: {
+                                background: '#000',
+                                border: '1px solid #f57315',
+                                color: '#fff',
+                                padding: '4px 8px',
+                                fontSize: '16px',
+                                fontWeight: 'bold',
+                                width: '60%'
+                            },
+                            onclick: (e) => e.stopPropagation(),
+                            onkeydown: (e) => {
+                                if (e.key === 'Enter') {
+                                    this.saveAccountName(account.id, e.target.value);
+                                } else if (e.key === 'Escape') {
+                                    this.editingAccountId = null;
+                                    this.updateAccountGrid();
+                                }
+                            },
+                            onblur: (e) => {
+                                this.saveAccountName(account.id, e.target.value);
+                            }
+                        }) :
+                        $.h4({ 
+                            style: { 
+                                color: isActive ? '#f57315' : '#fff',
+                                margin: '0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            } 
+                        }, [
+                            account.name,
+                            isActive && $.span({ 
+                                style: { 
+                                    fontSize: '12px',
+                                    background: '#f57315',
+                                    color: '#000',
+                                    padding: '2px 6px',
+                                    fontWeight: 'normal'
+                                } 
+                            }, ['ACTIVE'])
+                        ]),
+                    
+                    // Action buttons
+                    $.div({ style: { display: 'flex', gap: '5px' } }, [
+                        !isEditing && $.button({
+                            style: {
+                                background: 'transparent',
+                                border: '1px solid #666',
+                                color: '#666',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                            },
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                this.editingAccountId = account.id;
+                                this.updateAccountGrid();
+                            }
+                        }, ['✏️']),
+                        
+                        $.button({
+                            style: {
+                                background: 'transparent',
+                                border: '1px solid #666',
+                                color: '#666',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                            },
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                this.exportAccount(account);
+                            }
+                        }, ['📤']),
+                        
+                        (this.app.state.get('accounts').length > 1 && !isActive) && $.button({
+                            style: {
+                                background: 'transparent',
+                                border: '1px solid #ff4444',
+                                color: '#ff4444',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                            },
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                this.confirmDeleteAccount(account);
+                            }
+                        }, ['🗑️'])
+                    ])
+                ]),
+                
+                // Account info
+                $.div({ style: { fontSize: '12px', color: '#666' } }, [
+                    $.p({ style: { margin: '5px 0' } }, [
+                        `Created: ${new Date(account.createdAt).toLocaleDateString()}`
+                    ]),
+                    $.p({ style: { margin: '5px 0' } }, [
+                        `Type: ${account.type || 'HD Wallet'}`
+                    ])
+                ]),
+                
+                // Address preview
+                account.addresses && $.div({ 
+                    style: { 
+                        marginTop: '10px',
+                        padding: '8px',
+                        background: '#000',
+                        border: '1px solid #333',
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                    } 
+                }, [
+                    account.addresses.bech32 || account.addresses.segwit || 'No addresses generated'
+                ])
+            ]);
+        }
+        
+        createFooter() {
+            const $ = window.ElementFactory || ElementFactory;
+            const selectedCount = this.selectedAccounts.size;
+            
+            return $.div({
+                style: {
+                    padding: '15px',
+                    borderTop: '1px solid #333',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }
+            }, [
+                $.div({ style: { color: '#666', fontSize: '14px' } }, [
+                    selectedCount > 0 ? 
+                        `${selectedCount} account${selectedCount !== 1 ? 's' : ''} selected` :
+                        'Click on an account to switch to it'
+                ]),
+                $.button({
+                    style: {
+                        padding: '8px 16px',
+                        background: 'transparent',
+                        border: '1px solid #666',
+                        color: '#666',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                    },
+                    onclick: () => this.close()
+                }, ['Close'])
+            ]);
+        }
+        
+        filterAccounts(accounts) {
+            if (!this.searchQuery) return accounts;
+            
+            const query = this.searchQuery.toLowerCase();
+            return accounts.filter(account => {
+                return account.name.toLowerCase().includes(query) ||
+                       (account.addresses && Object.values(account.addresses).some(addr => 
+                           addr.toLowerCase().includes(query)
+                       ));
+            });
+        }
+        
+        sortAccounts(accounts) {
+            const sorted = [...accounts];
+            
+            sorted.sort((a, b) => {
+                let compareValue = 0;
+                
+                switch (this.sortBy) {
+                    case 'name':
+                        compareValue = a.name.localeCompare(b.name);
+                        break;
+                    case 'created':
+                        compareValue = new Date(a.createdAt) - new Date(b.createdAt);
+                        break;
+                    case 'balance':
+                        // TODO: Implement when balance tracking is added
+                        compareValue = 0;
+                        break;
+                }
+                
+                return this.sortOrder === 'asc' ? compareValue : -compareValue;
+            });
+            
+            return sorted;
+        }
+        
+        updateAccountGrid() {
+            if (!this.modal) return;
+            
+            const $ = window.ElementFactory || ElementFactory;
+            const accounts = this.app.state.get('accounts') || [];
+            const currentAccountId = this.app.state.get('currentAccountId');
+            
+            // Find and replace the account grid
+            const oldGrid = this.modal.querySelector('.account-grid');
+            if (oldGrid) {
+                const newGrid = this.createAccountGrid(accounts, currentAccountId);
+                oldGrid.parentNode.replaceChild(newGrid, oldGrid);
+            }
+        }
+        
+        switchToAccount(account) {
+            console.log(`[AccountListModal] Switching to account: ${account.name}`);
+            
+            const switched = this.app.state.switchAccount(account.id);
+            
+            if (switched) {
+                this.app.showNotification(`Switched to ${account.name}`, 'success');
+                this.close();
+                
+                // Refresh UI if on dashboard
+                if (this.app.state.get('currentPage') === 'dashboard' && this.app.dashboard) {
+                    setTimeout(() => {
+                        this.app.dashboard.refreshBalances();
+                    }, 100);
+                }
+            } else {
+                this.app.showNotification('Failed to switch account', 'error');
+            }
+        }
+        
+        saveAccountName(accountId, newName) {
+            if (!newName || newName.trim() === '') {
+                this.editingAccountId = null;
+                this.updateAccountGrid();
+                return;
+            }
+            
+            const accounts = this.app.state.get('accounts') || [];
+            const account = accounts.find(a => a.id === accountId);
+            
+            if (account) {
+                account.name = newName.trim();
+                this.app.state.set('accounts', accounts);
+                this.app.showNotification(`Account renamed to "${newName.trim()}"`, 'success');
+            }
+            
+            this.editingAccountId = null;
+            this.updateAccountGrid();
+        }
+        
+        confirmDeleteAccount(account) {
+            if (confirm(`Are you sure you want to delete "${account.name}"?\n\nThis action cannot be undone!`)) {
+                this.deleteAccount(account);
+            }
+        }
+        
+        deleteAccount(account) {
+            const accounts = this.app.state.get('accounts') || [];
+            const currentAccountId = this.app.state.get('currentAccountId');
+            
+            // Remove the account
+            const updatedAccounts = accounts.filter(a => a.id !== account.id);
+            
+            if (updatedAccounts.length === 0) {
+                this.app.showNotification('Cannot delete the last account', 'error');
+                return;
+            }
+            
+            this.app.state.set('accounts', updatedAccounts);
+            
+            // If deleting the current account, switch to the first one
+            if (account.id === currentAccountId) {
+                this.app.state.switchAccount(updatedAccounts[0].id);
+            }
+            
+            this.app.showNotification(`Account "${account.name}" deleted`, 'success');
+            this.updateAccountGrid();
+        }
+        
+        exportAccount(account) {
+            // Create export data
+            const exportData = {
+                name: account.name,
+                mnemonic: account.mnemonic,
+                createdAt: account.createdAt,
+                type: account.type
+            };
+            
+            // Create download
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const $ = window.ElementFactory || ElementFactory;
+            const link = $.a({
+                href: url,
+                download: `moosh-wallet-${account.name.replace(/\s+/g, '-').toLowerCase()}.json`
+            });
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            this.app.showNotification(`Account "${account.name}" exported`, 'success');
+        }
+        
+        createNewAccount() {
+            this.close();
+            // Use the existing MultiAccountModal for creation
+            this.app.multiAccountModal.isCreating = true;
+            this.app.multiAccountModal.show();
+        }
+        
+        importAccount() {
+            this.close();
+            // Use the existing MultiAccountModal for import
+            this.app.multiAccountModal.isImporting = true;
+            this.app.multiAccountModal.show();
+        }
+        
+        close() {
+            if (this.modal && this.modal.parentNode) {
+                this.modal.parentNode.removeChild(this.modal);
+                this.modal = null;
+            }
+            this.searchQuery = '';
+            this.selectedAccounts.clear();
+            this.editingAccountId = null;
         }
     }
     
@@ -23772,7 +24447,15 @@
                         'active ',
                         $.span({ 
                             style: 'color: var(--text-accent); animation: blink 1s ease-in-out infinite; display: inline;' 
-                        }, ['●'])
+                        }, ['●']),
+                        $.span({ 
+                            style: 'color: var(--text-accent); margin-left: 8px; font-weight: 600;' 
+                        }, [
+                            (() => {
+                                const currentAccount = this.app.state.getCurrentAccount();
+                                return currentAccount ? `(${currentAccount.name || 'Unnamed Account'})` : '';
+                            })()
+                        ])
                     ])
                 ]),
                 
@@ -23818,7 +24501,39 @@
                             }),
                             
                             // Action buttons
-                            // Note: + Accounts button removed as it's now in the AccountSwitcher dropdown
+                            // Temporary: Add Account button until AccountListModal is complete
+                            $.button({
+                                className: 'dashboard-btn',
+                                style: {
+                                    padding: 'calc(8px * var(--scale-factor)) calc(12px * var(--scale-factor))',
+                                    fontSize: 'calc(11px * var(--scale-factor))',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    background: 'var(--bg-primary)',
+                                    border: 'calc(1px * var(--scale-factor)) solid #69fd97',
+                                    color: '#69fd97',
+                                    borderRadius: '0',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    whiteSpace: 'nowrap',
+                                    minWidth: 'calc(100px * var(--scale-factor))',
+                                    height: 'calc(32px * var(--scale-factor))',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxSizing: 'border-box',
+                                    lineHeight: '1'
+                                },
+                                onmouseover: (e) => {
+                                    e.currentTarget.style.background = '#69fd97';
+                                    e.currentTarget.style.color = '#000000';
+                                },
+                                onmouseout: (e) => {
+                                    e.currentTarget.style.background = '#000000';
+                                    e.currentTarget.style.color = '#69fd97';
+                                },
+                                onclick: () => this.showMultiAccountManager(),
+                                title: 'Manage Accounts'
+                            }, ['📁 Manage']),
                             
                             // Refresh button
                             $.button({
@@ -24998,7 +25713,7 @@
             
             // Mount the AccountSwitcher component
             const accountSwitcherContainer = document.getElementById('accountSwitcherContainer');
-            if (accountSwitcherContainer && this.app.state.getAccounts().length > 0) {
+            if (accountSwitcherContainer) {
                 this.accountSwitcher = new AccountSwitcher(this.app);
                 this.accountSwitcher.mount(accountSwitcherContainer);
             }
@@ -25834,6 +26549,8 @@
                     if (address) {
                         console.log('[Dashboard] Fetching balance for address:', address, 'Type:', walletType);
                         
+                        try {
+                        
                         // Don't fetch balance for Spark addresses using Bitcoin API
                         if (walletType === 'spark') {
                             console.log('[Dashboard] Spark Protocol address - setting balance to 0');
@@ -25855,12 +26572,11 @@
                         }
                         
                         // Fetch fresh balance from blockchain
-                        const balanceData = await this.app.apiService.getSparkBalance(address);
+                        const balanceData = await this.app.apiService.fetchAddressBalance(address);
                         console.log('[Dashboard] Balance data received:', balanceData);
                         
-                        // Balance from API is already in BTC format, not satoshis
-                        const btcBalanceFromAPI = balanceData.data ? parseFloat(balanceData.data.balance) : 0;
-                        const balanceSats = btcBalanceFromAPI * 100000000; // Convert to satoshis for storage
+                        // Balance is in satoshis from the API
+                        const balanceSats = balanceData.balance || 0;
                         const btcBalance = balanceSats / 100000000; // Convert from satoshis
                         const usdValue = btcBalance * btcPrice;
                         
@@ -25929,6 +26645,13 @@
                             }
                         });
                         console.log('[Dashboard] Updated wallet selector balances');
+                        
+                        } catch (error) {
+                            console.error('[Dashboard] Error fetching balance:', error);
+                            this.app.showNotification('Failed to fetch balance', 'error');
+                            // Set balance to 0 on error
+                            this.updateBalanceDisplay(0, 0, btcPrice);
+                        }
                     } else {
                         // No address available for selected wallet type
                         console.log('[Dashboard] No address available for wallet type:', walletType);
@@ -25955,8 +26678,10 @@
                         }
                     }
                 }
+                
             } catch (error) {
                 console.error('Failed to refresh balances:', error);
+                this.app.showNotification('Failed to update balances', 'error');
             }
         }
         
@@ -26172,7 +26897,7 @@
         }
         
         showMultiAccountManager() {
-            const modal = new MultiAccountModal(this.app);
+            const modal = new AccountListModal(this.app);
             modal.show();
         }
         
