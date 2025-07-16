@@ -2209,6 +2209,83 @@
             }
             return false;
         }
+        
+        // Password Management Methods
+        setWalletPassword(password) {
+            if (!password || password.length < 8) {
+                throw new Error('Password must be at least 8 characters');
+            }
+            
+            // Hash the password (never store plain text)
+            const hashedPassword = this.hashPassword(password);
+            
+            // Store in sessionStorage (not localStorage for security)
+            sessionStorage.setItem('moosh_wallet_pwd_hash', hashedPassword);
+            
+            // Set password timeout (15 minutes)
+            this.startPasswordTimeout();
+            
+            return true;
+        }
+        
+        verifyPassword(password) {
+            const storedHash = sessionStorage.getItem('moosh_wallet_pwd_hash');
+            
+            if (!storedHash) {
+                return false;
+            }
+            
+            const inputHash = this.hashPassword(password);
+            return inputHash === storedHash;
+        }
+        
+        hasPassword() {
+            return !!sessionStorage.getItem('moosh_wallet_pwd_hash');
+        }
+        
+        clearPassword() {
+            sessionStorage.removeItem('moosh_wallet_pwd_hash');
+            this.clearPasswordTimeout();
+        }
+        
+        // Simple hash function (in production, use bcrypt or similar)
+        hashPassword(password) {
+            let hash = 0;
+            for (let i = 0; i < password.length; i++) {
+                const char = password.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return hash.toString(16);
+        }
+        
+        startPasswordTimeout() {
+            // Clear password after 15 minutes of inactivity
+            this.clearPasswordTimeout();
+            this.passwordTimeout = setTimeout(() => {
+                this.clearPassword();
+                this.notifySubscribers('security', { event: 'password_timeout' });
+            }, 15 * 60 * 1000); // 15 minutes
+        }
+        
+        clearPasswordTimeout() {
+            if (this.passwordTimeout) {
+                clearTimeout(this.passwordTimeout);
+                this.passwordTimeout = null;
+            }
+        }
+        
+        notifySubscribers(key, data) {
+            if (this.listeners.has(key)) {
+                this.listeners.get(key).forEach(callback => {
+                    try {
+                        callback(data);
+                    } catch (error) {
+                        console.error(`Error in subscriber for ${key}:`, error);
+                    }
+                });
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2521,6 +2598,81 @@
             } catch (error) {
                 console.error('Failed to fetch fee estimates:', error);
                 return { fast: 20, medium: 10, slow: 5 };
+            }
+        }
+        
+        // Send transaction method
+        async sendTransaction(txData) {
+            try {
+                const response = await fetch(`${this.baseURL}/api/transaction/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(txData)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Send transaction error:', error);
+                throw error;
+            }
+        }
+        
+        // Get transactions method
+        async getTransactions(address) {
+            try {
+                // Try multiple API endpoints for better reliability
+                const endpoints = [
+                    {
+                        url: `https://mempool.space/api/address/${address}/txs`,
+                        parser: (data) => data
+                    },
+                    {
+                        url: `https://blockstream.info/api/address/${address}/txs`,
+                        parser: (data) => data
+                    }
+                ];
+                
+                for (const endpoint of endpoints) {
+                    try {
+                        const response = await fetch(endpoint.url);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            return {
+                                success: true,
+                                data: endpoint.parser(data)
+                            };
+                        }
+                    } catch (err) {
+                        console.error(`Failed to fetch from ${endpoint.url}:`, err);
+                        continue;
+                    }
+                }
+                
+                // If all external APIs fail, try our own
+                const response = await fetch(`${this.baseURL}/api/transactions/${address}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+                
+            } catch (error) {
+                console.error('Get transactions error:', error);
+                return {
+                    success: false,
+                    data: [],
+                    error: error.message
+                };
             }
         }
         
@@ -8742,18 +8894,118 @@
             }
         }
         
-        processSend() {
+        async processSend() {
             const address = document.getElementById('recipient-address')?.value;
             const amount = document.getElementById('send-amount')?.value;
+            const feeRate = document.getElementById('fee-rate')?.value || 'normal';
             
             if (!address || !amount) {
                 this.app.showNotification('Please fill in all required fields', 'error');
                 return;
             }
             
-            // TODO: Implement actual send logic
-            this.app.showNotification('Transaction sent successfully!', 'success');
-            this.closeModal();
+            // Validate address
+            if (!this.validateBitcoinAddress(address)) {
+                this.app.showNotification('Invalid Bitcoin address', 'error');
+                return;
+            }
+            
+            // Validate amount
+            const amountBTC = parseFloat(amount);
+            if (isNaN(amountBTC) || amountBTC <= 0) {
+                this.app.showNotification('Invalid amount', 'error');
+                return;
+            }
+            
+            // Convert to satoshis
+            const amountSats = Math.floor(amountBTC * 100000000);
+            
+            // Check minimum amount (dust limit)
+            if (amountSats < 546) {
+                this.app.showNotification('Amount too small (minimum 546 satoshis)', 'error');
+                return;
+            }
+            
+            // Get current account
+            const currentAccount = this.app.state.get('currentAccount');
+            if (!currentAccount) {
+                this.app.showNotification('No wallet selected', 'error');
+                return;
+            }
+            
+            // Require password for sending
+            const passwordModal = new PasswordModal(this.app, {
+                title: 'Confirm Transaction',
+                message: `Enter password to send ${amount} BTC to ${this.formatAddress(address)}`,
+                onSuccess: () => {
+                    this.executeTransaction(address, amountSats, feeRate);
+                },
+                onCancel: () => {
+                    this.app.showNotification('Transaction cancelled', 'info');
+                }
+            });
+            
+            passwordModal.show();
+        }
+        
+        async executeTransaction(address, amountSats, feeRate) {
+            // Get current account again
+            const currentAccount = this.app.state.get('currentAccount');
+            
+            // Show loading state
+            const sendButton = document.querySelector('.btn-primary');
+            const originalText = sendButton?.textContent || 'Send Bitcoin';
+            if (sendButton) {
+                sendButton.textContent = 'Processing...';
+                sendButton.disabled = true;
+            }
+            
+            try {
+                // Call API to create and broadcast transaction
+                const response = await this.app.api.sendTransaction({
+                    from: currentAccount.addresses.bitcoin || currentAccount.addresses.segwit,
+                    to: address,
+                    amount: amountSats,
+                    feeRate: feeRate,
+                    privateKey: currentAccount.privateKeys?.bitcoin?.wif // This should be handled securely
+                });
+                
+                if (response.success) {
+                    this.app.showNotification(`Transaction sent! TX ID: ${response.data.txid}`, 'success');
+                    this.closeModal();
+                    
+                    // Refresh balance
+                    this.loadWalletData();
+                } else {
+                    throw new Error(response.error || 'Transaction failed');
+                }
+            } catch (error) {
+                console.error('Send transaction error:', error);
+                this.app.showNotification(error.message || 'Failed to send transaction', 'error');
+            } finally {
+                if (sendButton) {
+                    sendButton.textContent = originalText;
+                    sendButton.disabled = false;
+                }
+            }
+        }
+        
+        // Add this validation method if it doesn't exist
+        validateBitcoinAddress(address) {
+            // Basic Bitcoin address validation
+            const patterns = {
+                segwit: /^bc1[a-z0-9]{39,59}$/,
+                taproot: /^bc1p[a-z0-9]{58}$/,
+                legacy: /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/,
+                testnet: /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/
+            };
+            
+            return Object.values(patterns).some(pattern => pattern.test(address));
+        }
+        
+        formatAddress(address) {
+            if (!address) return 'Unknown';
+            return `${address.substring(0, 8)}...${address.substring(address.length - 6)}`;
         }
         
         copyAddress(address) {
@@ -16211,20 +16463,83 @@
         
         async fetchTransactions() {
             const currentAccount = this.app.state.getCurrentAccount();
-            if (!currentAccount || !currentAccount.addresses.taproot) {
+            if (!currentAccount) {
+                this.transactions = [];
+                return;
+            }
+            
+            // Get the current Bitcoin address
+            const address = currentAccount.addresses?.bitcoin || 
+                           currentAccount.addresses?.segwit || 
+                           currentAccount.addresses?.taproot;
+                           
+            if (!address) {
                 this.transactions = [];
                 return;
             }
             
             try {
-                this.transactions = await this.app.apiService.fetchTransactionHistory(
-                    currentAccount.addresses.taproot, 
-                    50
-                );
+                // Fetch real transactions from the API
+                const response = await this.app.api.getTransactions(address);
+                
+                if (response.success && response.data) {
+                    // Format transactions for display
+                    this.transactions = this.formatTransactions(response.data, address);
+                } else {
+                    this.transactions = [];
+                }
             } catch (error) {
                 console.error('Failed to fetch transactions:', error);
                 this.transactions = [];
             }
+        }
+        
+        // Add this method to format blockchain transactions
+        formatTransactions(txData, myAddress) {
+            if (!Array.isArray(txData)) return [];
+            
+            return txData.map(tx => {
+                // Determine if this is a send or receive
+                const isSend = tx.vin?.some(input => 
+                    input.prevout?.scriptpubkey_address === myAddress
+                );
+                
+                let amount = 0;
+                let toAddress = '';
+                
+                if (isSend) {
+                    // For sends, calculate the amount sent (excluding change)
+                    const myOutputs = tx.vout?.filter(output => 
+                        output.scriptpubkey_address === myAddress
+                    ) || [];
+                    const otherOutputs = tx.vout?.filter(output => 
+                        output.scriptpubkey_address !== myAddress
+                    ) || [];
+                    
+                    amount = otherOutputs.reduce((sum, output) => sum + output.value, 0);
+                    toAddress = otherOutputs[0]?.scriptpubkey_address || 'Unknown';
+                } else {
+                    // For receives, sum all outputs to our address
+                    const myOutputs = tx.vout?.filter(output => 
+                        output.scriptpubkey_address === myAddress
+                    ) || [];
+                    amount = myOutputs.reduce((sum, output) => sum + output.value, 0);
+                    toAddress = myAddress;
+                }
+                
+                return {
+                    id: tx.txid,
+                    type: isSend ? 'send' : 'receive',
+                    amount: amount, // In satoshis
+                    value: isSend ? -amount : amount, // Negative for sends
+                    hash: tx.txid,
+                    time: tx.status?.block_time || Math.floor(Date.now() / 1000),
+                    confirmations: tx.status?.confirmed ? 6 : 0, // Simplified
+                    address: isSend ? toAddress : (tx.vin[0]?.prevout?.scriptpubkey_address || 'Unknown'),
+                    fee: tx.fee || 0,
+                    status: tx.status?.confirmed ? 'confirmed' : 'pending'
+                };
+            }).sort((a, b) => b.time - a.time); // Sort by date, newest first
         }
         
         filterTransactions(filter) {
@@ -21049,17 +21364,208 @@
         }
         
         showSeedPhrase() {
-            this.app.showNotification('🔐 Security check required', 'warning');
-            // TODO: Implement password verification and seed phrase display
+            const passwordModal = new PasswordModal(this.app, {
+                title: 'Password Required',
+                message: 'Enter your password to view seed phrase',
+                onSuccess: () => {
+                    // Show the actual seed phrase
+                    this.displaySeedPhrase();
+                },
+                onCancel: () => {
+                    this.app.showNotification('Password required to view seed phrase', 'error');
+                }
+            });
+            
+            passwordModal.show();
+        }
+        
+        displaySeedPhrase() {
+            const $ = window.ElementFactory || ElementFactory;
+            const currentAccount = this.app.state.getCurrentAccount();
+            
+            if (!currentAccount || !currentAccount.mnemonic) {
+                this.app.showNotification('No seed phrase available', 'error');
+                return;
+            }
+            
+            // Create modal to display seed phrase
+            const modal = $.div({
+                className: 'modal-overlay',
+                onclick: (e) => {
+                    if (e.target.className === 'modal-overlay') {
+                        e.currentTarget.remove();
+                    }
+                }
+            }, [
+                $.div({
+                    className: 'modal-content',
+                    style: {
+                        background: 'var(--bg-primary)',
+                        border: '2px solid var(--text-primary)',
+                        padding: '30px',
+                        maxWidth: '600px',
+                        width: '90%'
+                    }
+                }, [
+                    $.h2({ style: { marginBottom: '20px' } }, ['Your Seed Phrase']),
+                    $.div({
+                        style: {
+                            background: 'var(--bg-secondary)',
+                            padding: '20px',
+                            borderRadius: '4px',
+                            marginBottom: '20px',
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            wordBreak: 'break-all',
+                            border: '1px solid var(--border-color)'
+                        }
+                    }, [currentAccount.mnemonic]),
+                    $.div({
+                        style: {
+                            background: '#ffeeee',
+                            border: '1px solid #ff4444',
+                            padding: '10px',
+                            marginBottom: '20px',
+                            fontSize: '12px',
+                            color: '#ff4444'
+                        }
+                    }, ['⚠️ Never share your seed phrase with anyone. Write it down and store it in a safe place.']),
+                    $.button({
+                        style: {
+                            background: 'transparent',
+                            border: '1px solid var(--text-primary)',
+                            color: 'var(--text-primary)',
+                            padding: '10px 20px',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => modal.remove()
+                    }, ['Close'])
+                ])
+            ]);
+            
+            document.body.appendChild(modal);
         }
         
         exportPrivateKey() {
-            this.app.showNotification('🔐 Security check required', 'warning');
-            // TODO: Implement password verification and private key export
+            const passwordModal = new PasswordModal(this.app, {
+                title: 'Export Private Key',
+                message: 'Enter password to export private key',
+                onSuccess: () => {
+                    this.displayPrivateKeys();
+                },
+                onCancel: () => {
+                    this.app.showNotification('Password required to export private key', 'error');
+                }
+            });
+            
+            passwordModal.show();
+        }
+        
+        displayPrivateKeys() {
+            const $ = window.ElementFactory || ElementFactory;
+            const currentAccount = this.app.state.getCurrentAccount();
+            
+            if (!currentAccount || !currentAccount.privateKeys) {
+                this.app.showNotification('No private keys available', 'error');
+                return;
+            }
+            
+            // Create modal to display private keys
+            const modal = $.div({
+                className: 'modal-overlay',
+                onclick: (e) => {
+                    if (e.target.className === 'modal-overlay') {
+                        e.currentTarget.remove();
+                    }
+                }
+            }, [
+                $.div({
+                    className: 'modal-content',
+                    style: {
+                        background: 'var(--bg-primary)',
+                        border: '2px solid var(--text-primary)',
+                        padding: '30px',
+                        maxWidth: '700px',
+                        width: '90%'
+                    }
+                }, [
+                    $.h2({ style: { marginBottom: '20px' } }, ['Private Keys']),
+                    
+                    // Display each key type
+                    ...Object.entries(currentAccount.privateKeys).map(([type, keyData]) => 
+                        $.div({ style: { marginBottom: '20px' } }, [
+                            $.h3({ style: { marginBottom: '10px', textTransform: 'capitalize' } }, [`${type} Private Key`]),
+                            $.div({
+                                style: {
+                                    background: 'var(--bg-secondary)',
+                                    padding: '15px',
+                                    borderRadius: '4px',
+                                    fontFamily: 'monospace',
+                                    fontSize: '12px',
+                                    wordBreak: 'break-all',
+                                    border: '1px solid var(--border-color)'
+                                }
+                            }, [keyData.wif || 'Not available'])
+                        ])
+                    ),
+                    
+                    $.div({
+                        style: {
+                            background: '#ffeeee',
+                            border: '1px solid #ff4444',
+                            padding: '10px',
+                            marginBottom: '20px',
+                            fontSize: '12px',
+                            color: '#ff4444'
+                        }
+                    }, ['⚠️ Never share your private keys with anyone. Anyone with these keys can steal your funds.']),
+                    
+                    $.button({
+                        style: {
+                            background: 'transparent',
+                            border: '1px solid var(--text-primary)',
+                            color: 'var(--text-primary)',
+                            padding: '10px 20px',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => modal.remove()
+                    }, ['Close'])
+                ])
+            ]);
+            
+            document.body.appendChild(modal);
         }
         
         changePassword() {
-            this.app.showNotification('Password change feature coming soon', 'info');
+            if (this.app.state.hasPassword()) {
+                // First verify current password
+                const verifyModal = new PasswordModal(this.app, {
+                    title: 'Verify Current Password',
+                    message: 'Enter your current password',
+                    onSuccess: () => {
+                        // Then show new password dialog
+                        const changeModal = new PasswordModal(this.app, {
+                            title: 'Set New Password',
+                            requireNewPassword: true,
+                            onSuccess: () => {
+                                this.app.showNotification('Password changed successfully', 'success');
+                            }
+                        });
+                        changeModal.show();
+                    }
+                });
+                verifyModal.show();
+            } else {
+                // No current password, just set new one
+                const setModal = new PasswordModal(this.app, {
+                    title: 'Set Wallet Password',
+                    requireNewPassword: true,
+                    onSuccess: () => {
+                        this.app.showNotification('Password set successfully', 'success');
+                    }
+                });
+                setModal.show();
+            }
         }
         
         saveSettings() {
@@ -21181,6 +21687,383 @@
                     this.modal.remove();
                     this.modal = null;
                 }, 300);
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PASSWORD MODAL
+    // ═══════════════════════════════════════════════════════════════════════
+    class PasswordModal {
+        constructor(app, options = {}) {
+            this.app = app;
+            this.options = {
+                title: options.title || 'Password Required',
+                message: options.message || 'Enter your password to continue',
+                onSuccess: options.onSuccess || (() => {}),
+                onCancel: options.onCancel || (() => {}),
+                showSetPassword: options.showSetPassword !== false,
+                requireNewPassword: options.requireNewPassword || false
+            };
+            this.attempts = 0;
+            this.maxAttempts = 3;
+        }
+        
+        show() {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Check if password is required but not set
+            if (!this.app.state.hasPassword() && !this.options.requireNewPassword) {
+                this.showSetPasswordDialog();
+                return;
+            }
+            
+            this.backdrop = $.div({
+                className: 'modal-backdrop',
+                style: {
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10000
+                }
+            });
+            
+            this.modal = $.div({
+                className: 'password-modal',
+                style: {
+                    background: 'var(--bg-primary)',
+                    border: '2px solid var(--text-primary)',
+                    borderRadius: '0',
+                    padding: '30px',
+                    minWidth: '400px',
+                    maxWidth: '500px',
+                    width: '90%'
+                }
+            }, [
+                // Terminal header
+                $.div({
+                    style: {
+                        borderBottom: '1px solid var(--text-primary)',
+                        paddingBottom: '10px',
+                        marginBottom: '20px',
+                        fontFamily: 'monospace'
+                    }
+                }, [
+                    $.span({ style: { color: 'var(--text-accent)' } }, ['~/moosh/security $ '])
+                ]),
+                
+                // Title
+                $.h2({
+                    style: {
+                        color: 'var(--text-primary)',
+                        marginBottom: '10px',
+                        fontSize: '20px'
+                    }
+                }, [this.options.title]),
+                
+                // Message
+                $.p({
+                    style: {
+                        color: 'var(--text-dim)',
+                        marginBottom: '20px',
+                        fontSize: '14px'
+                    }
+                }, [this.options.message]),
+                
+                // Password input
+                $.div({ style: { marginBottom: '20px' } }, [
+                    $.input({
+                        id: 'password-input',
+                        type: 'password',
+                        placeholder: 'Enter password',
+                        style: {
+                            width: '100%',
+                            padding: '12px',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '0',
+                            color: 'var(--text-primary)',
+                            fontFamily: 'monospace',
+                            fontSize: '14px'
+                        },
+                        onkeydown: (e) => {
+                            if (e.key === 'Enter') {
+                                this.verifyPassword();
+                            } else if (e.key === 'Escape') {
+                                this.cancel();
+                            }
+                        }
+                    })
+                ]),
+                
+                // Error message
+                $.div({
+                    id: 'password-error',
+                    style: {
+                        color: '#ff4444',
+                        fontSize: '12px',
+                        marginBottom: '20px',
+                        display: 'none'
+                    }
+                }),
+                
+                // Buttons
+                $.div({
+                    style: {
+                        display: 'flex',
+                        gap: '10px',
+                        justifyContent: 'flex-end'
+                    }
+                }, [
+                    $.button({
+                        style: {
+                            background: 'transparent',
+                            border: '2px solid var(--text-primary)',
+                            borderRadius: '0',
+                            color: 'var(--text-primary)',
+                            padding: '10px 20px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace'
+                        },
+                        onclick: () => this.verifyPassword()
+                    }, ['Verify']),
+                    
+                    $.button({
+                        style: {
+                            background: 'transparent',
+                            border: '1px solid var(--text-dim)',
+                            borderRadius: '0',
+                            color: 'var(--text-dim)',
+                            padding: '10px 20px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace'
+                        },
+                        onclick: () => this.cancel()
+                    }, ['Cancel'])
+                ])
+            ]);
+            
+            this.backdrop.appendChild(this.modal);
+            document.body.appendChild(this.backdrop);
+            
+            // Focus password input
+            setTimeout(() => {
+                document.getElementById('password-input')?.focus();
+            }, 100);
+        }
+        
+        verifyPassword() {
+            const input = document.getElementById('password-input');
+            const errorDiv = document.getElementById('password-error');
+            
+            if (!input) return;
+            
+            const password = input.value;
+            
+            if (!password) {
+                this.showError('Please enter a password');
+                return;
+            }
+            
+            // Verify the password
+            if (this.app.state.verifyPassword(password)) {
+                // Success
+                this.close();
+                this.options.onSuccess();
+                
+                // Reset password timeout
+                this.app.state.startPasswordTimeout();
+            } else {
+                // Failed attempt
+                this.attempts++;
+                
+                if (this.attempts >= this.maxAttempts) {
+                    this.showError('Too many failed attempts. Please reload the page.');
+                    setTimeout(() => {
+                        this.close();
+                        this.options.onCancel();
+                    }, 2000);
+                } else {
+                    this.showError(`Incorrect password. ${this.maxAttempts - this.attempts} attempts remaining.`);
+                    input.value = '';
+                    input.focus();
+                }
+            }
+        }
+        
+        showSetPasswordDialog() {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            this.backdrop = $.div({
+                className: 'modal-backdrop',
+                style: {
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10000
+                }
+            });
+            
+            this.modal = $.div({
+                style: {
+                    background: 'var(--bg-primary)',
+                    border: '2px solid var(--text-accent)',
+                    padding: '30px',
+                    minWidth: '400px',
+                    maxWidth: '500px'
+                }
+            }, [
+                $.h2({ style: { marginBottom: '20px' } }, ['Set Wallet Password']),
+                
+                $.p({
+                    style: {
+                        color: 'var(--text-dim)',
+                        marginBottom: '20px',
+                        fontSize: '14px'
+                    }
+                }, ['Set a password to protect sensitive operations like viewing seed phrases and sending transactions.']),
+                
+                $.div({ style: { marginBottom: '15px' } }, [
+                    $.label({ style: { display: 'block', marginBottom: '5px' } }, ['New Password']),
+                    $.input({
+                        id: 'new-password',
+                        type: 'password',
+                        placeholder: 'Enter password (min 8 characters)',
+                        style: {
+                            width: '100%',
+                            padding: '12px',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            color: 'var(--text-primary)',
+                            fontFamily: 'monospace'
+                        }
+                    })
+                ]),
+                
+                $.div({ style: { marginBottom: '15px' } }, [
+                    $.label({ style: { display: 'block', marginBottom: '5px' } }, ['Confirm Password']),
+                    $.input({
+                        id: 'confirm-password',
+                        type: 'password',
+                        placeholder: 'Confirm password',
+                        style: {
+                            width: '100%',
+                            padding: '12px',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            color: 'var(--text-primary)',
+                            fontFamily: 'monospace'
+                        }
+                    })
+                ]),
+                
+                $.div({
+                    id: 'password-error',
+                    style: {
+                        color: '#ff4444',
+                        fontSize: '12px',
+                        marginBottom: '20px',
+                        display: 'none'
+                    }
+                }),
+                
+                $.div({
+                    style: {
+                        display: 'flex',
+                        gap: '10px',
+                        justifyContent: 'flex-end'
+                    }
+                }, [
+                    $.button({
+                        style: {
+                            background: 'transparent',
+                            border: '2px solid var(--text-accent)',
+                            color: 'var(--text-accent)',
+                            padding: '10px 20px',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => this.setNewPassword()
+                    }, ['Set Password']),
+                    
+                    $.button({
+                        style: {
+                            background: 'transparent',
+                            border: '1px solid var(--text-dim)',
+                            color: 'var(--text-dim)',
+                            padding: '10px 20px',
+                            cursor: 'pointer'
+                        },
+                        onclick: () => {
+                            this.close();
+                            this.options.onCancel();
+                        }
+                    }, ['Skip'])
+                ])
+            ]);
+            
+            this.backdrop.appendChild(this.modal);
+            document.body.appendChild(this.backdrop);
+        }
+        
+        setNewPassword() {
+            const newPwd = document.getElementById('new-password')?.value;
+            const confirmPwd = document.getElementById('confirm-password')?.value;
+            
+            if (!newPwd || !confirmPwd) {
+                this.showError('Please fill in both password fields');
+                return;
+            }
+            
+            if (newPwd.length < 8) {
+                this.showError('Password must be at least 8 characters');
+                return;
+            }
+            
+            if (newPwd !== confirmPwd) {
+                this.showError('Passwords do not match');
+                return;
+            }
+            
+            try {
+                this.app.state.setWalletPassword(newPwd);
+                this.app.showNotification('Password set successfully', 'success');
+                this.close();
+                this.options.onSuccess();
+            } catch (error) {
+                this.showError(error.message);
+            }
+        }
+        
+        showError(message) {
+            const errorDiv = document.getElementById('password-error');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        cancel() {
+            this.close();
+            this.options.onCancel();
+        }
+        
+        close() {
+            if (this.backdrop) {
+                this.backdrop.remove();
+                this.backdrop = null;
+                this.modal = null;
             }
         }
     }
