@@ -3446,6 +3446,11 @@
                     this.currentPageInstance = page;
                     console.log('[Router] Page instance created:', !!page);
                     
+                    // Store dashboard instance on app for easy access
+                    if (currentPage === 'dashboard') {
+                        this.app.dashboard = page;
+                    }
+                    
                     // Mount the page
                     page.mount(content);
                     console.log('[Router] Page mounted, content children:', content.children.length);
@@ -3801,6 +3806,229 @@
                 window.location.hash = 'home';
                 window.location.reload();
             }, 2000);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ACCOUNT SWITCHER COMPONENT
+    // ═══════════════════════════════════════════════════════════════════════
+    class AccountSwitcher extends Component {
+        constructor(app) {
+            super(app);
+            this.state = {
+                isOpen: false
+            };
+        }
+
+        setState(newState) {
+            this.state = { ...this.state, ...newState };
+            this.update();
+        }
+
+        update() {
+            if (this.element && this.element.parentNode) {
+                const parent = this.element.parentNode;
+                const newElement = this.render();
+                parent.replaceChild(newElement, this.element);
+                this.element = newElement;
+            }
+        }
+
+        toggleDropdown() {
+            this.setState({ isOpen: !this.state.isOpen });
+        }
+
+        closeDropdown() {
+            this.setState({ isOpen: false });
+        }
+
+        switchToAccount(accountId) {
+            console.log('[AccountSwitcher] Switching to account:', accountId);
+            this.app.state.switchAccount(accountId);
+            this.closeDropdown();
+            
+            // Refresh dashboard data
+            if (this.app.dashboard && this.app.dashboard.loadCurrentAccountData) {
+                this.app.dashboard.loadCurrentAccountData();
+            }
+        }
+
+        render() {
+            const $ = window.ElementFactory || ElementFactory;
+            const currentAccount = this.app.state.getCurrentAccount();
+            const accounts = this.app.state.getAccounts();
+            
+            if (!currentAccount) {
+                return $.div({ style: 'display: none;' });
+            }
+
+            const accountName = currentAccount.name || 'Unnamed Account';
+            const truncatedName = accountName.length > 20 ? accountName.substring(0, 20) + '...' : accountName;
+
+            return $.div({ 
+                className: 'account-switcher',
+                style: {
+                    position: 'relative',
+                    display: 'inline-block'
+                }
+            }, [
+                // Trigger button
+                $.button({
+                    className: 'account-switcher-trigger',
+                    style: {
+                        fontSize: '11px',
+                        fontFamily: 'JetBrains Mono, monospace',
+                        color: '#69fd97',
+                        padding: '6px 12px',
+                        background: 'rgba(105, 253, 151, 0.1)',
+                        border: '1px solid #69fd97',
+                        borderRadius: '0',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        minWidth: '150px',
+                        justifyContent: 'space-between'
+                    },
+                    onclick: () => this.toggleDropdown(),
+                    onmouseover: function() {
+                        this.style.background = 'rgba(105, 253, 151, 0.2)';
+                    },
+                    onmouseout: function() {
+                        this.style.background = 'rgba(105, 253, 151, 0.1)';
+                    }
+                }, [
+                    $.span({}, [truncatedName]),
+                    $.span({ 
+                        style: {
+                            fontSize: '10px',
+                            opacity: '0.7',
+                            transform: this.state.isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s ease'
+                        }
+                    }, ['▼'])
+                ]),
+                
+                // Dropdown menu
+                this.state.isOpen && $.div({
+                    className: 'account-dropdown',
+                    style: {
+                        position: 'absolute',
+                        top: '100%',
+                        left: '0',
+                        marginTop: '4px',
+                        background: '#000000',
+                        border: '1px solid #69fd97',
+                        borderRadius: '0',
+                        minWidth: '200px',
+                        maxWidth: '300px',
+                        zIndex: '1000',
+                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
+                    }
+                }, [
+                    // Account list
+                    ...accounts.map(account => {
+                        const isActive = account.id === currentAccount.id;
+                        return $.div({
+                            className: `account-item ${isActive ? 'active' : ''}`,
+                            style: {
+                                padding: '10px 12px',
+                                cursor: 'pointer',
+                                borderBottom: '1px solid #333333',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontSize: '11px',
+                                fontFamily: 'JetBrains Mono, monospace',
+                                color: isActive ? '#69fd97' : '#f57315',
+                                background: isActive ? 'rgba(105, 253, 151, 0.1)' : 'transparent',
+                                transition: 'all 0.2s ease'
+                            },
+                            onclick: () => !isActive && this.switchToAccount(account.id),
+                            onmouseover: function() {
+                                if (!isActive) {
+                                    this.style.background = 'rgba(245, 115, 21, 0.1)';
+                                    this.style.color = '#ff8800';
+                                }
+                            },
+                            onmouseout: function() {
+                                if (!isActive) {
+                                    this.style.background = 'transparent';
+                                    this.style.color = '#f57315';
+                                }
+                            }
+                        }, [
+                            $.div({ style: 'display: flex; align-items: center; gap: 8px;' }, [
+                                isActive && $.span({ style: 'color: #69fd97;' }, ['✓ ']),
+                                $.span({}, [account.name || 'Unnamed Account'])
+                            ]),
+                            $.span({ 
+                                style: { 
+                                    fontSize: '10px', 
+                                    opacity: '0.7',
+                                    color: isActive ? '#69fd97' : '#888888'
+                                } 
+                            }, [
+                                account.type === 'imported' ? 'Imported' : 'Generated'
+                            ])
+                        ]);
+                    }),
+                    
+                    // Add new account button
+                    $.div({
+                        style: {
+                            padding: '10px 12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '11px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            color: '#69fd97',
+                            background: 'transparent',
+                            transition: 'all 0.2s ease'
+                        },
+                        onclick: () => {
+                            this.closeDropdown();
+                            if (this.app.dashboard && this.app.dashboard.showMultiAccountManager) {
+                                this.app.dashboard.showMultiAccountManager();
+                            }
+                        },
+                        onmouseover: function() {
+                            this.style.background = 'rgba(105, 253, 151, 0.1)';
+                        },
+                        onmouseout: function() {
+                            this.style.background = 'transparent';
+                        }
+                    }, [
+                        $.span({ style: 'font-size: 14px;' }, ['+']),
+                        $.span({}, ['Manage Accounts'])
+                    ])
+                ])
+            ]);
+        }
+
+        mount(container) {
+            this.element = this.render();
+            container.appendChild(this.element);
+            
+            // Listen for account changes
+            this.listenToState('currentAccountId', () => {
+                this.update();
+            });
+            
+            this.listenToState('accounts', () => {
+                this.update();
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (this.element && !this.element.contains(e.target)) {
+                    this.closeDropdown();
+                }
+            });
         }
     }
 
@@ -6386,9 +6614,7 @@
                     const generatedSeed = walletData.mnemonic.split(' ');
                     
                     console.log('✅ Real wallet generated successfully');
-                    console.log('   Mnemonic:', walletData.mnemonic);
-                    console.log('   Seed words array:', generatedSeed);
-                    console.log('   First 5 words:', generatedSeed.slice(0, 5).join(' '));
+                    // Security: Removed sensitive data logging
                     console.log('   Spark Address:', walletData.addresses.spark);
                     console.log('   Bitcoin Address:', walletData.addresses.bitcoin);
                     
@@ -6412,7 +6638,7 @@
                     // Create account in the multi-account system
                     try {
                         const account = await this.app.state.createAccount('Main Wallet', walletData.mnemonic, false);
-                        console.log('[GenerateSeed] Account created:', account);
+                        console.log('[GenerateSeed] Account created successfully');
                     } catch (accountError) {
                         console.error('[GenerateSeed] Failed to create account:', accountError);
                         // Continue anyway - wallet data is stored
@@ -6484,8 +6710,7 @@
         }
         
         updateDisplay(generatedSeed, wordCount) {
-            console.log('[DEBUG] updateDisplay called with:', generatedSeed);
-            console.log('[DEBUG] First 5 words in display:', generatedSeed.slice(0, 5).join(' '));
+            // Security: Removed sensitive data logging
             
             const container = document.querySelector('.card');
             if (!container) return;
@@ -6612,8 +6837,7 @@
         }
 
         createSeedDisplay(generatedSeed, wordCount) {
-            console.log('[DEBUG] createSeedDisplay called with:', generatedSeed);
-            console.log('[DEBUG] Creating display for', generatedSeed.length, 'words');
+            // Security: Removed sensitive data logging
             
             return $.div({
                 style: {
@@ -6851,8 +7075,7 @@
             const generatedSeed = this.app.state.get('generatedSeed') || [];
             const seedText = generatedSeed.join(' ');
             
-            console.log('[DEBUG] Copying seed to clipboard:', seedText);
-            console.log('[DEBUG] First 5 words being copied:', generatedSeed.slice(0, 5).join(' '));
+            // Security: Removed sensitive data logging
             
             // Enhanced copy function with fallback
             const copyWithFallback = () => {
@@ -6932,7 +7155,7 @@
                     return;
                 }
                 
-                console.log('[GenerateSeed] Starting progress animation');
+                // Progress animation started
                 let percent = 0;
                 const interval = setInterval(() => {
                     if (percent < 95) {
@@ -6953,7 +7176,7 @@
                             }
                         });
                         
-                        console.log(`[GenerateSeed] Progress: ${percent}%`);
+                        // Progress: ${percent}%
                     } else {
                         clearInterval(interval);
                         // Will be set to 100% when generation completes
@@ -9324,7 +9547,7 @@
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success && result.data && result.data.mnemonic) {
-                        console.log('✅ Real seed generated via API');
+                        console.log('✅ Real wallet generated via API');
                         // Store additional wallet data
                         if (result.data.addresses) {
                             localStorage.setItem('sparkAddress', result.data.addresses.spark || '');
@@ -9608,6 +9831,105 @@
             ctx.fillStyle = '#000000';
             const innerPadding = size / 3.5;
             ctx.fillRect(x + innerPadding, y + innerPadding, size - innerPadding * 2, size - innerPadding * 2);
+        }
+        
+        addAccountSwitcherStyles() {
+            if (document.getElementById('account-switcher-styles')) return;
+            
+            const style = document.createElement('style');
+            style.id = 'account-switcher-styles';
+            style.textContent = `
+                /* Account Switcher Styles */
+                .account-switcher {
+                    position: relative;
+                    display: inline-block;
+                }
+                
+                .account-switcher-trigger {
+                    min-width: 150px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    padding: calc(8px * var(--scale-factor)) calc(16px * var(--scale-factor));
+                    background: transparent;
+                    border: 1px solid #69fd97;
+                    color: #69fd97;
+                    cursor: pointer;
+                    font-family: inherit;
+                    font-size: calc(14px * var(--scale-factor));
+                    transition: all 0.3s ease;
+                }
+                
+                .account-switcher-trigger:hover {
+                    background: rgba(105, 253, 151, 0.1);
+                    border-color: #f57315;
+                    color: #f57315;
+                }
+                
+                .account-dropdown {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    margin-top: 4px;
+                    background: #000000;
+                    border: 1px solid #69fd97;
+                    min-width: 200px;
+                    max-width: 300px;
+                    z-index: 1000;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                    max-height: 400px;
+                    overflow-y: auto;
+                    display: none;
+                }
+                
+                .account-dropdown.show {
+                    display: block;
+                }
+                
+                .account-item {
+                    padding: calc(12px * var(--scale-factor));
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    border-bottom: 1px solid rgba(105, 253, 151, 0.1);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .account-item:last-child {
+                    border-bottom: none;
+                }
+                
+                .account-item:hover {
+                    background: rgba(105, 253, 151, 0.1);
+                    color: #f57315;
+                }
+                
+                .account-item.active {
+                    background: rgba(245, 115, 21, 0.1);
+                    color: #f57315;
+                }
+                
+                .account-item .account-name {
+                    font-weight: 500;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    max-width: 150px;
+                }
+                
+                .account-item .account-balance {
+                    font-size: calc(12px * var(--scale-factor));
+                    color: #69fd97;
+                    opacity: 0.8;
+                }
+                
+                .account-item.active .account-balance {
+                    color: #f57315;
+                }
+            `;
+            
+            document.head.appendChild(style);
         }
         
         addModalStyles() {
@@ -11590,14 +11912,14 @@
             console.log('[WalletDetails] Selected type:', selectedType);
             console.log('[WalletDetails] SparkWallet from localStorage:', sparkWallet);
             console.log('[WalletDetails] CurrentWallet from state:', currentWallet);
-            console.log('[WalletDetails] Generated seed:', generatedSeed);
+            console.log('[WalletDetails] Seed phrase loaded');
             
             // Use the real addresses from the API
             const allAddresses = this.getRealWalletAddresses(sparkWallet, currentWallet);
             const privateKeys = this.getRealPrivateKeys(sparkWallet, currentWallet);
             
             console.log('[WalletDetails] All addresses:', allAddresses);
-            console.log('[WalletDetails] Private keys:', privateKeys);
+            console.log('[WalletDetails] Private keys loaded');
             
             // Show ALL addresses and private keys, not filtered
             console.log('[WalletDetails] Showing all addresses and keys');
@@ -11850,8 +12172,7 @@
                 const sparkWallet = JSON.parse(localStorage.getItem('sparkWallet') || '{}');
                 const allPrivateKeys = sparkWallet.allPrivateKeys || {};
                 
-                console.log('[createPrivateKeysSection] sparkWallet.allPrivateKeys:', allPrivateKeys);
-                console.log('[createPrivateKeysSection] privateKeys parameter:', privateKeys);
+                // Security: Removed private key logging
                 
                 // Add Spark private key if available
                 if (privateKeys.spark && privateKeys.spark.hex !== 'Not available') {
@@ -12278,8 +12599,7 @@
                 const privateKeys = sparkWallet.privateKeys;
                 const allPrivateKeys = sparkWallet.allPrivateKeys || {};
                 
-                console.log('[getRealPrivateKeys] sparkWallet.privateKeys:', privateKeys);
-                console.log('[getRealPrivateKeys] sparkWallet.allPrivateKeys:', allPrivateKeys);
+                // Security: Removed private key logging
                 
                 // Spark key
                 if (privateKeys.spark?.hex) {
@@ -12328,7 +12648,7 @@
                 }
             }
             
-            console.log('[getRealPrivateKeys] Final keys object:', keys);
+            // Private keys loaded
             return keys;
         }
         
@@ -15092,7 +15412,7 @@
                 }
                 
                 const mnemonic = response.data.mnemonic;
-                console.log('[MultiAccountModal] Generated mnemonic length:', mnemonic.split(' ').length);
+                console.log('[MultiAccountModal] Mnemonic generated');
                 
                 // Create account
                 await this.app.state.createAccount(name, mnemonic, false);
@@ -16510,7 +16830,7 @@
                 }
                 
                 const mnemonic = response.data.mnemonic;
-                console.log('[MultiAccountModal] Generated mnemonic length:', mnemonic.split(' ').length);
+                console.log('[MultiAccountModal] Mnemonic generated');
                 
                 // Create account
                 await this.app.state.createAccount(name, mnemonic, false);
@@ -23279,7 +23599,7 @@
             console.log('[Dashboard] Wallet check:');
             console.log('  - sparkWallet:', sparkWallet);
             console.log('  - sparkWallet.addresses:', sparkWallet.addresses);
-            console.log('  - generatedSeed length:', generatedSeed.length);
+            console.log('  - Seed phrase exists:', generatedSeed.length > 0);
             console.log('  - currentWallet:', currentWallet);
             
             // If no wallet exists, redirect to home
@@ -23291,7 +23611,7 @@
             if (!hasSparkWallet && !hasSeed && !hasCurrentWallet) {
                 console.log('[Dashboard] No wallet found, redirecting to home');
                 console.log('  - hasSparkWallet:', hasSparkWallet);
-                console.log('  - hasSeed:', hasSeed);
+                console.log('  - Has valid seed:', hasSeed);
                 console.log('  - hasCurrentWallet:', hasCurrentWallet);
                 this.app.showNotification('Please create or import a wallet first', 'warning');
                 this.app.router.navigate('home');
@@ -23489,63 +23809,16 @@
                                 flexShrink: 0
                             }
                         }, [
-                            // Account indicator
+                            // Account switcher
                             $.div({ 
-                                id: 'currentAccountIndicator',
+                                id: 'accountSwitcherContainer',
                                 style: {
-                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
-                                    fontFamily: 'JetBrains Mono, monospace',
-                                    color: '#69fd97',
-                                    padding: isXS ? 'calc(5px * var(--scale-factor)) calc(10px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))',
-                                    background: 'rgba(105, 253, 151, 0.1)',
-                                    border: 'calc(1px * var(--scale-factor)) solid #69fd97',
-                                    borderRadius: '0',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    whiteSpace: 'nowrap',
-                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    boxSizing: 'border-box'
-                                },
-                                onclick: () => this.showMultiAccountManager(),
-                                onmouseover: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.2)',
-                                onmouseout: (e) => e.currentTarget.style.background = 'rgba(105, 253, 151, 0.1)'
-                            }, [this.getAccountDisplayName()]),
+                                    display: 'inline-block'
+                                }
+                            }),
                             
                             // Action buttons
-                            // + Accounts button
-                            $.button({
-                                className: 'dashboard-btn',
-                                style: {
-                                    padding: isXS ? 'calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))',
-                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
-                                    fontFamily: 'JetBrains Mono, monospace',
-                                    background: 'var(--bg-primary)',
-                                    border: 'calc(1px * var(--scale-factor)) solid #f57315',
-                                    color: '#f57315',
-                                    borderRadius: '0',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    whiteSpace: 'nowrap',
-                                    minWidth: isXS ? 'calc(28px * var(--scale-factor))' : 'calc(70px * var(--scale-factor))',
-                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    boxSizing: 'border-box'
-                                },
-                                onmouseover: (e) => {
-                                    e.currentTarget.style.background = '#f57315';
-                                    e.currentTarget.style.color = '#000000';
-                                },
-                                onmouseout: (e) => {
-                                    e.currentTarget.style.background = '#000000';
-                                    e.currentTarget.style.color = '#f57315';
-                                },
-                                onclick: () => this.showMultiAccountManager(),
-                                title: 'Manage Accounts'
-                            }, [isXS ? '+' : '+ Accounts']),
+                            // Note: + Accounts button removed as it's now in the AccountSwitcher dropdown
                             
                             // Refresh button
                             $.button({
@@ -24721,6 +24994,14 @@
         initializeDashboard() {
             // Add dashboard-specific styles
             this.addDashboardStyles();
+            this.addAccountSwitcherStyles();
+            
+            // Mount the AccountSwitcher component
+            const accountSwitcherContainer = document.getElementById('accountSwitcherContainer');
+            if (accountSwitcherContainer && this.app.state.getAccounts().length > 0) {
+                this.accountSwitcher = new AccountSwitcher(this.app);
+                this.accountSwitcher.mount(accountSwitcherContainer);
+            }
             
             // Start data loading
             setTimeout(() => {

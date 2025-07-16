@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AccountSwitcher Test Suite</title>
+    <style>
+        body {
+            background: #000;
+            color: #69fd97;
+            font-family: monospace;
+            padding: 20px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #69fd97;
+        }
+        .test-result.pass {
+            border-color: #69fd97;
+            color: #69fd97;
+        }
+        .test-result.fail {
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+        .test-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .test-details {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        #test-container {
+            margin-top: 30px;
+            border: 1px solid #69fd97;
+            padding: 20px;
+            min-height: 200px;
+        }
+        button {
+            background: transparent;
+            border: 1px solid #69fd97;
+            color: #69fd97;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            margin: 5px;
+        }
+        button:hover {
+            background: rgba(105, 253, 151, 0.1);
+            border-color: #f57315;
+            color: #f57315;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 AccountSwitcher Component Test Suite</h1>
+    
+    <div>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="test-results"></div>
+    
+    <h2>Test Container:</h2>
+    <div id="test-container">
+        <!-- AccountSwitcher will be mounted here -->
+    </div>
+    
+    <script>
+        // Mock app object for testing
+        const mockApp = {
+            state: {
+                accounts: [
+                    { id: '1', name: 'Main Wallet', addresses: { segwit: 'bc1q...' }, balances: { bitcoin: 0.00125 } },
+                    { id: '2', name: 'Trading Account', addresses: { segwit: 'bc1q...' }, balances: { bitcoin: 0.00543 } },
+                    { id: '3', name: 'Cold Storage', addresses: { segwit: 'bc1q...' }, balances: { bitcoin: 1.25000 } }
+                ],
+                currentAccountId: '1',
+                
+                getAccounts() {
+                    return this.accounts;
+                },
+                
+                getCurrentAccount() {
+                    return this.accounts.find(a => a.id === this.currentAccountId);
+                },
+                
+                switchAccount(accountId) {
+                    console.log('Switching to account:', accountId);
+                    this.currentAccountId = accountId;
+                    // Trigger update
+                    if (window.accountSwitcher) {
+                        window.accountSwitcher.updateDisplay();
+                    }
+                }
+            }
+        };
+        
+        // Test results container
+        const resultsDiv = document.getElementById('test-results');
+        const testContainer = document.getElementById('test-container');
+        
+        function addTestResult(title, passed, details = '') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            resultDiv.innerHTML = `
+                <div class="test-title">${passed ? '✅' : '❌'} ${title}</div>
+                ${details ? `<div class="test-details">${details}</div>` : ''}
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+            testContainer.innerHTML = '';
+        }
+        
+        async function runAllTests() {
+            clearResults();
+            
+            // Test 1: Component Creation
+            try {
+                // Load the moosh-wallet.js file first
+                const response = await fetch('/js/moosh-wallet.js');
+                const scriptText = await response.text();
+                
+                // Extract AccountSwitcher class definition
+                const accountSwitcherMatch = scriptText.match(/class\s+AccountSwitcher\s*\{[\s\S]*?\n\s*\}\s*(?=\n\s*class|\n\s*\/\/|$)/);
+                
+                if (!accountSwitcherMatch) {
+                    addTestResult('Component Creation', false, 'AccountSwitcher class not found in moosh-wallet.js');
+                    return;
+                }
+                
+                // Create a script element to evaluate the class
+                const script = document.createElement('script');
+                script.textContent = accountSwitcherMatch[0] + `
+                    // Also need ElementFactory
+                    const ElementFactory = {
+                        div: (props, children) => {
+                            const div = document.createElement('div');
+                            Object.assign(div, props);
+                            if (props.className) div.className = props.className;
+                            if (props.style) Object.assign(div.style, props.style);
+                            if (props.onclick) div.onclick = props.onclick;
+                            if (children) {
+                                children.forEach(child => {
+                                    if (typeof child === 'string') {
+                                        div.appendChild(document.createTextNode(child));
+                                    } else if (child) {
+                                        div.appendChild(child);
+                                    }
+                                });
+                            }
+                            return div;
+                        },
+                        button: (props, children) => {
+                            const button = document.createElement('button');
+                            Object.assign(button, props);
+                            if (props.className) button.className = props.className;
+                            if (props.onclick) button.onclick = props.onclick;
+                            if (children) {
+                                children.forEach(child => {
+                                    if (typeof child === 'string') {
+                                        button.appendChild(document.createTextNode(child));
+                                    } else if (child) {
+                                        button.appendChild(child);
+                                    }
+                                });
+                            }
+                            return button;
+                        },
+                        span: (props, children) => {
+                            const span = document.createElement('span');
+                            Object.assign(span, props);
+                            if (props.className) span.className = props.className;
+                            if (children) {
+                                children.forEach(child => {
+                                    if (typeof child === 'string') {
+                                        span.appendChild(document.createTextNode(child));
+                                    } else if (child) {
+                                        span.appendChild(child);
+                                    }
+                                });
+                            }
+                            return span;
+                        }
+                    };
+                    window.ElementFactory = ElementFactory;
+                `;
+                document.head.appendChild(script);
+                
+                // Create AccountSwitcher instance
+                window.accountSwitcher = new AccountSwitcher(mockApp);
+                addTestResult('Component Creation', true, 'AccountSwitcher instance created successfully');
+                
+                // Test 2: Render Method
+                const element = window.accountSwitcher.render();
+                if (element && element.className === 'account-switcher') {
+                    addTestResult('Render Method', true, 'Component renders with correct class');
+                } else {
+                    addTestResult('Render Method', false, 'Component did not render correctly');
+                }
+                
+                // Test 3: Mount to Container
+                testContainer.appendChild(element);
+                window.accountSwitcher.mount(testContainer);
+                
+                const mounted = testContainer.querySelector('.account-switcher');
+                if (mounted) {
+                    addTestResult('Mount Method', true, 'Component mounted successfully');
+                } else {
+                    addTestResult('Mount Method', false, 'Component failed to mount');
+                }
+                
+                // Test 4: Initial Display
+                const trigger = testContainer.querySelector('.account-switcher-trigger');
+                if (trigger && trigger.textContent.includes('Main Wallet')) {
+                    addTestResult('Initial Display', true, `Shows current account: "${trigger.textContent}"`);
+                } else {
+                    addTestResult('Initial Display', false, 'Current account not displayed correctly');
+                }
+                
+                // Test 5: Dropdown Toggle
+                if (trigger) {
+                    trigger.click();
+                    setTimeout(() => {
+                        const dropdown = testContainer.querySelector('.account-dropdown');
+                        if (dropdown && dropdown.classList.contains('show')) {
+                            addTestResult('Dropdown Toggle', true, 'Dropdown opens on click');
+                            
+                            // Test 6: Account Items
+                            const items = dropdown.querySelectorAll('.account-item');
+                            if (items.length === 3) {
+                                addTestResult('Account Items', true, `Shows ${items.length} accounts`);
+                                
+                                // Test 7: Active Account Indicator
+                                const activeItem = dropdown.querySelector('.account-item.active');
+                                if (activeItem && activeItem.textContent.includes('Main Wallet')) {
+                                    addTestResult('Active Indicator', true, 'Active account is highlighted');
+                                } else {
+                                    addTestResult('Active Indicator', false, 'Active account not highlighted');
+                                }
+                                
+                                // Test 8: Account Switching
+                                const secondAccount = items[1];
+                                if (secondAccount) {
+                                    secondAccount.click();
+                                    setTimeout(() => {
+                                        const currentAccount = mockApp.state.getCurrentAccount();
+                                        if (currentAccount.id === '2') {
+                                            addTestResult('Account Switching', true, 'Successfully switched to Trading Account');
+                                        } else {
+                                            addTestResult('Account Switching', false, 'Account switch failed');
+                                        }
+                                        
+                                        // Test 9: UI Update After Switch
+                                        const updatedTrigger = testContainer.querySelector('.account-switcher-trigger');
+                                        if (updatedTrigger && updatedTrigger.textContent.includes('Trading Account')) {
+                                            addTestResult('UI Update', true, 'Trigger text updated after switch');
+                                        } else {
+                                            addTestResult('UI Update', false, 'Trigger text not updated');
+                                        }
+                                        
+                                        // Test 10: Dropdown Auto-close
+                                        const dropdownAfterSwitch = testContainer.querySelector('.account-dropdown');
+                                        if (!dropdownAfterSwitch || !dropdownAfterSwitch.classList.contains('show')) {
+                                            addTestResult('Auto-close', true, 'Dropdown closed after selection');
+                                        } else {
+                                            addTestResult('Auto-close', false, 'Dropdown did not close');
+                                        }
+                                        
+                                    }, 100);
+                                }
+                            } else {
+                                addTestResult('Account Items', false, `Expected 3 accounts, found ${items.length}`);
+                            }
+                        } else {
+                            addTestResult('Dropdown Toggle', false, 'Dropdown did not open');
+                        }
+                    }, 100);
+                }
+                
+            } catch (error) {
+                addTestResult('Test Suite Error', false, error.message);
+                console.error('Test error:', error);
+            }
+        }
+        
+        // Add CSS styles
+        const style = document.createElement('style');
+        style.textContent = `
+            /* Account Switcher Styles */
+            .account-switcher {
+                position: relative;
+                display: inline-block;
+            }
+            
+            .account-switcher-trigger {
+                min-width: 150px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                padding: 8px 16px;
+                background: transparent;
+                border: 1px solid #69fd97;
+                color: #69fd97;
+                cursor: pointer;
+                font-family: inherit;
+                font-size: 14px;
+                transition: all 0.3s ease;
+            }
+            
+            .account-switcher-trigger:hover {
+                background: rgba(105, 253, 151, 0.1);
+                border-color: #f57315;
+                color: #f57315;
+            }
+            
+            .account-dropdown {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                margin-top: 4px;
+                background: #000000;
+                border: 1px solid #69fd97;
+                min-width: 200px;
+                max-width: 300px;
+                z-index: 1000;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                max-height: 400px;
+                overflow-y: auto;
+                display: none;
+            }
+            
+            .account-dropdown.show {
+                display: block;
+            }
+            
+            .account-item {
+                padding: 12px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border-bottom: 1px solid rgba(105, 253, 151, 0.1);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .account-item:last-child {
+                border-bottom: none;
+            }
+            
+            .account-item:hover {
+                background: rgba(105, 253, 151, 0.1);
+                color: #f57315;
+            }
+            
+            .account-item.active {
+                background: rgba(245, 115, 21, 0.1);
+                color: #f57315;
+            }
+            
+            .account-name {
+                font-weight: 500;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 150px;
+            }
+            
+            .account-balance {
+                font-size: 12px;
+                color: #69fd97;
+                opacity: 0.8;
+            }
+            
+            .account-item.active .account-balance {
+                color: #f57315;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
