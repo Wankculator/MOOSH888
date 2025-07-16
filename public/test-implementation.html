@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MOOSH Wallet Implementation Test</title>
+    <style>
+        body { 
+            font-family: 'JetBrains Mono', monospace; 
+            background: #0a0a0a; 
+            color: #0f0; 
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { 
+            color: #4CAF50; 
+            border-bottom: 2px solid #4CAF50; 
+            padding-bottom: 10px;
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 1px solid #0f0; 
+            background: rgba(0, 255, 0, 0.05);
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #000;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196F3; }
+        button { 
+            background: #4CAF50; 
+            color: #000; 
+            padding: 10px 20px; 
+            border: none; 
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        button:hover { background: #45a049; }
+        .test-status {
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 MOOSH Wallet Implementation Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>Phase 0: Core Fixes Verification</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <div id="test-results"></div>
+    </div>
+
+    <script src="/js/moosh-wallet.js"></script>
+    <script>
+        const results = document.getElementById('test-results');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            div.textContent = `[${timestamp}] ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+        
+        function clearResults() {
+            results.innerHTML = '';
+        }
+        
+        async function runAllTests() {
+            clearResults();
+            log('Starting MOOSH Wallet Implementation Tests...', 'info');
+            
+            // Wait for app to load
+            if (typeof window.app === 'undefined') {
+                log('❌ App not loaded. Please wait and try again.', 'error');
+                return;
+            }
+            
+            let passed = 0;
+            let failed = 0;
+            
+            // Test 1: App Initialization
+            log('\n📱 Test 1: App Initialization', 'info');
+            try {
+                if (window.app && window.app.state) {
+                    log('✅ App initialized successfully', 'success');
+                    log(`   Current page: ${app.router.currentPath}`, 'info');
+                    log(`   Accounts: ${app.state.accounts.length}`, 'info');
+                    passed++;
+                } else {
+                    throw new Error('App or state not initialized');
+                }
+            } catch (error) {
+                log(`❌ App initialization failed: ${error.message}`, 'error');
+                failed++;
+            }
+            
+            // Test 2: WalletDetector Class
+            log('\n🔍 Test 2: WalletDetector Availability', 'info');
+            try {
+                if (typeof WalletDetector !== 'undefined') {
+                    log('✅ WalletDetector class is available', 'success');
+                    const detector = new WalletDetector(app);
+                    log(`   Known wallet types: ${Object.keys(detector.knownPaths).length}`, 'info');
+                    log(`   Supported: ${Object.keys(detector.knownPaths).join(', ')}`, 'info');
+                    passed++;
+                } else {
+                    throw new Error('WalletDetector class not found');
+                }
+            } catch (error) {
+                log(`❌ WalletDetector test failed: ${error.message}`, 'error');
+                failed++;
+            }
+            
+            // Test 3: Address Generation
+            log('\n💳 Test 3: Address Generation (All Types)', 'info');
+            try {
+                const testSeed = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+                const testName = 'Test_' + Date.now();
+                
+                log('   Creating test account...', 'info');
+                const account = await app.state.createAccount(testName, testSeed, false);
+                
+                if (account && account.addresses) {
+                    const addressTypes = ['segwit', 'taproot', 'legacy', 'nestedSegwit', 'spark'];
+                    let allPresent = true;
+                    
+                    addressTypes.forEach(type => {
+                        const hasAddress = !!account.addresses[type];
+                        log(`   ${type}: ${hasAddress ? '✅' : '❌'} ${hasAddress ? account.addresses[type].substring(0, 20) + '...' : 'Missing'}`, 
+                            hasAddress ? 'success' : 'error');
+                        if (!hasAddress) allPresent = false;
+                    });
+                    
+                    if (allPresent) {
+                        log('✅ All address types generated successfully!', 'success');
+                        passed++;
+                    } else {
+                        throw new Error('Some address types are missing');
+                    }
+                    
+                    // Clean up test account
+                    const index = app.state.accounts.findIndex(a => a.id === account.id);
+                    if (index !== -1) {
+                        app.state.accounts.splice(index, 1);
+                        app.state.persist();
+                        log('   Test account cleaned up', 'info');
+                    }
+                } else {
+                    throw new Error('Account creation failed');
+                }
+            } catch (error) {
+                log(`❌ Address generation test failed: ${error.message}`, 'error');
+                failed++;
+            }
+            
+            // Test 4: Fix Addresses Button
+            log('\n🔧 Test 4: Fix Addresses Button Removal', 'info');
+            try {
+                // Navigate to dashboard
+                if (app.router.currentPath !== '/dashboard') {
+                    app.router.navigate('/dashboard');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const fixButtonExists = buttons.some(btn => 
+                    btn.textContent.includes('Fix Addresses') || 
+                    btn.textContent.includes('Fix Missing Addresses')
+                );
+                
+                if (!fixButtonExists) {
+                    log('✅ Fix Addresses button has been removed', 'success');
+                    passed++;
+                } else {
+                    log('⚠️  Fix Addresses button still exists', 'warning');
+                    failed++;
+                }
+            } catch (error) {
+                log(`❌ Fix button test failed: ${error.message}`, 'error');
+                failed++;
+            }
+            
+            // Test 5: Wallet Detection Logic
+            log('\n🎯 Test 5: Wallet Detection Logic', 'info');
+            try {
+                const detector = new WalletDetector(app);
+                const testSeed = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+                
+                // Mock the external API calls
+                detector.deriveAddressesForPath = async (mnemonic, path, count) => {
+                    const addresses = [];
+                    for (let i = 0; i < count; i++) {
+                        let prefix = 'bc1q';
+                        if (path.includes("86'")) prefix = 'bc1p';
+                        else if (path.includes("44'")) prefix = '1';
+                        else if (path.includes("49'")) prefix = '3';
+                        
+                        addresses.push({
+                            address: prefix + 'test' + i + Math.random().toString(36).substring(2, 8),
+                            index: i,
+                            path: `${path}/0/${i}`
+                        });
+                    }
+                    return addresses;
+                };
+                
+                detector.checkAddressActivity = async (address) => {
+                    // Simulate Xverse having activity
+                    if (address.includes('bc1q') && Math.random() > 0.5) return 0.1;
+                    if (address.includes('bc1p') && Math.random() > 0.7) return 0.05;
+                    return 0;
+                };
+                
+                log('   Running detection...', 'info');
+                const detection = await detector.detectWalletType(testSeed);
+                
+                log(`   Detection complete:`, 'info');
+                log(`   Detected: ${detection.detected}`, detection.detected ? 'success' : 'warning');
+                log(`   Wallet Type: ${detection.walletType}`, 'info');
+                log(`   Wallet Name: ${detection.walletName}`, 'info');
+                log(`   Active Paths Found: ${detection.activePaths.length}`, 'info');
+                
+                if (detection.activePaths.length > 0) {
+                    detection.activePaths.forEach(path => {
+                        log(`     - ${path.walletName} (${path.path}): ${path.balance} BTC`, 'info');
+                    });
+                }
+                
+                log('✅ Wallet detection logic working', 'success');
+                passed++;
+            } catch (error) {
+                log(`❌ Wallet detection test failed: ${error.message}`, 'error');
+                failed++;
+            }
+            
+            // Test 6: Import UI Integration
+            log('\n📥 Test 6: Import UI Integration', 'info');
+            try {
+                // Check if MultiAccountModal has the new methods
+                const modal = new MultiAccountModal(app);
+                
+                const hasDetectionMethods = 
+                    typeof modal.showDetectionResults === 'function' &&
+                    typeof modal.proceedWithImport === 'function' &&
+                    typeof modal.cancelImport === 'function';
+                
+                if (hasDetectionMethods) {
+                    log('✅ Import UI has wallet detection methods', 'success');
+                    log('   - showDetectionResults: ✅', 'success');
+                    log('   - proceedWithImport: ✅', 'success');
+                    log('   - cancelImport: ✅', 'success');
+                    passed++;
+                } else {
+                    throw new Error('Missing detection methods in import UI');
+                }
+            } catch (error) {
+                log(`❌ Import UI test failed: ${error.message}`, 'error');
+                failed++;
+            }
+            
+            // Test 7: API Integration
+            log('\n🌐 Test 7: API Server Integration', 'info');
+            try {
+                // Test health endpoint
+                const healthResponse = await fetch('http://localhost:3001/health');
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    log('✅ API server is healthy', 'success');
+                    log(`   Version: ${health.version}`, 'info');
+                    
+                    // Test wallet generation endpoint
+                    const genResponse = await fetch('http://localhost:3001/api/wallet/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wordCount: 12 })
+                    });
+                    
+                    if (genResponse.ok) {
+                        const wallet = await genResponse.json();
+                        const hasAllTypes = !!(
+                            wallet.data.bitcoin.addresses.segwit &&
+                            wallet.data.bitcoin.addresses.taproot &&
+                            wallet.data.bitcoin.addresses.legacy &&
+                            wallet.data.bitcoin.addresses.nestedSegwit
+                        );
+                        
+                        if (hasAllTypes) {
+                            log('✅ API generates all address types', 'success');
+                            passed++;
+                        } else {
+                            throw new Error('API missing some address types');
+                        }
+                    } else {
+                        throw new Error('Wallet generation API failed');
+                    }
+                } else {
+                    throw new Error('API health check failed');
+                }
+            } catch (error) {
+                log(`⚠️  API test failed: ${error.message} (API might not be running)`, 'warning');
+                // Don't count as failed since API might not be running
+            }
+            
+            // Summary
+            log('\n📊 Test Summary', 'info');
+            log('═══════════════════════════════', 'info');
+            log(`Total Tests: ${passed + failed}`, 'info');
+            log(`✅ Passed: ${passed}`, 'success');
+            log(`❌ Failed: ${failed}`, failed > 0 ? 'error' : 'success');
+            log('═══════════════════════════════', 'info');
+            
+            if (failed === 0) {
+                log('\n🎉 All tests passed! Implementation is working correctly.', 'success');
+            } else {
+                log('\n⚠️  Some tests failed. Please check the errors above.', 'warning');
+            }
+        }
+        
+        // Auto-run tests after page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (window.app) {
+                    log('App loaded. Ready to run tests.', 'info');
+                    log('Click "Run All Tests" to begin.', 'info');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

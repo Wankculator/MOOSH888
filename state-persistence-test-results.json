@@ -1,0 +1,77 @@
+{
+  "timestamp": "2025-07-16T14:20:16.178Z",
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "warnings": 0,
+    "info": 1,
+    "total": 10
+  },
+  "results": [
+    {
+      "timestamp": "2025-07-16T14:18:49.818Z",
+      "test": "Wallet Generation",
+      "status": "PASS",
+      "details": "Generated wallet with 12 words"
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.177Z",
+      "test": "Wallet Import",
+      "status": "PASS",
+      "details": "Successfully imported wallet"
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.177Z",
+      "test": "Address segwit",
+      "status": "PASS",
+      "details": "bc1q7hx2cq..."
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.177Z",
+      "test": "Address taproot",
+      "status": "PASS",
+      "details": "bc1pqcwgl7..."
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.177Z",
+      "test": "Address legacy",
+      "status": "PASS",
+      "details": "1DYFQAGpqB..."
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.177Z",
+      "test": "Address nestedSegwit",
+      "status": "PASS",
+      "details": "3AjiHpTjAV..."
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.177Z",
+      "test": "Spark Address",
+      "status": "PASS",
+      "details": "sp1pgss9n7..."
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.178Z",
+      "test": "State Structure",
+      "status": "INFO",
+      "details": "Created account with ID: test-1752675616177"
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.178Z",
+      "test": "Storage Format",
+      "status": "PASS",
+      "details": "Mock storage structure created"
+    },
+    {
+      "timestamp": "2025-07-16T14:20:16.178Z",
+      "test": "State Validation",
+      "status": "PASS",
+      "details": "State structure is valid"
+    }
+  ],
+  "recommendations": [
+    "Ensure localStorage is properly cleared between tests in frontend",
+    "Verify account persistence across page reloads",
+    "Test with multiple accounts to ensure switching works"
+  ]
+}

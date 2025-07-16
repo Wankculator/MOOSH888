@@ -46,9 +46,24 @@ app.post('/api/wallet/generate', async (req, res) => {
                 wordCount,
                 network,
                 bitcoin: {
-                    segwit: bitcoinWallet.addresses.segwit,
-                    taproot: bitcoinWallet.addresses.taproot,
-                    legacy: bitcoinWallet.addresses.legacy,
+                    addresses: {
+                        segwit: bitcoinWallet.addresses.segwit.address,
+                        taproot: bitcoinWallet.addresses.taproot.address,
+                        legacy: bitcoinWallet.addresses.legacy.address,
+                        nestedSegwit: bitcoinWallet.addresses.nestedSegwit.address
+                    },
+                    paths: {
+                        segwit: bitcoinWallet.addresses.segwit.path,
+                        taproot: bitcoinWallet.addresses.taproot.path,
+                        legacy: bitcoinWallet.addresses.legacy.path,
+                        nestedSegwit: bitcoinWallet.addresses.nestedSegwit.path
+                    },
+                    privateKeys: {
+                        segwit: bitcoinWallet.addresses.segwit.privateKey,
+                        taproot: bitcoinWallet.addresses.taproot.privateKey,
+                        legacy: bitcoinWallet.addresses.legacy.privateKey,
+                        nestedSegwit: bitcoinWallet.addresses.nestedSegwit.privateKey
+                    },
                     xpub: bitcoinWallet.xpub
                 },
                 spark: sparkWallet
@@ -79,13 +94,38 @@ app.post('/api/wallet/import', async (req, res) => {
         
         const wallet = await importWallet(mnemonicString, network);
         
-        res.json({
+        // Ensure all Bitcoin address types are included in the response
+        const response = {
             success: true,
             data: {
-                ...wallet,
+                mnemonic: wallet.bitcoin.mnemonic,
+                bitcoin: {
+                    addresses: {
+                        segwit: wallet.bitcoin.addresses.segwit.address,
+                        taproot: wallet.bitcoin.addresses.taproot.address,
+                        legacy: wallet.bitcoin.addresses.legacy.address,
+                        nestedSegwit: wallet.bitcoin.addresses.nestedSegwit.address
+                    },
+                    paths: {
+                        segwit: wallet.bitcoin.addresses.segwit.path,
+                        taproot: wallet.bitcoin.addresses.taproot.path,
+                        legacy: wallet.bitcoin.addresses.legacy.path,
+                        nestedSegwit: wallet.bitcoin.addresses.nestedSegwit.path
+                    },
+                    privateKeys: {
+                        segwit: wallet.bitcoin.addresses.segwit.privateKey,
+                        taproot: wallet.bitcoin.addresses.taproot.privateKey,
+                        legacy: wallet.bitcoin.addresses.legacy.privateKey,
+                        nestedSegwit: wallet.bitcoin.addresses.nestedSegwit.privateKey
+                    }
+                },
+                spark: wallet.spark,
                 walletType: walletType || 'auto-detected'
             }
-        });
+        };
+        
+        console.log('[API] Import wallet response:', response.data);
+        res.json(response);
     } catch (error) {
         console.error('Wallet import error:', error);
         res.status(500).json({
@@ -678,7 +718,7 @@ app.post('/api/ordinals/inscriptions', async (req, res) => {
 // Test different derivation paths
 app.post('/api/wallet/test-paths', async (req, res) => {
     try {
-        const { mnemonic } = req.body;
+        const { mnemonic, customPath, addressCount = 5 } = req.body;
         
         if (!mnemonic) {
             return res.status(400).json({
@@ -688,6 +728,78 @@ app.post('/api/wallet/test-paths', async (req, res) => {
         }
         
         const mnemonicString = Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic;
+        
+        // If custom path provided, generate addresses for that specific path
+        if (customPath) {
+            const addresses = [];
+            const seed = await bip39.mnemonicToSeed(mnemonicString);
+            const { HDKey } = await import('@scure/bip32');
+            const bitcoin = await import('bitcoinjs-lib');
+            const ecc = await import('tiny-secp256k1');
+            bitcoin.initEccLib(ecc);
+            const root = HDKey.fromMasterSeed(seed);
+            const btcNetwork = bitcoin.networks.bitcoin;
+            
+            // Generate addresses for the custom path
+            for (let i = 0; i < addressCount; i++) {
+                try {
+                    const fullPath = `${customPath}/0/${i}`;
+                    const child = root.derive(fullPath);
+                    
+                    let address;
+                    // Determine address type based on path
+                    if (customPath.includes("84'")) {
+                        // Native SegWit (bc1q...)
+                        const { address: segwitAddr } = bitcoin.payments.p2wpkh({ 
+                            pubkey: Buffer.from(child.publicKey),
+                            network: btcNetwork 
+                        });
+                        address = segwitAddr;
+                    } else if (customPath.includes("86'")) {
+                        // Taproot (bc1p...)
+                        const xOnlyPubkey = Buffer.from(child.publicKey.slice(1, 33));
+                        const { address: taprootAddr } = bitcoin.payments.p2tr({ 
+                            internalPubkey: xOnlyPubkey,
+                            network: btcNetwork 
+                        });
+                        address = taprootAddr;
+                    } else if (customPath.includes("49'")) {
+                        // Nested SegWit (3...)
+                        const { address: nestedAddr } = bitcoin.payments.p2sh({
+                            redeem: bitcoin.payments.p2wpkh({ 
+                                pubkey: Buffer.from(child.publicKey),
+                                network: btcNetwork 
+                            }),
+                            network: btcNetwork
+                        });
+                        address = nestedAddr;
+                    } else {
+                        // Legacy (1...)
+                        const { address: legacyAddr } = bitcoin.payments.p2pkh({ 
+                            pubkey: Buffer.from(child.publicKey),
+                            network: btcNetwork 
+                        });
+                        address = legacyAddr;
+                    }
+                    
+                    addresses.push({
+                        address,
+                        index: i,
+                        path: fullPath
+                    });
+                } catch (e) {
+                    console.error(`Failed to generate address for path ${customPath}/0/${i}:`, e);
+                }
+            }
+            
+            return res.json({
+                success: true,
+                addresses,
+                path: customPath
+            });
+        }
+        
+        // Original test-paths functionality
         const wallet = await generateBitcoinWallet(mnemonicString);
         
         const extraPaths = {
@@ -700,9 +812,11 @@ app.post('/api/wallet/test-paths', async (req, res) => {
         };
         
         const seed = await bip39.mnemonicToSeed(mnemonicString);
-        const { HDKey } = await import('micro-ed25519-hdkey');
-        const root = HDKey.fromMasterSeed(seed);
+        const { HDKey } = await import('@scure/bip32');
         const bitcoin = await import('bitcoinjs-lib');
+        const ecc = await import('tiny-secp256k1');
+        bitcoin.initEccLib(ecc);
+        const root = HDKey.fromMasterSeed(seed);
         const btcNetwork = bitcoin.networks.bitcoin;
         
         for (const path of Object.keys(extraPaths)) {
@@ -729,6 +843,49 @@ app.post('/api/wallet/test-paths', async (req, res) => {
         });
     } catch (error) {
         console.error('Path testing error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Proxy endpoints for external APIs to avoid CORS issues
+app.get('/api/proxy/bitcoin-price', async (req, res) => {
+    try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('Bitcoin price proxy error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+app.get('/api/proxy/mempool/fees', async (req, res) => {
+    try {
+        const response = await fetch('https://mempool.space/api/v1/fees/recommended');
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('Mempool fees proxy error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+app.get('/api/proxy/mempool/blocks', async (req, res) => {
+    try {
+        const response = await fetch('https://mempool.space/api/blocks');
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('Mempool blocks proxy error:', error);
         res.status(500).json({
             success: false,
             error: error.message

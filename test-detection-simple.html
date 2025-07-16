@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wallet Detection Test</title>
+    <style>
+        body { font-family: monospace; background: #0a0a0a; color: #0f0; padding: 20px; }
+        .test { margin: 20px 0; padding: 10px; border: 1px solid #0f0; }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        button { background: #0f0; color: #000; padding: 10px; border: none; cursor: pointer; }
+        input { background: #111; color: #0f0; border: 1px solid #0f0; padding: 5px; width: 100%; }
+    </style>
+</head>
+<body>
+    <h1>MOOSH Wallet Detection Test</h1>
+    
+    <div class="test">
+        <h2>Test 1: Address Generation</h2>
+        <button onclick="testAddressGeneration()">Run Test</button>
+        <div id="test1-result"></div>
+    </div>
+    
+    <div class="test">
+        <h2>Test 2: Wallet Import</h2>
+        <input type="text" id="importSeed" placeholder="Enter seed phrase (or use test seed)" 
+               value="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about">
+        <button onclick="testWalletImport()">Test Import</button>
+        <div id="test2-result"></div>
+    </div>
+    
+    <div class="test">
+        <h2>Test 3: Detection Simulation</h2>
+        <button onclick="testDetectionFlow()">Test Detection Flow</button>
+        <div id="test3-result"></div>
+    </div>
+
+    <script>
+        // Load the app
+        const script = document.createElement('script');
+        script.src = '/js/moosh-wallet.js';
+        document.head.appendChild(script);
+        
+        async function testAddressGeneration() {
+            const result = document.getElementById('test1-result');
+            result.innerHTML = 'Testing...';
+            
+            try {
+                // Wait for app to load
+                if (typeof window.app === 'undefined') {
+                    result.innerHTML = '<span class="error">App not loaded. Please refresh.</span>';
+                    return;
+                }
+                
+                // Create a test account
+                const testName = 'Test Account ' + Date.now();
+                const testSeed = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+                
+                const account = await app.state.createAccount(testName, testSeed, false);
+                
+                if (account) {
+                    const addresses = account.addresses;
+                    result.innerHTML = `
+                        <span class="success">✅ Account created successfully!</span><br>
+                        <br>
+                        <strong>Address Types Generated:</strong><br>
+                        SegWit: ${addresses.segwit ? '✅ ' + addresses.segwit.substring(0, 20) + '...' : '❌ Missing'}<br>
+                        Taproot: ${addresses.taproot ? '✅ ' + addresses.taproot.substring(0, 20) + '...' : '❌ Missing'}<br>
+                        Legacy: ${addresses.legacy ? '✅ ' + addresses.legacy.substring(0, 20) + '...' : '❌ Missing'}<br>
+                        Nested SegWit: ${addresses.nestedSegwit ? '✅ ' + addresses.nestedSegwit.substring(0, 20) + '...' : '❌ Missing'}<br>
+                        Spark: ${addresses.spark ? '✅ ' + addresses.spark.substring(0, 20) + '...' : '❌ Missing'}<br>
+                        <br>
+                        Fix Addresses button needed: ${!addresses.segwit || !addresses.taproot ? '❌ YES' : '✅ NO'}
+                    `;
+                    
+                    // Clean up - remove test account
+                    const index = app.state.accounts.findIndex(a => a.id === account.id);
+                    if (index !== -1) {
+                        app.state.accounts.splice(index, 1);
+                        app.state.persist();
+                    }
+                } else {
+                    result.innerHTML = '<span class="error">Failed to create account</span>';
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                console.error(error);
+            }
+        }
+        
+        async function testWalletImport() {
+            const result = document.getElementById('test2-result');
+            const seedInput = document.getElementById('importSeed');
+            result.innerHTML = 'Testing import...';
+            
+            try {
+                if (typeof window.app === 'undefined') {
+                    result.innerHTML = '<span class="error">App not loaded. Please refresh.</span>';
+                    return;
+                }
+                
+                const seed = seedInput.value.trim();
+                
+                // Test the detector
+                if (typeof WalletDetector !== 'undefined') {
+                    result.innerHTML += '<br>✅ WalletDetector class found';
+                    
+                    const detector = new WalletDetector(app);
+                    result.innerHTML += '<br>✅ Detector instantiated';
+                    
+                    // Mock the API calls for testing
+                    detector.checkAddressActivity = async (address) => {
+                        // Simulate some addresses having activity
+                        if (address.startsWith('bc1q')) return 0.1;
+                        return 0;
+                    };
+                    
+                    detector.deriveAddressesForPath = async (mnemonic, path, count) => {
+                        // Generate mock addresses
+                        const addresses = [];
+                        for (let i = 0; i < count; i++) {
+                            let prefix = 'bc1q'; // default segwit
+                            if (path.includes("86'")) prefix = 'bc1p';
+                            else if (path.includes("44'")) prefix = '1';
+                            else if (path.includes("49'")) prefix = '3';
+                            
+                            addresses.push({
+                                address: prefix + Math.random().toString(36).substring(2, 15),
+                                index: i,
+                                path: `${path}/0/${i}`
+                            });
+                        }
+                        return addresses;
+                    };
+                    
+                    result.innerHTML += '<br>🔍 Running detection...';
+                    
+                    const detection = await detector.detectWalletType(seed);
+                    
+                    result.innerHTML = `
+                        <span class="success">✅ Detection completed!</span><br>
+                        <br>
+                        <strong>Detection Results:</strong><br>
+                        Detected: ${detection.detected ? '✅ YES' : '❌ NO'}<br>
+                        Wallet Type: ${detection.walletType}<br>
+                        Wallet Name: ${detection.walletName}<br>
+                        Active Paths: ${detection.activePaths.length}<br>
+                        ${detection.activePaths.map(p => 
+                            `- ${p.walletName} (${p.path}): ${p.balance} BTC<br>`
+                        ).join('')}
+                    `;
+                } else {
+                    result.innerHTML = '<span class="error">❌ WalletDetector class not found</span>';
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                console.error(error);
+            }
+        }
+        
+        async function testDetectionFlow() {
+            const result = document.getElementById('test3-result');
+            result.innerHTML = 'Testing full detection flow...';
+            
+            try {
+                if (typeof window.app === 'undefined') {
+                    result.innerHTML = '<span class="error">App not loaded. Please refresh.</span>';
+                    return;
+                }
+                
+                // Find the import functionality
+                const dashboard = app.currentPage;
+                if (dashboard && typeof dashboard.importWallet === 'function') {
+                    result.innerHTML = `
+                        <span class="success">✅ Import functionality found!</span><br>
+                        <br>
+                        To test the full flow:<br>
+                        1. Click "Import Wallet" in the dashboard<br>
+                        2. Enter a seed phrase<br>
+                        3. Watch for the detection progress modal<br>
+                        4. See the detection results<br>
+                        <br>
+                        Functions available:<br>
+                        - showDetectionProgress: ${typeof dashboard.showDetectionProgress === 'function' ? '✅' : '❌'}<br>
+                        - showDetectionResults: ${typeof dashboard.showDetectionResults === 'function' ? '✅' : '❌'}<br>
+                        - proceedWithImport: ${typeof dashboard.proceedWithImport === 'function' ? '✅' : '❌'}
+                    `;
+                } else {
+                    result.innerHTML = '<span class="error">Dashboard or import function not found</span>';
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

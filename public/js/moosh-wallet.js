@@ -2029,52 +2029,222 @@
                 const dataToStore = {
                     accounts: this.state.accounts,
                     currentAccountId: this.state.currentAccountId,
-                    lastSaved: Date.now()
+                    lastSaved: Date.now(),
+                    version: 2 // Add version for future migrations
                 };
+                
+                console.log('[StateManager] Persisting accounts:', {
+                    count: this.state.accounts.length,
+                    currentId: this.state.currentAccountId
+                });
+                
                 localStorage.setItem('mooshAccounts', JSON.stringify(dataToStore));
+                
+                // Also update the main state persistence
+                this.persistState();
             } catch (e) {
                 console.error('[StateManager] Failed to persist accounts:', e);
             }
         }
         
+        async fixMissingAddresses() {
+            console.log('[StateManager] Checking for missing addresses in accounts...');
+            let needsUpdate = false;
+            let fixedCount = 0;
+            
+            for (const account of this.state.accounts) {
+                // Check if any critical address is missing or empty
+                const missingAddresses = [];
+                if (!account.addresses.segwit) missingAddresses.push('segwit');
+                if (!account.addresses.taproot) missingAddresses.push('taproot');
+                if (!account.addresses.legacy) missingAddresses.push('legacy');
+                if (!account.addresses.nestedSegwit) missingAddresses.push('nestedSegwit');
+                if (!account.addresses.spark) missingAddresses.push('spark');
+                
+                if (missingAddresses.length > 0) {
+                    console.log(`[StateManager] Account "${account.name}" missing addresses:`, missingAddresses);
+                    
+                    // Try to get the seed from multiple sources
+                    let mnemonic = null;
+                    
+                    // First try to get from stored seeds
+                    const generatedSeed = localStorage.getItem('generatedSeed');
+                    const importedSeed = localStorage.getItem('importedSeed');
+                    
+                    if (generatedSeed) {
+                        try {
+                            const parsed = JSON.parse(generatedSeed);
+                            mnemonic = Array.isArray(parsed) ? parsed.join(' ') : parsed;
+                        } catch (e) {
+                            mnemonic = generatedSeed; // Might be plain string
+                        }
+                    } else if (importedSeed) {
+                        try {
+                            const parsed = JSON.parse(importedSeed);
+                            mnemonic = Array.isArray(parsed) ? parsed.join(' ') : parsed;
+                        } catch (e) {
+                            mnemonic = importedSeed; // Might be plain string
+                        }
+                    }
+                    
+                    if (mnemonic && mnemonic.split(' ').length >= 12) {
+                        try {
+                            console.log('[StateManager] Fetching missing addresses from API...');
+                            
+                            // Re-fetch all addresses from API
+                            const [sparkResponse, bitcoinResponse] = await Promise.all([
+                                fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/import`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ mnemonic })
+                                }),
+                                fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/import`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ 
+                                        mnemonic,
+                                        walletType: account.walletType || 'standard'
+                                    })
+                                })
+                            ]);
+                            
+                            const sparkResult = await sparkResponse.json();
+                            const bitcoinResult = await bitcoinResponse.json();
+                            
+                            if (sparkResult.success && bitcoinResult.success) {
+                                const bitcoinData = bitcoinResult.data?.bitcoin || {};
+                                const addresses = bitcoinData.addresses || {};
+                                const paths = bitcoinData.paths || {};
+                                
+                                // Extract Spark address with fallbacks
+                                const sparkAddress = sparkResult.data?.addresses?.spark || 
+                                                   sparkResult.data?.spark?.address || 
+                                                   sparkResult.data?.sparkAddress || '';
+                                
+                                // Update only missing addresses (preserve existing ones)
+                                const updates = {
+                                    segwit: account.addresses.segwit || addresses.segwit || '',
+                                    taproot: account.addresses.taproot || addresses.taproot || '',
+                                    legacy: account.addresses.legacy || addresses.legacy || '',
+                                    nestedSegwit: account.addresses.nestedSegwit || addresses.nestedSegwit || '',
+                                    spark: account.addresses.spark || sparkAddress,
+                                    bitcoin: account.addresses.bitcoin || addresses.segwit || '' // Backward compatibility
+                                };
+                                
+                                // Update paths if missing
+                                if (!account.paths || Object.keys(account.paths).length === 0) {
+                                    account.paths = {
+                                        segwit: paths.segwit || "m/84'/0'/0'/0/0",
+                                        taproot: paths.taproot || "m/86'/0'/0'/0/0",
+                                        legacy: paths.legacy || "m/44'/0'/0'/0/0",
+                                        nestedSegwit: paths.nestedSegwit || "m/49'/0'/0'/0/0"
+                                    };
+                                }
+                                
+                                // Apply updates
+                                account.addresses = { ...account.addresses, ...updates };
+                                
+                                needsUpdate = true;
+                                fixedCount++;
+                                
+                                console.log(`[StateManager] Fixed addresses for account "${account.name}":`, {
+                                    spark: updates.spark ? '✓' : '✗',
+                                    segwit: updates.segwit ? '✓' : '✗',
+                                    taproot: updates.taproot ? '✓' : '✗',
+                                    legacy: updates.legacy ? '✓' : '✗',
+                                    nestedSegwit: updates.nestedSegwit ? '✓' : '✗'
+                                });
+                            } else {
+                                console.error('[StateManager] API failed to generate addresses:', {
+                                    spark: sparkResult.error,
+                                    bitcoin: bitcoinResult.error
+                                });
+                            }
+                        } catch (error) {
+                            console.error('[StateManager] Failed to fix addresses for account:', account.name, error);
+                        }
+                    } else {
+                        console.warn('[StateManager] No valid mnemonic found to fix addresses');
+                    }
+                }
+            }
+            
+            if (needsUpdate) {
+                this.persistAccounts();
+                console.log(`[StateManager] Fixed ${fixedCount} accounts with missing addresses`);
+                return fixedCount;
+            }
+            
+            console.log('[StateManager] All accounts have complete addresses');
+            return 0;
+        }
+        
         loadAccounts() {
             try {
+                console.log('[StateManager] Loading accounts from storage...');
                 const stored = localStorage.getItem('mooshAccounts');
                 if (stored) {
                     const data = JSON.parse(stored);
+                    console.log('[StateManager] Found stored accounts data:', {
+                        accountCount: data.accounts?.length || 0,
+                        currentAccountId: data.currentAccountId
+                    });
+                    
                     if (data.accounts && data.accounts.length > 0) {
-                        this.state.accounts = data.accounts;
-                        this.state.currentAccountId = data.currentAccountId || data.accounts[0].id;
-                        return true;
+                        // Validate account structure
+                        const validAccounts = data.accounts.filter(acc => {
+                            return acc.id && acc.name && acc.addresses;
+                        });
+                        
+                        if (validAccounts.length > 0) {
+                            this.state.accounts = validAccounts;
+                            
+                            // Ensure current account ID is valid
+                            if (data.currentAccountId && validAccounts.find(a => a.id === data.currentAccountId)) {
+                                this.state.currentAccountId = data.currentAccountId;
+                            } else {
+                                this.state.currentAccountId = validAccounts[0].id;
+                            }
+                            
+                            console.log('[StateManager] Loaded accounts:', {
+                                count: validAccounts.length,
+                                currentId: this.state.currentAccountId
+                            });
+                            
+                            // Automatically fix any accounts missing addresses
+                            setTimeout(() => {
+                                this.fixMissingAddresses().then(fixedCount => {
+                                    if (fixedCount > 0) {
+                                        console.log(`[StateManager] Automatically fixed ${fixedCount} accounts with missing addresses`);
+                                    }
+                                }).catch(error => {
+                                    console.error('[StateManager] Error during auto-fix:', error);
+                                });
+                            }, 1000); // Delay to ensure APIs are ready
+                            
+                            return true;
+                        }
                     }
                 }
             } catch (e) {
                 console.error('[StateManager] Failed to load accounts:', e);
             }
             
-            // If no accounts found, create a default one with known data
-            console.log('[StateManager] No accounts found, creating default account');
-            const defaultAccount = {
-                id: 'default-account',
-                name: 'Main Wallet',
-                addresses: {
-                    segwit: 'bc1qnl8rzz6ch58ldxltjv35x2gfrglx2xmt8pszxf',
-                    bitcoin: 'bc1qnl8rzz6ch58ldxltjv35x2gfrglx2xmt8pszxf',
-                    nestedSegwit: '',
-                    legacy: '',
-                    taproot: '',
-                    spark: ''
-                },
-                balances: {
-                    bitcoin: 128000,
-                    usd: 0
-                },
-                type: 'imported'
-            };
+            // Check if we have legacy wallet data to migrate
+            const hasLegacyWallet = localStorage.getItem('sparkWallet') || 
+                                   localStorage.getItem('generatedSeed') || 
+                                   localStorage.getItem('importedSeed');
             
-            this.state.accounts = [defaultAccount];
-            this.state.currentAccountId = defaultAccount.id;
-            this.persistAccounts();
+            if (hasLegacyWallet) {
+                console.log('[StateManager] No accounts found but legacy wallet data exists');
+                // Return false to let legacy migration happen elsewhere
+                return false;
+            }
+            
+            console.log('[StateManager] No accounts or legacy data found');
+            // Clear accounts to ensure clean state
+            this.state.accounts = [];
+            this.state.currentAccountId = null;
             
             return false;
         }
@@ -2099,6 +2269,12 @@
                 
                 const mnemonicString = Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic;
                 
+                // Validate mnemonic before proceeding
+                if (!mnemonicString || mnemonicString.trim().split(' ').length < 12) {
+                    throw new Error('Invalid mnemonic phrase');
+                }
+                
+                // Fetch both Spark and Bitcoin addresses in parallel
                 const [sparkResponse, bitcoinResponse] = await Promise.all([
                     fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/import`, {
                         method: 'POST',
@@ -2122,12 +2298,25 @@
                     throw new Error(sparkResult.error || bitcoinResult.error || 'Failed to generate addresses');
                 }
                 
-                const sparkAddresses = sparkResult.data.addresses || {};
-                const bitcoinData = bitcoinResult.data.bitcoin || {};
+                // Extract Spark addresses with multiple fallback paths
+                const sparkAddress = sparkResult.data?.addresses?.spark || 
+                                   sparkResult.data?.spark?.address || 
+                                   sparkResult.data?.sparkAddress || '';
                 
-                let taprootAddress = bitcoinData.addresses?.taproot || '';
-                let taprootPath = bitcoinData.paths?.taproot || "m/86'/0'/0'/0/0";
+                // Extract Bitcoin data with proper null checks
+                const bitcoinData = bitcoinResult.data?.bitcoin || {};
+                const addresses = bitcoinData.addresses || {};
+                const paths = bitcoinData.paths || {};
+                const privateKeys = bitcoinData.privateKeys || {};
                 
+                // Ensure all address types are present
+                const segwitAddress = addresses.segwit || '';
+                const legacyAddress = addresses.legacy || '';
+                const nestedSegwitAddress = addresses.nestedSegwit || '';
+                let taprootAddress = addresses.taproot || '';
+                let taprootPath = paths.taproot || "m/86'/0'/0'/0/0";
+                
+                // Handle taproot variants if provided
                 if (selectedVariant && selectedVariant.address) {
                     taprootAddress = selectedVariant.address;
                     taprootPath = selectedVariant.path;
@@ -2136,16 +2325,33 @@
                     taprootPath = bitcoinData.taprootVariants[walletType].path;
                 }
                 
+                // Validate that we have at least one Bitcoin address
+                if (!segwitAddress && !legacyAddress && !nestedSegwitAddress && !taprootAddress) {
+                    console.error('[StateManager] No Bitcoin addresses received from API');
+                    throw new Error('Failed to generate Bitcoin addresses');
+                }
+                
+                // Create account object with all addresses
                 const account = {
                     id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     name: name || `Account ${this.state.accounts.length + 1}`,
                     addresses: {
-                        spark: sparkAddresses.spark || sparkResult.data.spark?.address || '',
-                        bitcoin: bitcoinData.addresses?.segwit || '',
-                        segwit: bitcoinData.addresses?.segwit || '',
+                        spark: sparkAddress,
+                        bitcoin: segwitAddress, // Keep for backward compatibility
+                        segwit: segwitAddress,
                         taproot: taprootAddress,
-                        legacy: bitcoinData.addresses?.legacy || '',
-                        nestedSegwit: bitcoinData.addresses?.nestedSegwit || ''
+                        legacy: legacyAddress,
+                        nestedSegwit: nestedSegwitAddress
+                    },
+                    privateKeys: {
+                        spark: sparkResult.data?.privateKeys || {},
+                        bitcoin: privateKeys
+                    },
+                    paths: {
+                        segwit: paths.segwit || "m/84'/0'/0'/0/0",
+                        taproot: taprootPath,
+                        legacy: paths.legacy || "m/44'/0'/0'/0/0",
+                        nestedSegwit: paths.nestedSegwit || "m/49'/0'/0'/0/0"
                     },
                     type: isImport ? 'Imported' : 'Generated',
                     walletType: walletType || 'standard',
@@ -2160,13 +2366,27 @@
                     }
                 };
                 
-                console.log('[StateManager] Created account with addresses:', account.addresses);
+                // Log account details for debugging
+                console.log('[StateManager] Created account with addresses:', {
+                    spark: account.addresses.spark ? '✓' : '✗',
+                    segwit: account.addresses.segwit ? '✓' : '✗',
+                    taproot: account.addresses.taproot ? '✓' : '✗',
+                    legacy: account.addresses.legacy ? '✓' : '✗',
+                    nestedSegwit: account.addresses.nestedSegwit ? '✓' : '✗'
+                });
                 
+                // Add account and persist
                 this.state.accounts.push(account);
                 this.state.currentAccountId = account.id;
                 this.persistAccounts();
                 
-                console.log('[StateManager] Account created:', account);
+                // Store mnemonic for potential recovery (encrypted in production)
+                if (!localStorage.getItem('generatedSeed') && !localStorage.getItem('importedSeed')) {
+                    const seedKey = isImport ? 'importedSeed' : 'generatedSeed';
+                    localStorage.setItem(seedKey, JSON.stringify(mnemonicString.split(' ')));
+                }
+                
+                console.log('[StateManager] Account created successfully:', account.name);
                 return account;
             } catch (error) {
                 console.error('[StateManager] Failed to create account:', error);
@@ -2322,7 +2542,10 @@
                     return cache.prices.bitcoin;
                 }
                 
-                const response = await fetch(`${this.endpoints.coingecko}/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`);
+                const response = await fetch('http://localhost:3001/api/proxy/bitcoin-price');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
                 
                 // Update cache
@@ -2330,6 +2553,7 @@
                 cache.lastUpdate = now;
                 this.stateManager.set('apiCache', cache);
                 
+                // Return the bitcoin price data directly
                 return data.bitcoin;
             } catch (error) {
                 console.error('Failed to fetch Bitcoin price:', error);
@@ -2848,6 +3072,266 @@
                 console.error('Failed to get Spark transactions:', error);
                 throw error;
             }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WALLET DETECTOR - Multi-Wallet Type Detection System
+    // ═══════════════════════════════════════════════════════════════════════
+    class WalletDetector {
+        constructor(app) {
+            this.app = app;
+            this.knownPaths = {
+                // Standard Bitcoin wallets
+                'bitcoin-core': {
+                    name: 'Bitcoin Core',
+                    paths: ["m/0'/0'", "m/0'/1'"],
+                    type: 'legacy'
+                },
+                'electrum': {
+                    name: 'Electrum',
+                    paths: ["m/0'", "m/1'", "m/44'/0'/0'", "m/49'/0'/0'", "m/84'/0'/0'"],
+                    type: 'multi'
+                },
+                'xverse': {
+                    name: 'Xverse',
+                    paths: ["m/84'/0'/0'", "m/86'/0'/0'"],
+                    type: 'segwit-taproot'
+                },
+                'ledger': {
+                    name: 'Ledger',
+                    paths: ["m/44'/0'/0'", "m/49'/0'/0'", "m/84'/0'/0'"],
+                    type: 'multi'
+                },
+                'trezor': {
+                    name: 'Trezor',
+                    paths: ["m/44'/0'/0'", "m/49'/0'/0'", "m/84'/0'/0'", "m/86'/0'/0'"],
+                    type: 'multi'
+                },
+                'exodus': {
+                    name: 'Exodus',
+                    paths: ["m/44'/0'/0'", "m/84'/0'/0'"],
+                    type: 'legacy-segwit'
+                },
+                'trust-wallet': {
+                    name: 'Trust Wallet',
+                    paths: ["m/84'/0'/0'"],
+                    type: 'segwit'
+                },
+                'metamask': {
+                    name: 'MetaMask (Bitcoin)',
+                    paths: ["m/44'/0'/0'"],
+                    type: 'legacy'
+                },
+                'sparrow': {
+                    name: 'Sparrow',
+                    paths: ["m/84'/0'/0'", "m/86'/0'/0'", "m/44'/0'/0'", "m/49'/0'/0'"],
+                    type: 'multi'
+                },
+                'bluewallet': {
+                    name: 'BlueWallet',
+                    paths: ["m/84'/0'/0'", "m/44'/0'/0'", "m/49'/0'/0'"],
+                    type: 'multi'
+                }
+            };
+        }
+
+        async detectWalletType(mnemonic, knownAddress = null) {
+            console.log('[WalletDetector] Starting wallet detection...');
+            
+            const detectionResults = {
+                detected: false,
+                walletType: 'unknown',
+                walletName: 'Unknown Wallet',
+                activePaths: [],
+                suggestedPath: null,
+                balances: {},
+                usedAddresses: []
+            };
+
+            try {
+                // If we have a known address, try to match it first
+                if (knownAddress) {
+                    console.log('[WalletDetector] Checking known address:', knownAddress);
+                    const matchResult = await this.matchKnownAddress(mnemonic, knownAddress);
+                    if (matchResult.found) {
+                        detectionResults.detected = true;
+                        detectionResults.walletType = matchResult.walletType;
+                        detectionResults.walletName = matchResult.walletName;
+                        detectionResults.suggestedPath = matchResult.path;
+                        detectionResults.activePaths.push(matchResult.path);
+                    }
+                }
+
+                // Check all known wallet paths
+                const pathChecks = [];
+                for (const [walletId, wallet] of Object.entries(this.knownPaths)) {
+                    for (const path of wallet.paths) {
+                        pathChecks.push(this.checkPath(mnemonic, path, walletId, wallet.name));
+                    }
+                }
+
+                // Execute all checks in parallel for performance
+                const results = await Promise.all(pathChecks);
+                
+                // Process results
+                for (const result of results) {
+                    if (result.hasActivity) {
+                        detectionResults.activePaths.push({
+                            path: result.path,
+                            walletId: result.walletId,
+                            walletName: result.walletName,
+                            balance: result.balance,
+                            addresses: result.addresses
+                        });
+                        
+                        if (result.balance > 0 && !detectionResults.detected) {
+                            detectionResults.detected = true;
+                            detectionResults.walletType = result.walletId;
+                            detectionResults.walletName = result.walletName;
+                            detectionResults.suggestedPath = result.path;
+                        }
+                        
+                        detectionResults.balances[result.path] = result.balance;
+                        detectionResults.usedAddresses.push(...result.addresses);
+                    }
+                }
+
+                // If no activity found, suggest most common type
+                if (!detectionResults.detected) {
+                    detectionResults.walletType = 'moosh';
+                    detectionResults.walletName = 'MOOSH Wallet (New)';
+                    detectionResults.suggestedPath = "m/84'/0'/0'"; // Default to Native SegWit
+                }
+
+                console.log('[WalletDetector] Detection complete:', detectionResults);
+                return detectionResults;
+
+            } catch (error) {
+                console.error('[WalletDetector] Detection error:', error);
+                return detectionResults;
+            }
+        }
+
+        async checkPath(mnemonic, path, walletId, walletName) {
+            try {
+                // Generate first 5 addresses for this path
+                const addresses = await this.deriveAddressesForPath(mnemonic, path, 5);
+                
+                // Check each address for activity
+                let totalBalance = 0;
+                const activeAddresses = [];
+                
+                for (const addr of addresses) {
+                    try {
+                        const balance = await this.checkAddressActivity(addr.address);
+                        if (balance > 0 || addr.address === this.app.state.get('knownImportAddress')) {
+                            totalBalance += balance;
+                            activeAddresses.push({
+                                address: addr.address,
+                                index: addr.index,
+                                balance: balance
+                            });
+                        }
+                    } catch (error) {
+                        console.warn(`[WalletDetector] Failed to check address ${addr.address}:`, error);
+                    }
+                }
+                
+                return {
+                    path,
+                    walletId,
+                    walletName,
+                    hasActivity: activeAddresses.length > 0,
+                    balance: totalBalance,
+                    addresses: activeAddresses
+                };
+                
+            } catch (error) {
+                console.error(`[WalletDetector] Error checking path ${path}:`, error);
+                return {
+                    path,
+                    walletId,
+                    walletName,
+                    hasActivity: false,
+                    balance: 0,
+                    addresses: []
+                };
+            }
+        }
+
+        async deriveAddressesForPath(mnemonic, path, count = 5) {
+            const addresses = [];
+            
+            try {
+                // Use the API to generate addresses for this specific path
+                const response = await fetch(`${this.app.apiUrl}/api/wallet/test-paths`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        mnemonic,
+                        customPath: path,
+                        addressCount: count
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to derive addresses');
+                }
+                
+                const data = await response.json();
+                return data.addresses || [];
+                
+            } catch (error) {
+                console.error('[WalletDetector] Failed to derive addresses:', error);
+                return [];
+            }
+        }
+
+        async checkAddressActivity(address) {
+            try {
+                // Use mempool.space API to check address
+                const response = await fetch(`https://mempool.space/api/address/${address}`);
+                if (!response.ok) return 0;
+                
+                const data = await response.json();
+                return (data.chain_stats?.funded_txo_sum || 0) / 100000000; // Convert sats to BTC
+                
+            } catch (error) {
+                // Fallback to our API
+                try {
+                    const response = await fetch(`${this.app.apiUrl}/api/balance/${address}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.balance || 0;
+                    }
+                } catch (fallbackError) {
+                    console.warn('[WalletDetector] Address check failed:', address);
+                }
+                return 0;
+            }
+        }
+
+        async matchKnownAddress(mnemonic, knownAddress) {
+            // Check if the known address matches any standard derivation
+            for (const [walletId, wallet] of Object.entries(this.knownPaths)) {
+                for (const path of wallet.paths) {
+                    const addresses = await this.deriveAddressesForPath(mnemonic, path, 10);
+                    const match = addresses.find(addr => addr.address === knownAddress);
+                    
+                    if (match) {
+                        return {
+                            found: true,
+                            walletType: walletId,
+                            walletName: wallet.name,
+                            path: path,
+                            index: match.index
+                        };
+                    }
+                }
+            }
+            
+            return { found: false };
         }
     }
 
@@ -5925,6 +6409,15 @@
                         isInitialized: true
                     });
                     
+                    // Create account in the multi-account system
+                    try {
+                        const account = await this.app.state.createAccount('Main Wallet', walletData.mnemonic, false);
+                        console.log('[GenerateSeed] Account created:', account);
+                    } catch (accountError) {
+                        console.error('[GenerateSeed] Failed to create account:', accountError);
+                        // Continue anyway - wallet data is stored
+                    }
+                    
                     // Update the display
                     this.completeProgress();
                     this.updateDisplay(generatedSeed, wordCount);
@@ -7385,9 +7878,16 @@
                                 onclick: () => this.handleRefresh()
                             }, ['Refresh']),
                             $.button({
-                                className: 'btn-secondary dashboard-btn',
-                                onclick: () => this.toggleBalanceVisibility()
-                            }, ['Hide'])
+                                className: 'btn-secondary dashboard-btn visibility-toggle',
+                                onclick: () => this.toggleBalanceVisibility(),
+                                style: {
+                                    padding: '8px 12px',
+                                    minWidth: '60px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }
+                            }, [this.createLockIcon()])
                         ])
                     ]),
                     
@@ -9966,9 +10466,16 @@
                                 onclick: () => this.handleRefresh()
                             }, ['Refresh']),
                             $.button({
-                                className: 'btn-secondary dashboard-btn',
-                                onclick: () => this.toggleBalanceVisibility()
-                            }, ['Hide'])
+                                className: 'btn-secondary dashboard-btn visibility-toggle',
+                                onclick: () => this.toggleBalanceVisibility(),
+                                style: {
+                                    padding: '8px 12px',
+                                    minWidth: '60px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }
+                            }, [this.createLockIcon()])
                         ])
                     ]),
                     
@@ -13714,6 +14221,34 @@
             return currentAccount ? `Active: ${currentAccount.name}` : 'Active: Account 1';
         }
         
+        createLockIcon() {
+            const $ = window.ElementFactory || ElementFactory;
+            const isHidden = this.app.state.get('isBalanceHidden');
+            
+            // Create square lock icon
+            return $.div({
+                style: {
+                    width: '20px',
+                    height: '20px',
+                    border: '2px solid currentColor',
+                    borderRadius: '0',
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }
+            }, [
+                isHidden ? null : $.div({
+                    style: {
+                        width: '8px',
+                        height: '8px',
+                        background: 'currentColor',
+                        borderRadius: '0'
+                    }
+                })
+            ]);
+        }
+        
         toggleBalanceVisibility() {
             // Toggle the hidden state
             const isHidden = this.app.state.get('isBalanceHidden');
@@ -13776,6 +14311,16 @@
                     this.refreshBalances();
                 }
             }
+            
+            // Update lock icon in all visibility toggle buttons
+            const toggleButtons = document.querySelectorAll('.visibility-toggle');
+            toggleButtons.forEach(button => {
+                // Clear existing content
+                button.innerHTML = '';
+                // Add new lock icon
+                const newIcon = this.createLockIcon();
+                button.appendChild(newIcon);
+            });
             
             this.app.showNotification(isHidden ? 'Balances shown' : 'Balances hidden', 'success');
         }
@@ -14588,28 +15133,27 @@
                 this.showImportLoadingScreen();
                 this.app.showNotification('Detecting wallet type...', 'info');
                 
-                const detectResponse = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/detect`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mnemonic: seed })
-                });
-                
-                const detectResult = await detectResponse.json();
+                // Use WalletDetector instead of API
+                const detector = new WalletDetector(this.app);
+                const detection = await detector.detectWalletType(seed);
                 
                 this.hideImportLoadingScreen();
                 
-                if (detectResult.success && detectResult.data.allVariants) {
-                    this.showWalletSelectionDialog(name, seed, detectResult.data.allVariants);
+                if (detection.detected && detection.activePaths.length > 0) {
+                    // Show detection results
+                    this.showDetectionResults(detection, name, seed);
                 } else {
+                    // No activity detected - import as new MOOSH wallet
                     this.showImportLoadingScreen();
-                    await this.app.state.createAccount(name, seed, true);
+                    await this.app.state.createAccount(name, seed, true, 'moosh', null);
                     this.hideImportLoadingScreen();
-                    this.app.showNotification(`Account "${name}" imported successfully`, 'success');
+                    this.app.showNotification(`Account "${name}" imported successfully as new MOOSH wallet`, 'success');
                     this.isImporting = false;
                     this.close();
                     this.app.router.render();
                 }
             } catch (error) {
+                this.hideImportLoadingScreen();
                 this.app.showNotification('Failed to import account: ' + error.message, 'error');
             }
         }
@@ -14848,6 +15392,127 @@
                 this.loadingOverlay.remove();
                 this.loadingOverlay = null;
             }
+        }
+        
+        showDetectionResults(detection, accountName, seed) {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            const content = $.div({ style: 'padding: 20px;' }, [
+                $.h3({ style: 'color: var(--text-primary); margin-bottom: 20px;' }, ['Wallet Detection Results']),
+                
+                detection.detected ? 
+                    $.div({ 
+                        style: 'background: rgba(76, 175, 80, 0.1); padding: 15px; border: 1px solid #4CAF50; margin-bottom: 20px;' 
+                    }, [
+                        $.p({ style: 'color: #4CAF50; margin-bottom: 10px;' }, [`✅ Detected: ${detection.walletName}`]),
+                        $.p({ style: 'color: var(--text-dim);' }, [`Type: ${detection.walletType}`]),
+                        $.p({ style: 'color: var(--text-dim);' }, [`Active Paths: ${detection.activePaths.length}`])
+                    ]) :
+                    $.p({ style: 'color: var(--text-dim); margin-bottom: 20px;' }, 
+                        ['No existing wallet activity found. Will import as new MOOSH wallet.']),
+                
+                detection.activePaths.length > 0 && $.div({ 
+                    style: 'margin-bottom: 20px; background: var(--bg-secondary); padding: 15px;' 
+                }, [
+                    $.h4({ style: 'color: var(--text-primary); margin-bottom: 10px;' }, ['Found Activity On:']),
+                    ...detection.activePaths.map(path => 
+                        $.div({ 
+                            style: 'display: flex; justify-content: space-between; padding: 5px 0; color: var(--text-dim);' 
+                        }, [
+                            $.span({}, [`${path.walletName}: `]),
+                            $.span({}, [`${path.balance} BTC`]),
+                            $.span({ style: 'font-size: 0.9em; color: #888;' }, [`(${path.path})`])
+                        ])
+                    )
+                ]),
+                
+                $.div({ style: 'display: flex; gap: 10px; justify-content: center;' }, [
+                    $.button({
+                        style: 'background: var(--text-primary); color: var(--bg-primary); padding: 12px 24px; border: none; cursor: pointer;',
+                        onclick: async () => {
+                            this.proceedWithImport(accountName, seed, detection.walletType, detection);
+                        }
+                    }, [`Import as ${detection.walletName}`]),
+                    
+                    detection.detected && $.button({
+                        style: 'background: transparent; border: 1px solid var(--text-primary); color: var(--text-primary); padding: 12px 24px; cursor: pointer;',
+                        onclick: async () => {
+                            this.proceedWithImport(accountName, seed, 'moosh', null);
+                        }
+                    }, ['Import as New MOOSH Wallet']),
+                    
+                    $.button({
+                        style: 'background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim); padding: 12px 24px; cursor: pointer;',
+                        onclick: () => {
+                            this.cancelImport();
+                        }
+                    }, ['Cancel'])
+                ])
+            ]);
+            
+            // Replace current modal content
+            if (this.modal) {
+                const modalContent = this.modal.querySelector('.modal-content') || 
+                                   this.modal.querySelector('[style*="background: var(--bg-primary)"]');
+                if (modalContent) {
+                    modalContent.innerHTML = '';
+                    modalContent.appendChild(content);
+                }
+            }
+        }
+        
+        async proceedWithImport(accountName, seed, walletType, detectionData) {
+            try {
+                this.showImportLoadingScreen();
+                
+                await this.app.state.createAccount(
+                    accountName, 
+                    seed, 
+                    true, // isImport
+                    walletType,
+                    detectionData?.suggestedPath
+                );
+                
+                this.hideImportLoadingScreen();
+                this.app.showNotification(`Account "${accountName}" imported successfully as ${walletType} wallet`, 'success');
+                
+                // If we detected balances, refresh them
+                if (detectionData?.balances && Object.keys(detectionData.balances).length > 0) {
+                    setTimeout(() => {
+                        if (this.app.refreshBalances) {
+                            this.app.refreshBalances();
+                        }
+                    }, 1000);
+                }
+                
+                this.isImporting = false;
+                this.close();
+                this.app.router.render();
+                
+            } catch (error) {
+                this.hideImportLoadingScreen();
+                this.app.showNotification('Failed to complete import: ' + error.message, 'error');
+            }
+        }
+        
+        cancelImport() {
+            // Clear import form
+            const seedInput = document.getElementById('importSeedPhrase');
+            if (seedInput) seedInput.value = '';
+            
+            this.isImporting = false;
+            this.isCreating = false;
+            
+            // Remove current modal
+            if (this.modal) {
+                this.modal.remove();
+                this.modal = null;
+            }
+            
+            // Show main modal after brief delay
+            setTimeout(() => {
+                this.show();
+            }, 50);
         }
         
         renameAccount(account) {
@@ -15886,28 +16551,27 @@
                 this.showImportLoadingScreen();
                 this.app.showNotification('Detecting wallet type...', 'info');
                 
-                const detectResponse = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/detect`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mnemonic: seed })
-                });
-                
-                const detectResult = await detectResponse.json();
+                // Use WalletDetector instead of API
+                const detector = new WalletDetector(this.app);
+                const detection = await detector.detectWalletType(seed);
                 
                 this.hideImportLoadingScreen();
                 
-                if (detectResult.success && detectResult.data.allVariants) {
-                    this.showWalletSelectionDialog(name, seed, detectResult.data.allVariants);
+                if (detection.detected && detection.activePaths.length > 0) {
+                    // Show detection results
+                    this.showDetectionResults(detection, name, seed);
                 } else {
+                    // No activity detected - import as new MOOSH wallet
                     this.showImportLoadingScreen();
-                    await this.app.state.createAccount(name, seed, true);
+                    await this.app.state.createAccount(name, seed, true, 'moosh', null);
                     this.hideImportLoadingScreen();
-                    this.app.showNotification(`Account "${name}" imported successfully`, 'success');
+                    this.app.showNotification(`Account "${name}" imported successfully as new MOOSH wallet`, 'success');
                     this.isImporting = false;
                     this.close();
                     this.app.router.render();
                 }
             } catch (error) {
+                this.hideImportLoadingScreen();
                 this.app.showNotification('Failed to import account: ' + error.message, 'error');
             }
         }
@@ -25378,18 +26042,18 @@
             }, [
                 $.span({}, [
                     'BTC: $',
-                    $.span({ id: 'btcPrice', style: 'color: #f57315; font-weight: 600;' }, ['Loading...']),
+                    $.span({ id: 'btcPrice', style: 'color: #f57315; font-weight: 600;' }, ['0.00']),
                     ' ',
                     $.span({ id: 'priceChange', style: 'color: #69fd97;' }, [''])
                 ]),
                 $.span({}, [
                     'Next Block: ~',
-                    $.span({ id: 'nextBlock', style: 'color: #f57315;' }, ['...']),
+                    $.span({ id: 'nextBlock', style: 'color: #f57315;' }, ['10']),
                     ' min'
                 ]),
                 $.span({}, [
                     'Fee: ',
-                    $.span({ id: 'feeRate', style: 'color: #f57315;' }, ['...']),
+                    $.span({ id: 'feeRate', style: 'color: #f57315;' }, ['1']),
                     ' sat/vB'
                 ])
             ]);
@@ -25402,14 +26066,14 @@
                 const priceElement = document.getElementById('btcPrice');
                 const changeElement = document.getElementById('priceChange');
                 
-                if (priceElement && priceData.usd) {
+                if (priceElement && priceData && priceData.usd) {
                     priceElement.textContent = priceData.usd.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     });
                 }
                 
-                if (changeElement && priceData.usd_24h_change !== undefined) {
+                if (changeElement && priceData && priceData.usd_24h_change !== undefined) {
                     const change = priceData.usd_24h_change;
                     const arrow = change >= 0 ? '↑' : '↓';
                     const color = change >= 0 ? '#69fd97' : '#ff4444';
@@ -25437,13 +26101,18 @@
                 
             } catch (error) {
                 console.error('Failed to update live data:', error);
+                // Set fallback values on error
+                const priceElement = document.getElementById('btcPrice');
+                if (priceElement) {
+                    priceElement.textContent = '0.00';
+                }
             }
         }
         
         async updateMempoolData() {
             try {
                 // Fetch recommended fees
-                const feesResponse = await fetch('https://mempool.space/api/v1/fees/recommended');
+                const feesResponse = await fetch('http://localhost:3001/api/proxy/mempool/fees');
                 const feesData = await feesResponse.json();
                 
                 const feeElement = document.getElementById('feeRate');
@@ -25452,7 +26121,7 @@
                 }
                 
                 // Fetch latest blocks
-                const blocksResponse = await fetch('https://mempool.space/api/blocks');
+                const blocksResponse = await fetch('http://localhost:3001/api/proxy/mempool/blocks');
                 const blocks = await blocksResponse.json();
                 
                 if (blocks && blocks.length > 0) {
@@ -25469,6 +26138,15 @@
                 }
             } catch (error) {
                 console.error('Failed to fetch mempool data:', error);
+                // Set fallback values on error
+                const feeElement = document.getElementById('feeRate');
+                if (feeElement) {
+                    feeElement.textContent = '0';
+                }
+                const blockElement = document.getElementById('nextBlock');
+                if (blockElement) {
+                    blockElement.textContent = '0';
+                }
             }
         }
         
