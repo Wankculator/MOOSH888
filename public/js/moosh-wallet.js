@@ -26403,25 +26403,46 @@
                         ])
                     ]),
                     
-                    // Wallet address display
+                    // Container to center the address frame
                     $.div({
-                        id: 'walletAddressDisplay',
                         style: {
-                            marginTop: '12px',
-                            padding: '8px 12px',
-                            background: 'rgba(245, 115, 21, 0.05)',
-                            border: '1px solid rgba(245, 115, 21, 0.2)',
-                            borderRadius: '0',
-                            fontSize: '12px',
-                            fontFamily: 'JetBrains Mono, monospace',
-                            color: 'var(--text-dim)',
                             textAlign: 'center',
-                            wordBreak: 'break-all',
-                            lineHeight: '1.4'
+                            marginTop: '8px'
                         }
                     }, [
-                        $.span({ style: { color: 'var(--text-primary)', fontWeight: '500' } }, ['Active Address: ']),
-                        $.span({ id: 'currentWalletAddress' }, [this.getCurrentWalletAddress()])
+                        // Wallet address display - with frame that fits content and click to copy
+                        $.div({
+                            id: 'walletAddressDisplay',
+                            style: {
+                                padding: '6px 10px',
+                                background: 'rgba(245, 115, 21, 0.05)',
+                                border: '1px solid rgba(245, 115, 21, 0.2)',
+                                borderRadius: '0',
+                                fontSize: isXS ? '9px' : '10px',
+                                fontFamily: 'JetBrains Mono, monospace',
+                                color: 'var(--text-dim)',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block',
+                                lineHeight: '1.2',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            },
+                            onclick: () => this.copyActiveAddress(),
+                            onmouseover: (e) => {
+                                e.currentTarget.style.background = 'rgba(245, 115, 21, 0.1)';
+                                e.currentTarget.style.borderColor = '#f57315';
+                            },
+                            onmouseout: (e) => {
+                                e.currentTarget.style.background = 'rgba(245, 115, 21, 0.05)';
+                                e.currentTarget.style.borderColor = 'rgba(245, 115, 21, 0.2)';
+                            },
+                            title: 'Click to copy address'
+                        }, [
+                            $.span({ style: { color: 'var(--text-primary)', fontWeight: '500' } }, ['Active Address: ']),
+                            $.span({ 
+                                id: 'currentWalletAddress'
+                            }, [this.getCurrentWalletAddress()])
+                        ])
                     ])
                 ])
             ]);
@@ -26506,6 +26527,44 @@
             
             // Don't fallback to wrong type - return a clear message
             return `No ${selectedType} address available`;
+        }
+        
+        async copyActiveAddress() {
+            const addressElement = document.getElementById('currentWalletAddress');
+            if (!addressElement) return;
+            
+            const address = addressElement.textContent;
+            if (!address || address.includes('Not available') || address === 'Loading...') {
+                this.app.showNotification('No address to copy', 'error');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(address);
+                
+                // Visual feedback - temporarily change the display
+                const displayElement = document.getElementById('walletAddressDisplay');
+                const originalBg = displayElement.style.background;
+                const originalBorder = displayElement.style.borderColor;
+                const originalContent = addressElement.textContent;
+                
+                // Show success state
+                displayElement.style.background = 'rgba(105, 253, 151, 0.1)';
+                displayElement.style.borderColor = '#69fd97';
+                addressElement.textContent = '✓ Copied!';
+                
+                // Restore after 1.5 seconds
+                setTimeout(() => {
+                    displayElement.style.background = originalBg;
+                    displayElement.style.borderColor = originalBorder;
+                    addressElement.textContent = originalContent;
+                }, 1500);
+                
+                this.app.showNotification('Address copied to clipboard!', 'success');
+            } catch (error) {
+                console.error('Failed to copy address:', error);
+                this.app.showNotification('Failed to copy address', 'error');
+            }
         }
         
         createAccountSelector() {
