@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Currency Test Debug</title>
+    <style>
+        body {
+            background: #000;
+            color: #f57315;
+            font-family: monospace;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #f57315;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        button {
+            background: #000;
+            border: 2px solid #f57315;
+            color: #f57315;
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        #log {
+            background: #111;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>MOOSH Currency Debug Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Currency Price Fetch</h2>
+        <button onclick="testCurrencyFetch()">Fetch All Currency Prices</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Currency Display</h2>
+        <p>BTC Balance: <span id="btc-balance">0.12345678</span> BTC</p>
+        <p>Fiat Value: <span id="fiat-value">Loading...</span></p>
+        
+        <select id="currency-select" onchange="updateCurrency(this.value)">
+            <option value="usd">USD</option>
+            <option value="eur">EUR</option>
+            <option value="gbp">GBP</option>
+            <option value="jpy">JPY</option>
+            <option value="cad">CAD</option>
+            <option value="aud">AUD</option>
+            <option value="chf">CHF</option>
+            <option value="cny">CNY</option>
+            <option value="inr">INR</option>
+            <option value="krw">KRW</option>
+        </select>
+    </div>
+    
+    <div class="test-section">
+        <h2>Debug Log</h2>
+        <div id="log"></div>
+    </div>
+    
+    <script>
+        const BTC_AMOUNT = 0.12345678;
+        let currencyPrices = new Map();
+        let selectedCurrency = 'usd';
+        
+        const currencySymbols = {
+            usd: '$',
+            eur: '€',
+            gbp: '£',
+            jpy: '¥',
+            cad: 'C$',
+            aud: 'A$',
+            chf: 'Fr',
+            cny: '¥',
+            inr: '₹',
+            krw: '₩'
+        };
+        
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.textContent += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+        
+        async function testCurrencyFetch() {
+            log('Starting currency fetch test...');
+            
+            try {
+                const currencies = ['usd', 'eur', 'gbp', 'jpy', 'cad', 'aud', 'chf', 'cny', 'inr', 'krw'].join(',');
+                const url = `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=${currencies}`;
+                
+                log(`Fetching from: ${url}`);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                log('Response received: ' + JSON.stringify(data, null, 2));
+                
+                if (data.bitcoin) {
+                    for (const [currency, price] of Object.entries(data.bitcoin)) {
+                        currencyPrices.set(currency, price);
+                        log(`${currency.toUpperCase()}: ${price}`);
+                    }
+                    
+                    log(`\nTotal currencies loaded: ${currencyPrices.size}`);
+                    updateDisplay();
+                } else {
+                    log('ERROR: Invalid response structure');
+                }
+                
+            } catch (error) {
+                log(`ERROR: ${error.message}`);
+            }
+        }
+        
+        function formatCurrencyValue(value, currency) {
+            const noDecimalCurrencies = ['jpy', 'krw', 'idr'];
+            
+            if (noDecimalCurrencies.includes(currency)) {
+                return Math.round(value).toLocaleString();
+            }
+            
+            return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        
+        function updateCurrency(currency) {
+            selectedCurrency = currency;
+            log(`Currency changed to: ${currency.toUpperCase()}`);
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            const price = currencyPrices.get(selectedCurrency);
+            const fiatEl = document.getElementById('fiat-value');
+            
+            if (price) {
+                const value = BTC_AMOUNT * price;
+                const symbol = currencySymbols[selectedCurrency] || '';
+                const formatted = formatCurrencyValue(value, selectedCurrency);
+                
+                fiatEl.textContent = `${symbol}${formatted} ${selectedCurrency.toUpperCase()}`;
+                log(`Display updated: ${symbol}${formatted} ${selectedCurrency.toUpperCase()}`);
+            } else {
+                fiatEl.textContent = 'No price data';
+                log(`No price data for ${selectedCurrency}`);
+            }
+        }
+        
+        // Auto-fetch on load
+        window.onload = () => {
+            log('Page loaded. Click "Fetch All Currency Prices" to start.');
+        };
+    </script>
+</body>
+</html>

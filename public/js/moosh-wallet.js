@@ -2656,6 +2656,42 @@
             return false;
         }
         
+        reorderAccounts(newAccountOrder) {
+            try {
+                ComplianceUtils.log('StateManager', 'Reordering accounts');
+                
+                // Validate the new order has all accounts
+                if (newAccountOrder.length !== this.state.accounts.length) {
+                    console.error('[StateManager] Invalid account order - count mismatch');
+                    return false;
+                }
+                
+                // Ensure all account IDs are present
+                const currentIds = new Set(this.state.accounts.map(acc => acc.id));
+                const newIds = new Set(newAccountOrder.map(acc => acc.id));
+                
+                if (currentIds.size !== newIds.size) {
+                    console.error('[StateManager] Invalid account order - ID mismatch');
+                    return false;
+                }
+                
+                // Update the accounts array
+                this.state.accounts = newAccountOrder;
+                
+                // Persist the new order
+                this.persistAccounts();
+                
+                // Emit event for listeners
+                this.emit('accounts', this.state.accounts);
+                
+                ComplianceUtils.log('StateManager', 'Account order updated successfully');
+                return true;
+            } catch (error) {
+                console.error('[StateManager] Failed to reorder accounts:', error);
+                return false;
+            }
+        }
+        
         // Password Management Methods
         setWalletPassword(password) {
             if (!password || password.length < 8) {
@@ -9073,7 +9109,13 @@
                     }, ['0.00000000 BTC']),
                     $.div({ 
                         style: 'font-size: calc(10px * var(--scale-factor)); margin-top: calc(4px * var(--scale-factor)); color: #888888;'
-                    }, ['≈ $', $.span({ id: 'btcUsdValue' }, ['0.00']), ' USD'])
+                    }, [
+                        '≈ ', 
+                        $.span({ id: 'currencySymbol' }, ['$']),
+                        $.span({ id: 'btcUsdValue' }, ['0.00']), 
+                        ' ', 
+                        $.span({ id: 'currencyCode' }, ['USD'])
+                    ])
                 ]),
                 
                 // Lightning Balance
@@ -11951,7 +11993,13 @@
                     }, ['0.00000000 BTC']),
                     $.div({ 
                         style: 'font-size: calc(10px * var(--scale-factor)); margin-top: calc(4px * var(--scale-factor)); color: #888888;'
-                    }, ['≈ $', $.span({ id: 'btcUsdValue' }, ['0.00']), ' USD'])
+                    }, [
+                        '≈ ', 
+                        $.span({ id: 'currencySymbol' }, ['$']),
+                        $.span({ id: 'btcUsdValue' }, ['0.00']), 
+                        ' ', 
+                        $.span({ id: 'currencyCode' }, ['USD'])
+                    ])
                 ]),
                 
                 // Lightning Balance
@@ -14084,7 +14132,13 @@
                     }, ['0.00000000 BTC']),
                     $.div({ 
                         style: 'font-size: calc(10px * var(--scale-factor)); margin-top: calc(4px * var(--scale-factor)); color: #888888;'
-                    }, ['≈ $', $.span({ id: 'btcUsdValue' }, ['0.00']), ' USD'])
+                    }, [
+                        '≈ ', 
+                        $.span({ id: 'currencySymbol' }, ['$']),
+                        $.span({ id: 'btcUsdValue' }, ['0.00']), 
+                        ' ', 
+                        $.span({ id: 'currencyCode' }, ['USD'])
+                    ])
                 ]),
                 
                 // Lightning Balance
@@ -17605,11 +17659,52 @@
             this.modal = null;
             this.searchQuery = '';
             this.selectedAccounts = new Set();
+            
+            // Balance tracking
+            this.balanceLoading = new Map();
+            this.lastBalanceUpdate = new Map();
             this.editingAccountId = null;
             this.sortBy = 'name'; // name, date, balance, activity
             this.sortOrder = 'asc'; // asc, desc
             this.balanceCache = new Map();
             this.btcPrice = 0;
+            
+            // Multi-currency support
+            this.selectedCurrency = 'usd'; // Default to USD
+            this.currencyPrices = new Map(); // Cache for all currency prices
+            this.supportedCurrencies = [
+                { code: 'usd', symbol: '$', name: 'US Dollar' },
+                { code: 'eur', symbol: '€', name: 'Euro' },
+                { code: 'gbp', symbol: '£', name: 'British Pound' },
+                { code: 'jpy', symbol: '¥', name: 'Japanese Yen' },
+                { code: 'cny', symbol: '¥', name: 'Chinese Yuan' },
+                { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
+                { code: 'aud', symbol: 'A$', name: 'Australian Dollar' },
+                { code: 'chf', symbol: 'Fr', name: 'Swiss Franc' },
+                { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
+                { code: 'krw', symbol: '₩', name: 'South Korean Won' },
+                { code: 'brl', symbol: 'R$', name: 'Brazilian Real' },
+                { code: 'mxn', symbol: 'Mex$', name: 'Mexican Peso' },
+                { code: 'rub', symbol: '₽', name: 'Russian Ruble' },
+                { code: 'zar', symbol: 'R', name: 'South African Rand' },
+                { code: 'aed', symbol: 'د.إ', name: 'UAE Dirham' },
+                { code: 'sgd', symbol: 'S$', name: 'Singapore Dollar' },
+                { code: 'hkd', symbol: 'HK$', name: 'Hong Kong Dollar' },
+                { code: 'nzd', symbol: 'NZ$', name: 'New Zealand Dollar' },
+                { code: 'sek', symbol: 'kr', name: 'Swedish Krona' },
+                { code: 'nok', symbol: 'kr', name: 'Norwegian Krone' },
+                { code: 'try', symbol: '₺', name: 'Turkish Lira' },
+                { code: 'thb', symbol: '฿', name: 'Thai Baht' },
+                { code: 'pln', symbol: 'zł', name: 'Polish Złoty' },
+                { code: 'php', symbol: '₱', name: 'Philippine Peso' },
+                { code: 'idr', symbol: 'Rp', name: 'Indonesian Rupiah' }
+            ];
+            
+            // Load saved currency preference
+            const savedCurrency = localStorage.getItem('mooshPreferredCurrency');
+            if (savedCurrency && this.supportedCurrencies.find(c => c.code === savedCurrency)) {
+                this.selectedCurrency = savedCurrency;
+            }
             
             // View modes
             this.viewMode = 'grid'; // grid, list, details
@@ -17620,6 +17715,203 @@
                 activity: 'all', // all, active, inactive
                 type: 'all' // all, hd, imported
             };
+        }
+        
+        // Balance fetching methods
+        async fetchBTCPrice() {
+            try {
+                // Fetch prices for all major currencies at once
+                const currencies = this.supportedCurrencies.map(c => c.code).join(',');
+                const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=${currencies}`);
+                const data = await response.json();
+                
+                // Store all currency prices
+                if (data.bitcoin) {
+                    for (const [currency, price] of Object.entries(data.bitcoin)) {
+                        this.currencyPrices.set(currency, price);
+                    }
+                }
+                
+                // Keep backward compatibility
+                this.btcPrice = this.currencyPrices.get('usd') || 40000;
+                
+                ComplianceUtils.log('AccountListModal', `BTC Prices fetched for ${this.currencyPrices.size} currencies`);
+                return this.currencyPrices.get(this.selectedCurrency) || this.btcPrice;
+            } catch (error) {
+                console.error('[AccountListModal] Failed to fetch BTC prices:', error);
+                // Fallback prices
+                this.currencyPrices.set('usd', 40000);
+                this.currencyPrices.set('eur', 37000);
+                this.currencyPrices.set('gbp', 32000);
+                this.btcPrice = 40000;
+                return this.btcPrice;
+            }
+        }
+        
+        async refreshAccountBalance(account) {
+            if (this.balanceLoading.get(account.id)) {
+                ComplianceUtils.log('AccountListModal', `Balance already loading for ${account.name}`);
+                return;
+            }
+            
+            this.balanceLoading.set(account.id, true);
+            const btcElement = document.querySelector(`.balance-btc-${account.id}`);
+            const usdElement = document.querySelector(`.balance-usd-${account.id}`);
+            
+            if (btcElement) {
+                btcElement.textContent = 'Refreshing...';
+                btcElement.style.color = '#faa307';
+            }
+            
+            try {
+                // Fetch BTC price if not already fetched
+                if (!this.btcPrice || Date.now() - (this.lastPriceUpdate || 0) > 60000) {
+                    await this.fetchBTCPrice();
+                    this.lastPriceUpdate = Date.now();
+                }
+                
+                // Get the primary address for balance checking
+                const address = account.addresses?.segwit || 
+                              account.addresses?.bech32 || 
+                              account.addresses?.bitcoin || 
+                              account.addresses?.taproot;
+                
+                if (!address) {
+                    throw new Error('No valid address found');
+                }
+                
+                // Fetch balance from API
+                const response = await fetch(`https://blockchain.info/q/addressbalance/${address}`);
+                const satoshis = await response.text();
+                const btcBalance = parseInt(satoshis) / 100000000;
+                
+                // Get current currency info
+                const currencyInfo = this.supportedCurrencies.find(c => c.code === this.selectedCurrency) || 
+                                   { code: 'usd', symbol: '$', name: 'US Dollar' };
+                const currencyPrice = this.currencyPrices.get(this.selectedCurrency) || this.btcPrice;
+                
+                // Update cache with all currency values
+                const cacheData = {
+                    btc: btcBalance,
+                    timestamp: Date.now()
+                };
+                
+                // Add all currency values to cache
+                for (const [currency, price] of this.currencyPrices.entries()) {
+                    cacheData[currency] = btcBalance * price;
+                }
+                
+                this.balanceCache.set(account.id, cacheData);
+                
+                // Update UI
+                if (btcElement) {
+                    btcElement.textContent = `${btcBalance.toFixed(8)} BTC`;
+                    btcElement.style.color = '#f57315';
+                }
+                
+                if (usdElement && currencyPrice) {
+                    const fiatValue = btcBalance * currencyPrice;
+                    const displayValue = this.formatCurrencyValue(fiatValue, this.selectedCurrency);
+                    usdElement.textContent = `${currencyInfo.symbol}${displayValue} ${currencyInfo.code.toUpperCase()}`;
+                }
+                
+                this.lastBalanceUpdate.set(account.id, Date.now());
+                ComplianceUtils.log('AccountListModal', `Balance updated for ${account.name}: ${btcBalance} BTC`);
+                
+            } catch (error) {
+                console.error(`[AccountListModal] Failed to fetch balance for ${account.name}:`, error);
+                
+                if (btcElement) {
+                    btcElement.textContent = 'Error loading';
+                    btcElement.style.color = '#ff4444';
+                }
+                
+                if (usdElement) {
+                    usdElement.textContent = 'Unable to fetch price';
+                }
+            } finally {
+                this.balanceLoading.set(account.id, false);
+            }
+        }
+        
+        formatCurrencyValue(value, currency) {
+            // Format based on currency - some need no decimals (JPY, KRW), others need 2
+            const noDecimalCurrencies = ['jpy', 'krw', 'idr', 'vnd'];
+            
+            if (noDecimalCurrencies.includes(currency)) {
+                return Math.round(value).toLocaleString();
+            }
+            
+            return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        
+        changeCurrency(newCurrency) {
+            this.selectedCurrency = newCurrency;
+            localStorage.setItem('mooshPreferredCurrency', newCurrency);
+            
+            // Get the price for the new currency
+            const currencyPrice = this.currencyPrices.get(newCurrency);
+            if (!currencyPrice) {
+                console.warn(`[AccountListModal] No price data for ${newCurrency}`);
+                return;
+            }
+            
+            // Update all displayed balances
+            const accounts = this.app.state.get('accounts') || [];
+            accounts.forEach(account => {
+                const cached = this.balanceCache.get(account.id);
+                if (cached && cached.btc !== undefined) {
+                    // Calculate the value in the new currency
+                    const fiatValue = cached.btc * currencyPrice;
+                    this.updateBalanceDisplay(account.id, cached.btc, fiatValue);
+                }
+            });
+            
+            // Update currency selector if it exists
+            const selector = document.getElementById('currency-selector');
+            if (selector) {
+                selector.value = newCurrency;
+            }
+            
+            ComplianceUtils.log('AccountListModal', `Currency changed to ${newCurrency.toUpperCase()}`);
+        }
+        
+        updateBalanceDisplay(accountId, btcBalance, fiatValue) {
+            const btcElement = document.querySelector(`.balance-btc-${accountId}`);
+            const fiatElement = document.querySelector(`.balance-usd-${accountId}`);
+            
+            if (btcElement) {
+                btcElement.textContent = `${btcBalance.toFixed(8)} BTC`;
+            }
+            
+            if (fiatElement) {
+                const currencyInfo = this.supportedCurrencies.find(c => c.code === this.selectedCurrency) || 
+                                   { code: 'usd', symbol: '$', name: 'US Dollar' };
+                const displayValue = this.formatCurrencyValue(fiatValue, this.selectedCurrency);
+                fiatElement.textContent = `${currencyInfo.symbol}${displayValue} ${currencyInfo.code.toUpperCase()}`;
+                
+                // Debug log
+                console.log(`[AccountListModal] Updated balance for ${accountId}: ${btcBalance} BTC = ${currencyInfo.symbol}${displayValue} ${currencyInfo.code.toUpperCase()}`);
+            }
+        }
+        
+        async loadAllBalances() {
+            const accounts = this.app.state.get('accounts') || [];
+            
+            // First fetch BTC price
+            await this.fetchBTCPrice();
+            
+            // Then fetch all account balances in parallel with rate limiting
+            const batchSize = 3; // Process 3 accounts at a time
+            for (let i = 0; i < accounts.length; i += batchSize) {
+                const batch = accounts.slice(i, i + batchSize);
+                await Promise.all(batch.map(account => this.refreshAccountBalance(account)));
+                
+                // Small delay between batches to avoid rate limiting
+                if (i + batchSize < accounts.length) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
         }
         
         show() {
@@ -17644,6 +17936,39 @@
                     .account-grid::-webkit-scrollbar-thumb {
                         background: #f57315;
                         border-radius: 0;
+                    }
+                    
+                    /* Drag and Drop Styles */
+                    .account-card {
+                        transition: all 0.2s ease;
+                    }
+                    
+                    .account-card.dragging {
+                        opacity: 0.5;
+                        transform: scale(0.95);
+                        cursor: grabbing !important;
+                    }
+                    
+                    .account-card:not(.dragging):hover {
+                        cursor: grab;
+                    }
+                    
+                    .drop-indicator {
+                        position: absolute;
+                        width: 100%;
+                        height: 3px;
+                        background: #f57315;
+                        left: 0;
+                        pointer-events: none;
+                        z-index: 1000;
+                        animation: pulse-glow 0.5s ease-in-out infinite;
+                    }
+                    
+                    @keyframes pulse-glow {
+                        0% { opacity: 0.8; }
+                        50% { opacity: 1; }
+                        100% { opacity: 0.8; }
+                    }
                     }
                     
                     .account-grid::-webkit-scrollbar-thumb:hover {
@@ -17716,92 +18041,103 @@
             
             document.body.appendChild(this.modal);
             
+            // Add custom styles for currency selector
+            this.addCurrencySelectorStyles();
+            
             // Fetch Bitcoin price and account balances
             this.initializeBalances();
         }
         
+        addCurrencySelectorStyles() {
+            // Check if styles already exist
+            if (document.getElementById('currency-selector-styles')) return;
+            
+            const style = document.createElement('style');
+            style.id = 'currency-selector-styles';
+            style.textContent = `
+                /* Currency selector theme styles */
+                #currency-selector {
+                    -webkit-appearance: none;
+                    -moz-appearance: none;
+                    appearance: none;
+                    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f57315' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+                    background-repeat: no-repeat;
+                    background-position: right 8px center;
+                    background-size: 16px;
+                    padding-right: 35px !important;
+                }
+                
+                #currency-selector:hover {
+                    border-color: #ff8c42 !important;
+                    color: #ff8c42 !important;
+                }
+                
+                #currency-selector:focus {
+                    border-color: #ff8c42 !important;
+                    box-shadow: 0 0 0 2px rgba(245, 115, 21, 0.2) !important;
+                }
+                
+                /* Style the dropdown */
+                #currency-selector option {
+                    background: #000 !important;
+                    color: #f57315 !important;
+                    padding: 8px !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                }
+                
+                #currency-selector option:hover,
+                #currency-selector option:focus,
+                #currency-selector option:checked {
+                    background: #1a1a1a !important;
+                    color: #ff8c42 !important;
+                    box-shadow: 0 0 10px 100px #1a1a1a inset !important;
+                }
+                
+                /* Firefox specific */
+                @-moz-document url-prefix() {
+                    #currency-selector option {
+                        background: #000 !important;
+                        color: #f57315 !important;
+                    }
+                    
+                    #currency-selector option:hover,
+                    #currency-selector option:checked {
+                        background: #1a1a1a !important;
+                        color: #ff8c42 !important;
+                    }
+                }
+                
+                /* Webkit browsers */
+                @media screen and (-webkit-min-device-pixel-ratio:0) {
+                    #currency-selector option {
+                        background: #000 !important;
+                        color: #f57315 !important;
+                    }
+                    
+                    #currency-selector option:checked {
+                        background: linear-gradient(#1a1a1a, #1a1a1a) !important;
+                        color: #ff8c42 !important;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
         async initializeBalances() {
             try {
-                // Fetch Bitcoin price first
-                const priceData = await this.app.apiService.fetchBitcoinPrice();
-                this.btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
-                console.log('[AccountListModal] Bitcoin price:', this.btcPrice);
+                // Fetch Bitcoin prices for all currencies
+                await this.fetchBTCPrice();
+                console.log('[AccountListModal] Bitcoin prices fetched for', this.currencyPrices.size, 'currencies');
                 
                 // Fetch balances for all accounts
                 const accounts = this.app.state.get('accounts') || [];
-                await this.fetchAllBalances(accounts);
+                await this.loadAllBalances();
             } catch (error) {
                 console.error('[AccountListModal] Error initializing balances:', error);
             }
         }
         
-        async fetchAllBalances(accounts) {
-            // Batch fetch balances with a small delay between requests
-            for (const account of accounts) {
-                this.fetchAccountBalance(account);
-                // Small delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-        }
-        
-        async fetchAccountBalance(account) {
-            try {
-                // Use the primary address (prefer segwit for balance checking)
-                const address = account.addresses?.segwit || account.addresses?.bech32 || account.addresses?.taproot;
-                if (!address) {
-                    this.updateBalanceDisplay(account.id, 0, 0);
-                    return;
-                }
-                
-                // Check cache first
-                const cached = this.balanceCache.get(account.id);
-                if (cached && (Date.now() - cached.timestamp) < 60000) { // 1 minute cache
-                    this.updateBalanceDisplay(account.id, cached.btc, cached.usd);
-                    return;
-                }
-                
-                // Fetch fresh balance
-                const balanceData = await this.app.apiService.fetchAddressBalance(address);
-                const btcBalance = (balanceData.balance || 0) / 100000000; // Convert from satoshis
-                const usdBalance = btcBalance * this.btcPrice;
-                
-                // Update cache
-                this.balanceCache.set(account.id, {
-                    btc: btcBalance,
-                    usd: usdBalance,
-                    timestamp: Date.now()
-                });
-                
-                // Update UI
-                this.updateBalanceDisplay(account.id, btcBalance, usdBalance);
-            } catch (error) {
-                console.error(`[AccountListModal] Error fetching balance for ${account.name}:`, error);
-                this.updateBalanceDisplay(account.id, 0, 0, true);
-            }
-        }
-        
-        updateBalanceDisplay(accountId, btcBalance, usdBalance, isError = false) {
-            const btcElement = document.querySelector(`.balance-btc-${accountId}`);
-            const usdElement = document.querySelector(`.balance-usd-${accountId}`);
-            
-            if (btcElement) {
-                if (isError) {
-                    btcElement.textContent = 'Error';
-                    btcElement.style.color = '#ff4444';
-                } else {
-                    btcElement.textContent = `${btcBalance.toFixed(8)} BTC`;
-                    btcElement.style.color = btcBalance > 0 ? '#f57315' : '#666';
-                }
-            }
-            
-            if (usdElement) {
-                if (isError) {
-                    usdElement.textContent = '';
-                } else {
-                    usdElement.textContent = `≈ $${usdBalance.toFixed(2)} USD`;
-                }
-            }
-        }
+        // Remove duplicate methods - using the currency-aware versions above
         
         async refreshAccountBalance(account) {
             // Show loading state
@@ -17898,6 +18234,49 @@
                             this.updateAccountGrid();
                         }
                     })
+                ]),
+                
+                // Currency selector
+                $.div({ style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
+                    $.span({ style: { color: '#f57315', fontSize: '14px', fontWeight: '500' } }, ['Currency:']),
+                    $.select({
+                        id: 'currency-selector',
+                        value: this.selectedCurrency,
+                        style: {
+                            padding: '8px 12px',
+                            background: '#000',
+                            border: '2px solid #f57315',
+                            color: '#f57315',
+                            fontSize: '14px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            cursor: 'pointer',
+                            minWidth: '120px',
+                            outline: 'none',
+                            transition: 'all 0.2s ease'
+                        },
+                        onfocus: (e) => {
+                            e.target.style.boxShadow = '0 0 0 1px #f57315';
+                            e.target.style.borderColor = '#ff8c42';
+                        },
+                        onblur: (e) => {
+                            e.target.style.boxShadow = 'none';
+                            e.target.style.borderColor = '#f57315';
+                        },
+                        onchange: (e) => {
+                            this.changeCurrency(e.target.value);
+                        }
+                    }, this.supportedCurrencies.map(currency => 
+                        $.option({ 
+                            value: currency.code,
+                            style: {
+                                background: '#000',
+                                color: '#f57315',
+                                padding: '5px'
+                            }
+                        }, [
+                            `${currency.symbol} ${currency.code.toUpperCase()}`
+                        ])
+                    ))
                 ]),
                 
                 // View mode selector
@@ -18209,15 +18588,22 @@
             return $.div({
                 className: 'account-card',
                 'data-account-id': account.id,
+                draggable: false,
                 style: {
                     background: isActive ? `${accountColor}20` : '#111',
                     border: `2px solid ${isActive ? accountColor : (account.color || '#333')}`,
                     borderLeft: `5px solid ${accountColor}`,
                     padding: '20px',
-                    cursor: 'default',
+                    cursor: 'pointer',
                     transition: 'all 0.2s',
                     position: 'relative',
                     userSelect: 'none'
+                },
+                onclick: (e) => {
+                    e.stopPropagation();
+                    if (!isActive) {
+                        this.switchToAccount(account);
+                    }
                 },
                 onmouseover: (e) => {
                     if (!isActive) {
@@ -25866,7 +26252,7 @@
                             style: {
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 'calc(12px * var(--scale-factor))',
+                                gap: 'calc(8px * var(--scale-factor))',
                                 flexShrink: 0
                             }
                         }, [
@@ -25883,8 +26269,8 @@
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: 'calc(8px * var(--scale-factor)) calc(12px * var(--scale-factor))',
-                                    fontSize: 'calc(11px * var(--scale-factor))',
+                                    padding: 'calc(5px * var(--scale-factor)) calc(8px * var(--scale-factor))',
+                                    fontSize: 'calc(10px * var(--scale-factor))',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: 'var(--bg-primary)',
                                     border: 'calc(1px * var(--scale-factor)) solid #69fd97',
@@ -25893,8 +26279,8 @@
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    minWidth: 'calc(100px * var(--scale-factor))',
-                                    height: 'calc(32px * var(--scale-factor))',
+                                    minWidth: 'calc(70px * var(--scale-factor))',
+                                    height: 'calc(24px * var(--scale-factor))',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -25917,8 +26303,8 @@
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: isXS ? 'calc(4px * var(--scale-factor)) calc(6px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(8px * var(--scale-factor))',
-                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
+                                    padding: isXS ? 'calc(3px * var(--scale-factor)) calc(5px * var(--scale-factor))' : 'calc(5px * var(--scale-factor)) calc(7px * var(--scale-factor))',
+                                    fontSize: isXS ? 'calc(9px * var(--scale-factor))' : 'calc(10px * var(--scale-factor))',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: 'var(--bg-primary)',
                                     border: 'calc(1px * var(--scale-factor)) solid #f57315',
@@ -25927,8 +26313,8 @@
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    minWidth: isXS ? 'calc(28px * var(--scale-factor))' : 'calc(55px * var(--scale-factor))',
-                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
+                                    minWidth: isXS ? 'calc(25px * var(--scale-factor))' : 'calc(50px * var(--scale-factor))',
+                                    height: isXS ? 'calc(20px * var(--scale-factor))' : 'calc(24px * var(--scale-factor))',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -25946,12 +26332,12 @@
                                 title: 'Refresh Data'
                             }, [isXS ? 'R' : 'Refresh']),
                             
-                            // Hide/Show button
+                            // Currency selector button
                             $.button({
                                 className: 'dashboard-btn',
                                 style: {
-                                    padding: isXS ? 'calc(6px * var(--scale-factor)) calc(10px * var(--scale-factor))' : 'calc(6px * var(--scale-factor)) calc(12px * var(--scale-factor))',
-                                    fontSize: isXS ? 'calc(10px * var(--scale-factor))' : 'calc(11px * var(--scale-factor))',
+                                    padding: isXS ? 'calc(3px * var(--scale-factor)) calc(5px * var(--scale-factor))' : 'calc(5px * var(--scale-factor)) calc(7px * var(--scale-factor))',
+                                    fontSize: isXS ? 'calc(9px * var(--scale-factor))' : 'calc(10px * var(--scale-factor))',
                                     fontFamily: 'JetBrains Mono, monospace',
                                     background: 'var(--bg-primary)',
                                     border: 'calc(1px * var(--scale-factor)) solid #f57315',
@@ -25960,7 +26346,43 @@
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     whiteSpace: 'nowrap',
-                                    height: isXS ? 'calc(22px * var(--scale-factor))' : 'calc(26px * var(--scale-factor))',
+                                    minWidth: isXS ? 'calc(32px * var(--scale-factor))' : 'calc(45px * var(--scale-factor))',
+                                    height: isXS ? 'calc(20px * var(--scale-factor))' : 'calc(24px * var(--scale-factor))',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxSizing: 'border-box',
+                                    position: 'relative'
+                                },
+                                onmouseover: (e) => {
+                                    e.currentTarget.style.background = '#f57315';
+                                    e.currentTarget.style.color = '#000000';
+                                },
+                                onmouseout: (e) => {
+                                    e.currentTarget.style.background = '#000000';
+                                    e.currentTarget.style.color = '#f57315';
+                                },
+                                onclick: (e) => this.showCurrencyDropdown(e),
+                                title: 'Select Currency'
+                            }, [
+                                $.span({}, [(localStorage.getItem('mooshPreferredCurrency') || 'USD').toUpperCase()])
+                            ]),
+                            
+                            // Hide/Show button
+                            $.button({
+                                className: 'dashboard-btn',
+                                style: {
+                                    padding: isXS ? 'calc(4px * var(--scale-factor)) calc(8px * var(--scale-factor))' : 'calc(5px * var(--scale-factor)) calc(10px * var(--scale-factor))',
+                                    fontSize: isXS ? 'calc(9px * var(--scale-factor))' : 'calc(10px * var(--scale-factor))',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    background: 'var(--bg-primary)',
+                                    border: 'calc(1px * var(--scale-factor)) solid #f57315',
+                                    color: '#f57315',
+                                    borderRadius: '0',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    whiteSpace: 'nowrap',
+                                    height: isXS ? 'calc(20px * var(--scale-factor))' : 'calc(24px * var(--scale-factor))',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -26741,7 +27163,13 @@
                     }, ['0.00000000 BTC']),
                     $.div({ 
                         style: 'font-size: calc(10px * var(--scale-factor)); margin-top: calc(4px * var(--scale-factor)); color: #888888;'
-                    }, ['≈ $', $.span({ id: 'btcUsdValue' }, ['0.00']), ' USD'])
+                    }, [
+                        '≈ ', 
+                        $.span({ id: 'currencySymbol' }, ['$']),
+                        $.span({ id: 'btcUsdValue' }, ['0.00']), 
+                        ' ', 
+                        $.span({ id: 'currencyCode' }, ['USD'])
+                    ])
                 ]),
                 
                 // Lightning Balance
@@ -27870,16 +28298,75 @@
             await this.fetchTransactionHistory();
         }
         
+        getCurrencyInfo() {
+            const currencyData = {
+                usd: { symbol: '$', name: 'US Dollar' },
+                eur: { symbol: '€', name: 'Euro' },
+                gbp: { symbol: '£', name: 'British Pound' },
+                jpy: { symbol: '¥', name: 'Japanese Yen' },
+                cad: { symbol: 'C$', name: 'Canadian Dollar' },
+                aud: { symbol: 'A$', name: 'Australian Dollar' },
+                chf: { symbol: 'Fr', name: 'Swiss Franc' },
+                cny: { symbol: '¥', name: 'Chinese Yuan' },
+                inr: { symbol: '₹', name: 'Indian Rupee' },
+                krw: { symbol: '₩', name: 'South Korean Won' },
+                brl: { symbol: 'R$', name: 'Brazilian Real' },
+                mxn: { symbol: 'Mex$', name: 'Mexican Peso' },
+                rub: { symbol: '₽', name: 'Russian Ruble' },
+                zar: { symbol: 'R', name: 'South African Rand' },
+                aed: { symbol: 'د.إ', name: 'UAE Dirham' },
+                sgd: { symbol: 'S$', name: 'Singapore Dollar' },
+                hkd: { symbol: 'HK$', name: 'Hong Kong Dollar' },
+                nzd: { symbol: 'NZ$', name: 'New Zealand Dollar' },
+                sek: { symbol: 'kr', name: 'Swedish Krona' },
+                nok: { symbol: 'kr', name: 'Norwegian Krone' },
+                try: { symbol: '₺', name: 'Turkish Lira' },
+                thb: { symbol: '฿', name: 'Thai Baht' },
+                pln: { symbol: 'zł', name: 'Polish Złoty' },
+                php: { symbol: '₱', name: 'Philippine Peso' },
+                idr: { symbol: 'Rp', name: 'Indonesian Rupiah' }
+            };
+            
+            const selectedCurrency = localStorage.getItem('mooshPreferredCurrency') || 'usd';
+            return {
+                code: selectedCurrency,
+                ...currencyData[selectedCurrency]
+            };
+        }
+        
+        formatCurrencyValue(value, currencyCode) {
+            const noDecimalCurrencies = ['jpy', 'krw', 'idr'];
+            
+            if (noDecimalCurrencies.includes(currencyCode)) {
+                return Math.round(value).toLocaleString();
+            }
+            
+            return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        
         async refreshBalances() {
             try {
                 console.log('[Dashboard] Starting balance refresh...');
                 
-                // Fetch Bitcoin price
-                const priceData = await this.app.apiService.fetchBitcoinPrice();
+                // Get selected currency
+                const currencyInfo = this.getCurrencyInfo();
+                const selectedCurrency = currencyInfo.code;
+                
+                // Fetch Bitcoin price for selected currency
+                let priceData;
+                try {
+                    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=${selectedCurrency}`);
+                    priceData = await response.json();
+                } catch (error) {
+                    console.error('[Dashboard] Failed to fetch price from CoinGecko:', error);
+                    // Try fallback through API
+                    priceData = await this.app.apiService.fetchBitcoinPrice();
+                }
+                
                 console.log('[Dashboard] Price data received:', priceData);
                 // Handle both nested and flat response structures
-                const btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
-                console.log('[Dashboard] BTC price extracted:', btcPrice);
+                const btcPrice = priceData?.bitcoin?.[selectedCurrency] || priceData?.[selectedCurrency] || priceData?.bitcoin?.usd || priceData?.usd || 0;
+                console.log(`[Dashboard] BTC price extracted for ${selectedCurrency.toUpperCase()}:`, btcPrice);
                 
                 // Update network info
                 const networkInfo = await this.app.apiService.fetchNetworkInfo();
@@ -27941,10 +28428,10 @@
                             // For Spark Protocol, we would need a different API
                             // For now, just show 0 balance
                             const btcBalance = 0;
-                            const usdValue = 0;
+                            const currencyValue = 0;
                             
                             // Update UI elements
-                            this.updateBalanceDisplay(btcBalance, usdValue, btcPrice);
+                            this.updateBalanceDisplay(btcBalance, currencyValue, btcPrice, selectedCurrency, currencyInfo);
                             
                             // Also update the wallet selector balance display
                             const balanceElement = document.getElementById('selectedWalletBalance');
@@ -27962,14 +28449,14 @@
                         // Balance is in satoshis from the API
                         const balanceSats = balanceData.balance || 0;
                         const btcBalance = balanceSats / 100000000; // Convert from satoshis
-                        const usdValue = btcBalance * btcPrice;
+                        const currencyValue = btcBalance * btcPrice;
                         
-                        console.log('[Dashboard] Balance calculations:', { balanceSats, btcBalance, usdValue });
+                        console.log('[Dashboard] Balance calculations:', { balanceSats, btcBalance, currencyValue, currency: selectedCurrency });
                         
                         // Update the account's balance in state
                         currentAccount.balances = currentAccount.balances || {};
                         currentAccount.balances.bitcoin = balanceSats;
-                        currentAccount.balances.usd = usdValue;
+                        currentAccount.balances[selectedCurrency] = currencyValue;
                         
                         // Update UI elements - check both ID variations
                         const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
@@ -28000,18 +28487,30 @@
                         }
                         
                         if (usdElement) {
-                            // Update just the value for USD display
-                            const usdText = usdValue.toFixed(2);
-                            usdElement.setAttribute('data-original', usdText);
+                            // Update the currency value display
+                            const currencyText = this.formatCurrencyValue(currencyValue, selectedCurrency);
+                            usdElement.setAttribute('data-original', currencyText);
                             // Only show if not hidden
                             if (!this.app.state.get('isBalanceHidden')) {
-                                usdElement.textContent = usdText;
+                                usdElement.textContent = currencyText;
                             } else {
                                 usdElement.textContent = '••••••••';
                             }
-                            console.log('[Dashboard] Updated USD balance display:', usdText);
+                            console.log(`[Dashboard] Updated ${selectedCurrency.toUpperCase()} balance display:`, currencyText);
                         } else {
-                            console.warn('[Dashboard] USD balance element not found');
+                            console.warn('[Dashboard] Currency value element not found');
+                        }
+                        
+                        // Update currency symbol and code
+                        const symbolElement = document.getElementById('currencySymbol');
+                        const codeElement = document.getElementById('currencyCode');
+                        
+                        if (symbolElement) {
+                            symbolElement.textContent = currencyInfo.symbol;
+                        }
+                        
+                        if (codeElement) {
+                            codeElement.textContent = selectedCurrency.toUpperCase();
                         }
                         
                         // Also update wallet selector balance displays
@@ -28034,12 +28533,12 @@
                             console.error('[Dashboard] Error fetching balance:', error);
                             this.app.showNotification('Failed to fetch balance', 'error');
                             // Set balance to 0 on error
-                            this.updateBalanceDisplay(0, 0, btcPrice);
+                            this.updateBalanceDisplay(0, 0, btcPrice, selectedCurrency, currencyInfo);
                         }
                     } else {
                         // No address available for selected wallet type
                         console.log('[Dashboard] No address available for wallet type:', walletType);
-                        this.updateBalanceDisplay(0, 0, btcPrice);
+                        this.updateBalanceDisplay(0, 0, btcPrice, selectedCurrency, currencyInfo);
                     }
                 }
                 
@@ -28069,11 +28568,17 @@
             }
         }
         
-        updateBalanceDisplay(btcBalance, usdValue, btcPrice) {
-            console.log('[Dashboard] updateBalanceDisplay called with:', { btcBalance, usdValue, btcPrice });
+        updateBalanceDisplay(btcBalance, currencyValue, btcPrice, selectedCurrency, currencyInfo) {
+            // If currency parameters not provided, get them
+            if (!selectedCurrency || !currencyInfo) {
+                currencyInfo = this.getCurrencyInfo();
+                selectedCurrency = currencyInfo.code;
+            }
+            
+            console.log('[Dashboard] updateBalanceDisplay called with:', { btcBalance, currencyValue, btcPrice, selectedCurrency });
             // Update UI elements - check both ID variations
             const btcElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
-            const usdElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
+            const valueElement = document.getElementById('usd-balance') || document.getElementById('btcUsdValue');
             
             if (btcElement) {
                 const balanceText = btcElement.id === 'btcBalance' ? `${btcBalance.toFixed(8)} BTC` : btcBalance.toFixed(8);
@@ -28086,15 +28591,27 @@
                 }
             }
             
-            if (usdElement) {
-                const usdText = usdValue.toFixed(2);
-                usdElement.setAttribute('data-original', usdText);
+            if (valueElement) {
+                const currencyText = this.formatCurrencyValue(currencyValue, selectedCurrency);
+                valueElement.setAttribute('data-original', currencyText);
                 // Only show if not hidden
                 if (!this.app.state.get('isBalanceHidden')) {
-                    usdElement.textContent = usdText;
+                    valueElement.textContent = currencyText;
                 } else {
-                    usdElement.textContent = '••••••••';
+                    valueElement.textContent = '••••••••';
                 }
+            }
+            
+            // Update currency symbol and code
+            const symbolElement = document.getElementById('currencySymbol');
+            const codeElement = document.getElementById('currencyCode');
+            
+            if (symbolElement) {
+                symbolElement.textContent = currencyInfo.symbol;
+            }
+            
+            if (codeElement) {
+                codeElement.textContent = selectedCurrency.toUpperCase();
             }
             
             // Also update wallet selector balance displays
@@ -28410,6 +28927,205 @@
             });
             
             this.app.showNotification(isHidden ? 'Balances shown' : 'Balances hidden', 'success');
+        }
+        
+        showCurrencyDropdown(event) {
+            // Prevent button click from propagating
+            event.stopPropagation();
+            
+            // Remove any existing dropdown
+            const existingDropdown = document.getElementById('dashboard-currency-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+                return;
+            }
+            
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Get button position
+            const button = event.currentTarget;
+            const rect = button.getBoundingClientRect();
+            
+            // Check if we're in Moosh mode
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            const themeColor = isMooshMode ? '#69fd97' : '#f57315';
+            
+            // Add custom scrollbar styles
+            const styleId = 'currency-dropdown-scrollbar-styles';
+            if (!document.getElementById(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = `
+                    #dashboard-currency-dropdown::-webkit-scrollbar {
+                        width: 8px;
+                    }
+                    #dashboard-currency-dropdown::-webkit-scrollbar-track {
+                        background: #000;
+                        border-left: 1px solid ${themeColor};
+                    }
+                    #dashboard-currency-dropdown::-webkit-scrollbar-thumb {
+                        background: ${themeColor};
+                        border-radius: 0;
+                    }
+                    #dashboard-currency-dropdown::-webkit-scrollbar-thumb:hover {
+                        background: ${isMooshMode ? '#7fffb3' : '#ff8c42'};
+                    }
+                    
+                    /* Firefox scrollbar */
+                    #dashboard-currency-dropdown {
+                        scrollbar-width: thin;
+                        scrollbar-color: ${themeColor} #000;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Create dropdown container
+            const dropdown = $.div({
+                id: 'dashboard-currency-dropdown',
+                style: {
+                    position: 'absolute',
+                    top: `${rect.bottom + 5}px`,
+                    left: `${rect.left}px`,
+                    zIndex: '10000',
+                    background: '#000',
+                    border: `2px solid ${themeColor}`,
+                    borderRadius: '0',
+                    minWidth: '200px',
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.5)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '12px'
+                }
+            }, []);
+            
+            // Get supported currencies from AccountListModal
+            const supportedCurrencies = [
+                { code: 'usd', symbol: '$', name: 'US Dollar' },
+                { code: 'eur', symbol: '€', name: 'Euro' },
+                { code: 'gbp', symbol: '£', name: 'British Pound' },
+                { code: 'jpy', symbol: '¥', name: 'Japanese Yen' },
+                { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
+                { code: 'aud', symbol: 'A$', name: 'Australian Dollar' },
+                { code: 'chf', symbol: 'Fr', name: 'Swiss Franc' },
+                { code: 'cny', symbol: '¥', name: 'Chinese Yuan' },
+                { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
+                { code: 'krw', symbol: '₩', name: 'South Korean Won' },
+                { code: 'brl', symbol: 'R$', name: 'Brazilian Real' },
+                { code: 'mxn', symbol: 'Mex$', name: 'Mexican Peso' },
+                { code: 'rub', symbol: '₽', name: 'Russian Ruble' },
+                { code: 'zar', symbol: 'R', name: 'South African Rand' },
+                { code: 'aed', symbol: 'د.إ', name: 'UAE Dirham' },
+                { code: 'sgd', symbol: 'S$', name: 'Singapore Dollar' },
+                { code: 'hkd', symbol: 'HK$', name: 'Hong Kong Dollar' },
+                { code: 'nzd', symbol: 'NZ$', name: 'New Zealand Dollar' },
+                { code: 'sek', symbol: 'kr', name: 'Swedish Krona' },
+                { code: 'nok', symbol: 'kr', name: 'Norwegian Krone' },
+                { code: 'try', symbol: '₺', name: 'Turkish Lira' },
+                { code: 'thb', symbol: '฿', name: 'Thai Baht' },
+                { code: 'pln', symbol: 'zł', name: 'Polish Złoty' },
+                { code: 'php', symbol: '₱', name: 'Philippine Peso' },
+                { code: 'idr', symbol: 'Rp', name: 'Indonesian Rupiah' }
+            ];
+            
+            const currentCurrency = localStorage.getItem('mooshPreferredCurrency') || 'usd';
+            
+            // Add currency options
+            supportedCurrencies.forEach(currency => {
+                const option = $.div({
+                    style: {
+                        padding: '10px 15px',
+                        cursor: 'pointer',
+                        color: currency.code === currentCurrency ? '#000' : themeColor,
+                        background: currency.code === currentCurrency ? themeColor : 'transparent',
+                        borderBottom: '1px solid #333',
+                        transition: 'all 0.2s ease'
+                    },
+                    onmouseover: (e) => {
+                        if (currency.code !== currentCurrency) {
+                            e.currentTarget.style.background = '#1a1a1a';
+                            e.currentTarget.style.color = isMooshMode ? '#7fffb3' : '#ff8c42';
+                        }
+                    },
+                    onmouseout: (e) => {
+                        if (currency.code !== currentCurrency) {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = themeColor;
+                        }
+                    },
+                    onclick: () => {
+                        this.changeDashboardCurrency(currency.code);
+                        dropdown.remove();
+                        // Remove the scrollbar styles when dropdown closes
+                        const styleEl = document.getElementById(styleId);
+                        if (styleEl) styleEl.remove();
+                    }
+                }, [`${currency.symbol} ${currency.code.toUpperCase()} - ${currency.name}`]);
+                
+                dropdown.appendChild(option);
+            });
+            
+            // Add to document
+            document.body.appendChild(dropdown);
+            
+            // Close dropdown when clicking elsewhere
+            const closeDropdown = (e) => {
+                if (!dropdown.contains(e.target) && e.target !== button) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                    // Remove the scrollbar styles when dropdown closes
+                    const styleEl = document.getElementById(styleId);
+                    if (styleEl) styleEl.remove();
+                }
+            };
+            
+            setTimeout(() => {
+                document.addEventListener('click', closeDropdown);
+            }, 0);
+        }
+        
+        changeDashboardCurrency(currency) {
+            // Save preference
+            localStorage.setItem('mooshPreferredCurrency', currency);
+            
+            // Update button text
+            const currencyButtons = document.querySelectorAll('.dashboard-btn');
+            currencyButtons.forEach(btn => {
+                const span = btn.querySelector('span');
+                if (span && span.textContent.length === 3) {
+                    // This is likely our currency button
+                    span.textContent = currency.toUpperCase();
+                }
+            });
+            
+            // Update USD value display if visible
+            const btcUsdValue = document.getElementById('btcUsdValue');
+            if (btcUsdValue && !btcUsdValue.textContent.includes('•')) {
+                // Get BTC balance
+                const btcBalanceEl = document.getElementById('btcBalance');
+                if (btcBalanceEl) {
+                    const btcText = btcBalanceEl.textContent;
+                    const btcMatch = btcText.match(/(\d+\.?\d*)/);
+                    
+                    if (btcMatch) {
+                        const btcAmount = parseFloat(btcMatch[1]);
+                        
+                        // Refresh to get new prices in the selected currency
+                        this.refreshBalances();
+                        
+                        // Also update AccountListModal if it exists
+                        if (window.accountListModalInstance) {
+                            const modal = window.accountListModalInstance;
+                            modal.selectedCurrency = currency;
+                            modal.changeCurrency(currency);
+                        }
+                    }
+                }
+            }
+            
+            // Show notification
+            this.app.showNotification(`Currency changed to ${currency.toUpperCase()}`, 'success');
         }
         
         showStablecoinSwap() {

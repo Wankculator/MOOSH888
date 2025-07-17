@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Currency Selector Test</title>
+    <style>
+        body {
+            background: #000;
+            color: #f57315;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 20px;
+        }
+        
+        .dashboard-mockup {
+            border: 2px solid #f57315;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            align-items: center;
+        }
+        
+        .dashboard-btn {
+            padding: 8px 12px;
+            background: #000;
+            border: 1px solid #f57315;
+            color: #f57315;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+        
+        .dashboard-btn:hover {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .balance-display {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .btc-balance {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .currency-value {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        #dashboard-currency-dropdown {
+            position: absolute;
+            background: #000;
+            border: 2px solid #f57315;
+            min-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .currency-option {
+            padding: 10px 15px;
+            cursor: pointer;
+            color: #f57315;
+            border-bottom: 1px solid #333;
+            transition: all 0.2s ease;
+        }
+        
+        .currency-option:hover {
+            background: #1a1a1a;
+            color: #ff8c42;
+        }
+        
+        .currency-option.selected {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #111;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-mockup">
+        <h1>MOOSH Dashboard Currency Test</h1>
+        
+        <div class="button-row">
+            <span>Account 3 ▼</span>
+            <button class="dashboard-btn">Manage</button>
+            <button class="dashboard-btn">Refresh</button>
+            <button class="dashboard-btn" id="currency-btn">
+                <span id="current-currency">USD</span>
+            </button>
+            <button class="dashboard-btn">Hide</button>
+        </div>
+        
+        <div class="balance-display">
+            <div class="btc-balance">0.12345678 BTC</div>
+            <div class="currency-value">
+                ≈ <span id="currencySymbol">$</span><span id="btcUsdValue">4,938.27</span> <span id="currencyCode">USD</span>
+            </div>
+        </div>
+        
+        <div class="log" id="log"></div>
+    </div>
+    
+    <script>
+        const currencies = [
+            { code: 'usd', symbol: '$', name: 'US Dollar' },
+            { code: 'eur', symbol: '€', name: 'Euro' },
+            { code: 'gbp', symbol: '£', name: 'British Pound' },
+            { code: 'jpy', symbol: '¥', name: 'Japanese Yen' },
+            { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
+            { code: 'aud', symbol: 'A$', name: 'Australian Dollar' },
+            { code: 'chf', symbol: 'Fr', name: 'Swiss Franc' },
+            { code: 'cny', symbol: '¥', name: 'Chinese Yuan' },
+            { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
+            { code: 'krw', symbol: '₩', name: 'South Korean Won' }
+        ];
+        
+        let currentCurrency = localStorage.getItem('mooshPreferredCurrency') || 'usd';
+        let prices = {};
+        
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${time}] ${msg}<br>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function formatCurrencyValue(value, code) {
+            const noDecimalCurrencies = ['jpy', 'krw', 'idr'];
+            if (noDecimalCurrencies.includes(code)) {
+                return Math.round(value).toLocaleString();
+            }
+            return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        
+        async function fetchPrices() {
+            log('Fetching prices...');
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,eur,gbp,jpy,cad,aud,chf,cny,inr,krw');
+                const data = await response.json();
+                prices = data.bitcoin;
+                log(`Prices fetched: ${Object.keys(prices).length} currencies`);
+                updateDisplay();
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                // Use fallback prices
+                prices = {
+                    usd: 40000,
+                    eur: 37000,
+                    gbp: 32000,
+                    jpy: 5500000,
+                    cad: 50000,
+                    aud: 55000,
+                    chf: 38000,
+                    cny: 280000,
+                    inr: 3300000,
+                    krw: 47000000
+                };
+                updateDisplay();
+            }
+        }
+        
+        function updateDisplay() {
+            const btc = 0.12345678;
+            const price = prices[currentCurrency] || 40000;
+            const value = btc * price;
+            const currency = currencies.find(c => c.code === currentCurrency);
+            
+            document.getElementById('current-currency').textContent = currentCurrency.toUpperCase();
+            document.getElementById('currencySymbol').textContent = currency.symbol;
+            document.getElementById('btcUsdValue').textContent = formatCurrencyValue(value, currentCurrency);
+            document.getElementById('currencyCode').textContent = currentCurrency.toUpperCase();
+            
+            log(`Display updated: ${currency.symbol}${formatCurrencyValue(value, currentCurrency)} ${currentCurrency.toUpperCase()}`);
+        }
+        
+        function showDropdown(event) {
+            event.stopPropagation();
+            
+            // Remove existing dropdown
+            const existing = document.getElementById('dashboard-currency-dropdown');
+            if (existing) {
+                existing.remove();
+                return;
+            }
+            
+            const button = event.currentTarget;
+            const rect = button.getBoundingClientRect();
+            
+            const dropdown = document.createElement('div');
+            dropdown.id = 'dashboard-currency-dropdown';
+            dropdown.style.top = `${rect.bottom + 5}px`;
+            dropdown.style.left = `${rect.left}px`;
+            
+            currencies.forEach(currency => {
+                const option = document.createElement('div');
+                option.className = 'currency-option';
+                if (currency.code === currentCurrency) {
+                    option.classList.add('selected');
+                }
+                option.textContent = `${currency.symbol} ${currency.code.toUpperCase()} - ${currency.name}`;
+                option.onclick = () => {
+                    currentCurrency = currency.code;
+                    localStorage.setItem('mooshPreferredCurrency', currentCurrency);
+                    log(`Currency changed to ${currency.code.toUpperCase()}`);
+                    updateDisplay();
+                    dropdown.remove();
+                };
+                dropdown.appendChild(option);
+            });
+            
+            document.body.appendChild(dropdown);
+            
+            // Close on outside click
+            setTimeout(() => {
+                document.addEventListener('click', function closeDropdown(e) {
+                    if (!dropdown.contains(e.target)) {
+                        dropdown.remove();
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                });
+            }, 0);
+        }
+        
+        // Set up event listeners
+        document.getElementById('currency-btn').addEventListener('click', showDropdown);
+        
+        // Initial load
+        fetchPrices();
+        log('Dashboard currency test initialized');
+    </script>
+</body>
+</html>
