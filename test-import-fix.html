@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Fix Test - MOOSH Wallet</title>
+    <link rel="stylesheet" href="css/app.css">
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 20px;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .fix-summary {
+            background: #002200;
+            border: 2px solid #69fd97;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .test-button {
+            padding: 15px 30px;
+            background: #000;
+            border: 2px solid #f57315;
+            color: #f57315;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s ease;
+            margin: 10px;
+        }
+        
+        .test-button:hover {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .results {
+            background: #111;
+            border: 2px solid #333;
+            padding: 20px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        
+        .success { color: #69fd97; }
+        .error { color: #ff4444; }
+        .info { color: #00d4ff; }
+        .warning { color: #f57315; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div class="test-container">
+        <h1 style="color: #f57315; text-align: center;">IMPORT BUTTON FIX TEST</h1>
+        
+        <div class="fix-summary">
+            <h3 style="color: #69fd97;">FIX APPLIED ✓</h3>
+            <p><strong>Issue:</strong> Import button was trying to access <code>this.app.multiAccountModal</code> which doesn't exist</p>
+            <p><strong>Solution:</strong> Create new MultiAccountModal instance when needed</p>
+            <p><strong>Code Fixed:</strong></p>
+            <pre style="background: #000; padding: 10px; overflow-x: auto;">
+// OLD (BROKEN):
+importAccount() {
+    this.close();
+    this.app.multiAccountModal.isImporting = true;  // ERROR: undefined
+    this.app.multiAccountModal.show();
+}
+
+// NEW (FIXED):
+importAccount() {
+    this.close();
+    const modal = new MultiAccountModal(this.app);  // Create new instance
+    modal.isImporting = true;
+    modal.show();
+}</pre>
+        </div>
+        
+        <div style="text-align: center; margin: 40px 0;">
+            <button class="test-button" onclick="testImportButton()">TEST IMPORT BUTTON</button>
+            <button class="test-button" onclick="testNewAccountButton()">TEST NEW ACCOUNT BUTTON</button>
+        </div>
+        
+        <div class="results" id="results">
+            <span class="info">Click the test buttons above to verify the fix works.</span>
+        </div>
+    </div>
+    
+    <script src="js/moosh-wallet.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        let logs = [];
+        
+        function log(message, type = 'info') {
+            const time = new Date().toTimeString().split(' ')[0];
+            logs.push(`<span class="${type}">[${time}] ${message}</span>`);
+            results.innerHTML = logs.join('\n');
+        }
+        
+        function clearLog() {
+            logs = [];
+            results.innerHTML = '';
+        }
+        
+        function testImportButton() {
+            clearLog();
+            log('=== TESTING IMPORT BUTTON ===', 'info');
+            
+            try {
+                // Open AccountListModal
+                log('Opening AccountListModal...', 'info');
+                const accountModal = new AccountListModal(window.app);
+                accountModal.show();
+                
+                setTimeout(() => {
+                    // Find Import button
+                    const modalEl = document.querySelector('.account-list-modal');
+                    if (!modalEl) {
+                        log('✗ AccountListModal not found', 'error');
+                        return;
+                    }
+                    log('✓ AccountListModal opened', 'success');
+                    
+                    const importBtn = Array.from(modalEl.querySelectorAll('button')).find(
+                        btn => btn.textContent === 'Import'
+                    );
+                    
+                    if (!importBtn) {
+                        log('✗ Import button not found', 'error');
+                        return;
+                    }
+                    log('✓ Import button found', 'success');
+                    
+                    // Click Import button
+                    log('Clicking Import button...', 'info');
+                    try {
+                        importBtn.click();
+                        
+                        setTimeout(() => {
+                            // Check if MultiAccountModal opened
+                            const importModal = document.querySelector('.multi-account-modal');
+                            if (importModal) {
+                                log('✓ Import modal opened successfully!', 'success');
+                                
+                                // Check for import form elements
+                                const mnemonicInput = importModal.querySelector('textarea');
+                                const nameInput = importModal.querySelector('input[type="text"]');
+                                
+                                if (mnemonicInput) {
+                                    log('✓ Mnemonic input field present', 'success');
+                                }
+                                if (nameInput) {
+                                    log('✓ Account name input present', 'success');
+                                }
+                                
+                                log('\n🎉 IMPORT BUTTON FIXED AND WORKING!', 'success');
+                                
+                                // Close modal
+                                const closeBtn = importModal.querySelector('button[onclick*="close"]');
+                                if (closeBtn) closeBtn.click();
+                                
+                            } else {
+                                log('✗ Import modal did not open', 'error');
+                                log('  Check browser console for errors', 'warning');
+                            }
+                        }, 500);
+                        
+                    } catch (error) {
+                        log(`✗ Error clicking Import button: ${error.message}`, 'error');
+                    }
+                    
+                }, 500);
+                
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function testNewAccountButton() {
+            clearLog();
+            log('=== TESTING NEW ACCOUNT BUTTON ===', 'info');
+            
+            try {
+                // Open AccountListModal
+                log('Opening AccountListModal...', 'info');
+                const accountModal = new AccountListModal(window.app);
+                accountModal.show();
+                
+                setTimeout(() => {
+                    // Find New Account button
+                    const modalEl = document.querySelector('.account-list-modal');
+                    if (!modalEl) {
+                        log('✗ AccountListModal not found', 'error');
+                        return;
+                    }
+                    log('✓ AccountListModal opened', 'success');
+                    
+                    const newAccountBtn = Array.from(modalEl.querySelectorAll('button')).find(
+                        btn => btn.textContent === '+ New Account'
+                    );
+                    
+                    if (!newAccountBtn) {
+                        log('✗ New Account button not found', 'error');
+                        return;
+                    }
+                    log('✓ New Account button found', 'success');
+                    
+                    // Click New Account button
+                    log('Clicking New Account button...', 'info');
+                    try {
+                        newAccountBtn.click();
+                        
+                        setTimeout(() => {
+                            // Check if MultiAccountModal opened
+                            const createModal = document.querySelector('.multi-account-modal');
+                            if (createModal) {
+                                log('✓ Create account modal opened successfully!', 'success');
+                                
+                                // Check for create form elements
+                                const nameInput = createModal.querySelector('input[type="text"]');
+                                const createBtn = Array.from(createModal.querySelectorAll('button')).find(
+                                    btn => btn.textContent.includes('Create')
+                                );
+                                
+                                if (nameInput) {
+                                    log('✓ Account name input present', 'success');
+                                }
+                                if (createBtn) {
+                                    log('✓ Create button present', 'success');
+                                }
+                                
+                                log('\n🎉 NEW ACCOUNT BUTTON FIXED AND WORKING!', 'success');
+                                
+                                // Close modal
+                                const closeBtn = createModal.querySelector('button[onclick*="close"]');
+                                if (closeBtn) closeBtn.click();
+                                
+                            } else {
+                                log('✗ Create account modal did not open', 'error');
+                                log('  Check browser console for errors', 'warning');
+                            }
+                        }, 500);
+                        
+                    } catch (error) {
+                        log(`✗ Error clicking New Account button: ${error.message}`, 'error');
+                    }
+                    
+                }, 500);
+                
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Show initial message
+        setTimeout(() => {
+            log('Ready to test. Click buttons above to verify the import fix.', 'info');
+        }, 500);
+    </script>
+</body>
+</html>

@@ -3702,7 +3702,7 @@
             if (this.failedAttempts === 0) return [];
             const remaining = this.maxAttempts - this.failedAttempts;
             if (remaining === 1) {
-                return ['⚠️ Last attempt remaining!'];
+                return ['WARNING: Last attempt remaining!'];
             }
             return [`${remaining} attempts remaining`];
         }
@@ -4591,11 +4591,11 @@
             if (isMainnet) {
                 toggle.classList.remove('testnet');
                 label.textContent = '.mainnet';
-                console.log('🌐 Switched to Bitcoin MAINNET');
+                console.log('[Network] Switched to Bitcoin MAINNET');
             } else {
                 toggle.classList.add('testnet');
                 label.textContent = '.testnet';
-                console.log('🧪 Switched to Bitcoin TESTNET');
+                console.log('[Network] Switched to Bitcoin TESTNET');
             }
             
             this.app.showNotification(`Network: ${isMainnet ? '.mainnet' : '.testnet'}`, 'network');
@@ -5495,7 +5495,7 @@
                         textAlign: 'center'
                     }
                 }, [
-                    ElementFactory.h2({}, ['🔥 SPARK PROTOCOL DASHBOARD']),
+                    ElementFactory.h2({}, ['SPARK PROTOCOL DASHBOARD']),
                     ElementFactory.p({
                         style: { margin: '5px 0 0 0', opacity: '0.8' }
                     }, ['Real Bitcoin Spark Integration - Authentic SparkSat Features'])
@@ -5517,9 +5517,9 @@
                     }
                 }, [
                     this.createStatCard('Bitcoin Balance', '0.00000000 BTC', '$0.00', '₿'),
-                    this.createStatCard('Spark Balance', '0.00000000 BTC', 'Layer 2', '🔥'),
-                    this.createStatCard('Lightning Balance', '0.00000000 BTC', 'Instant Payments', '⚡'),
-                    this.createStatCard('Total Value', '0.00000000 BTC', '$0.00', '💰')
+                    this.createStatCard('Spark Balance', '0.00000000 BTC', 'Layer 2', 'SPARK'),
+                    this.createStatCard('Lightning Balance', '0.00000000 BTC', 'Instant Payments', 'LN'),
+                    this.createStatCard('Total Value', '0.00000000 BTC', '$0.00', 'TOTAL')
                 ]);
             }
     
@@ -5572,7 +5572,7 @@
                     }
                 }, [
                     this.createFeatureCard(
-                        '🔥 Spark Deposits',
+                        'Spark Deposits',
                         'Deposit Bitcoin into Spark Protocol for instant Layer 2 transactions',
                         'Create Deposit',
                         () => this.handleSparkDeposit()
@@ -5584,25 +5584,25 @@
                         () => this.handleLightningManager()
                     ),
                     this.createFeatureCard(
-                        '🔄 Spark Exits',
+                        'Spark Exits',
                         'Exit from Spark Protocol back to Bitcoin mainnet',
                         'Exit to Bitcoin',
                         () => this.handleSparkExit()
                     ),
                     this.createFeatureCard(
-                        '📊 Market Intelligence',
+                        'Market Intelligence',
                         'Real-time Bitcoin and DeFi market data',
                         'Market Data',
                         () => this.handleMarketData()
                     ),
                     this.createFeatureCard(
-                        '🏦 DeFi Integration',
+                        'DeFi Integration',
                         'Access DeFi protocols through Spark',
                         'DeFi Dashboard',
                         () => this.handleDeFiIntegration()
                     ),
                     this.createFeatureCard(
-                        '🔐 Advanced Security',
+                        'Advanced Security',
                         'Hardware wallet and multi-sig support',
                         'Security Settings',
                         () => this.handleSecurity()
@@ -5675,7 +5675,7 @@
                             cursor: 'pointer'
                         },
                         onclick: () => this.createNewSparkWallet()
-                    }, ['🔥 Create Spark Wallet']),
+                    }, ['Create Spark Wallet']),
                     ElementFactory.button({
                         className: 'spark-action-btn secondary',
                         style: {
@@ -5688,7 +5688,7 @@
                             cursor: 'pointer'
                         },
                         onclick: () => this.refreshSparkData()
-                    }, ['🔄 Refresh Data']),
+                    }, ['Refresh Data']),
                     ElementFactory.button({
                         className: 'spark-action-btn close',
                         style: {
@@ -5846,7 +5846,7 @@
                                 textAlign: 'center'
                             }
                         }, [
-                            ElementFactory.h2({}, ['🔥 Spark Protocol Deposit']),
+                            ElementFactory.h2({}, ['Spark Protocol Deposit']),
                             ElementFactory.p({}, ['Deposit Bitcoin into Spark for instant Layer 2 transactions'])
                         ]),
                         ElementFactory.div({
@@ -5885,7 +5885,7 @@
                             }, [
                                 ElementFactory.h4({
                                     style: { color: '#00D4FF', marginBottom: '10px' }
-                                }, ['💡 Spark Protocol Benefits']),
+                                }, ['Spark Protocol Benefits']),
                                 ElementFactory.ul({
                                     style: { margin: '0', paddingLeft: '20px' }
                                 }, [
@@ -5910,7 +5910,7 @@
                                         cursor: 'pointer'
                                     },
                                     onclick: () => this.processSparkDeposit()
-                                }, ['🔥 Create Deposit']),
+                                }, ['Create Deposit']),
                                 ElementFactory.button({
                                     style: {
                                         flex: '0 0 auto',
@@ -6049,9 +6049,9 @@
                         marginBottom: '20px'
                     }
                 }, [
-                    this.createStatCard('Local Balance', '0.005 BTC', '⚡'),
-                    this.createStatCard('Remote Balance', '0.010 BTC', '🌐'),
-                    this.createStatCard('Total Capacity', '0.015 BTC', '💰')
+                    this.createStatCard('Local Balance', '0.005 BTC', 'LOCAL'),
+                    this.createStatCard('Remote Balance', '0.010 BTC', 'REMOTE'),
+                    this.createStatCard('Total Capacity', '0.015 BTC', 'CAPACITY')
                 ]);
             }
     
@@ -6102,10 +6102,10 @@
                             gap: '10px'
                         }
                     }, [
-                        this.createFeatureButton('⚡ Send Payment', () => this.sendLightningPayment()),
-                        this.createFeatureButton('📨 Create Invoice', () => this.createLightningInvoice()),
-                        this.createFeatureButton('🔗 Open Channel', () => this.openLightningChannel()),
-                        this.createFeatureButton('📊 Channel Info', () => this.showChannelInfo())
+                        this.createFeatureButton('Send Payment', () => this.sendLightningPayment()),
+                        this.createFeatureButton('Create Invoice', () => this.createLightningInvoice()),
+                        this.createFeatureButton('Open Channel', () => this.openLightningChannel()),
+                        this.createFeatureButton('Channel Info', () => this.showChannelInfo())
                     ])
                 ]);
             }
@@ -6144,7 +6144,7 @@
                             cursor: 'pointer'
                         },
                         onclick: () => this.refreshChannelData()
-                    }, ['🔄 Refresh']),
+                    }, ['Refresh']),
                     ElementFactory.button({
                         style: {
                             background: 'transparent',
@@ -6264,7 +6264,7 @@
             if (response.ok) {
                 const text = await response.text();
                 BIP39_WORDS = text.trim().split('\n');
-                console.log('✅ Loaded full BIP39 wordlist:', BIP39_WORDS.length, 'words');
+                console.log('[BIP39] Loaded full wordlist:', BIP39_WORDS.length, 'words');
             }
         } catch (error) {
             console.warn('Could not load BIP39 wordlist from CDN, using fallback');
@@ -6799,7 +6799,7 @@
             
             try {
                 // Always try to use real API first for proper seed generation
-                console.log('🔑 Generating wallet with', wordCount, 'words...');
+                console.log('[Wallet] Generating wallet with', wordCount, 'words...');
                 const response = await this.app.apiService.generateSparkWallet(wordCount);
                 
                 console.log('[DEBUG] Raw API response:', JSON.stringify(response, null, 2));
@@ -6809,7 +6809,7 @@
                     const walletData = response.data;
                     const generatedSeed = walletData.mnemonic.split(' ');
                     
-                    console.log('✅ Real wallet generated successfully');
+                    console.log('[Wallet] Real wallet generated successfully');
                     // Security: Removed sensitive data logging
                     console.log('   Spark Address:', walletData.addresses.spark);
                     console.log('   Bitcoin Address:', walletData.addresses.bitcoin);
@@ -8270,8 +8270,7 @@
             
             return $.div({ className: 'terminal-box', style: 'margin-bottom: calc(24px * var(--scale-factor));' }, [
                 $.div({ className: 'terminal-header' }, [
-                    $.span({}, ['~/moosh/wallet/dashboard $']),
-                    $.span({ className: 'text-keyword' }, ['active'])
+                    $.span({}, ['~/moosh/wallet/dashboard $'])
                 ]),
                 $.div({ className: 'terminal-content' }, [
                     $.div({ 
@@ -8358,7 +8357,7 @@
                     className: 'header-btn',
                     title: 'Refresh',
                     onclick: () => this.handleRefresh()
-                }, ['↻']),
+                }, ['REFRESH']),
                 
                 $.button({
                     className: 'header-btn privacy-toggle',
@@ -9697,7 +9696,7 @@
                     
                     $.div({ className: 'modal-content' }, [
                         $.div({ className: 'seed-warning' }, [
-                            $.div({ className: 'warning-icon' }, ['⚠️']),
+                            $.div({ className: 'warning-icon' }, ['WARNING']),
                             $.div({ className: 'warning-text' }, [
                                 'Never share your seed phrase with anyone!',
                                 $.br(),
@@ -9746,7 +9745,7 @@
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success && result.data && result.data.mnemonic) {
-                        console.log('✅ Real wallet generated via API');
+                        console.log('[Wallet] Real wallet generated via API');
                         // Store additional wallet data
                         if (result.data.addresses) {
                             localStorage.setItem('sparkAddress', result.data.addresses.spark || '');
@@ -9756,7 +9755,7 @@
                     }
                 }
             } catch (error) {
-                console.log('⚠️ API not available, using local generation');
+                console.log('[Wallet] API not available, using local generation');
             }
             
             // Fallback to local BIP39 generation
@@ -10960,8 +10959,7 @@
             
             return $.div({ className: 'terminal-box', style: 'margin-bottom: calc(24px * var(--scale-factor));' }, [
                 $.div({ className: 'terminal-header' }, [
-                    $.span({}, ['~/moosh/wallet/dashboard $']),
-                    $.span({ className: 'text-keyword' }, ['active'])
+                    $.span({}, ['~/moosh/wallet/dashboard $'])
                 ]),
                 $.div({ className: 'terminal-content' }, [
                     $.div({ 
@@ -11048,7 +11046,7 @@
                     className: 'header-btn',
                     title: 'Refresh',
                     onclick: () => this.handleRefresh()
-                }, ['↻']),
+                }, ['REFRESH']),
                 
                 $.button({
                     className: 'header-btn privacy-toggle',
@@ -13181,7 +13179,7 @@
                     className: 'header-btn',
                     title: 'Refresh',
                     onclick: () => this.handleRefresh()
-                }, ['↻']),
+                }, ['REFRESH']),
                 
                 $.button({
                     className: 'header-btn privacy-toggle',
@@ -15929,7 +15927,7 @@
                     $.div({ 
                         style: 'background: rgba(76, 175, 80, 0.1); padding: 15px; border: 1px solid #4CAF50; margin-bottom: 20px;' 
                     }, [
-                        $.p({ style: 'color: #4CAF50; margin-bottom: 10px;' }, [`✅ Detected: ${detection.walletName}`]),
+                        $.p({ style: 'color: #4CAF50; margin-bottom: 10px;' }, [`DETECTED: ${detection.walletName}`]),
                         $.p({ style: 'color: var(--text-dim);' }, [`Type: ${detection.walletType}`]),
                         $.p({ style: 'color: var(--text-dim);' }, [`Active Paths: ${detection.activePaths.length}`])
                     ]) :
@@ -16212,7 +16210,7 @@
                     }, [`Are you sure you want to delete "${account.name}"?`]),
                     $.p({ 
                         style: 'color: #ff4444; fontSize: 12px' 
-                    }, ['⚠️ This action cannot be undone.'])
+                    }, ['WARNING: This action cannot be undone.'])
                 ]),
                 $.div({ 
                     style: 'display: flex; gap: 10px; justifyContent: flex-end' 
@@ -16826,7 +16824,7 @@
                     }, [`Are you sure you want to delete "${account.name}"?`]),
                     $.p({ 
                         style: 'color: #ff4444; fontSize: 12px' 
-                    }, ['⚠️ This action cannot be undone.'])
+                    }, ['WARNING: This action cannot be undone.'])
                 ]),
                 $.div({ 
                     style: 'display: flex; gap: 10px; justifyContent: flex-end' 
@@ -17386,11 +17384,20 @@
             this.searchQuery = '';
             this.selectedAccounts = new Set();
             this.editingAccountId = null;
-            this.sortBy = 'custom'; // custom, name, created, balance
+            this.sortBy = 'name'; // name, date, balance, activity
             this.sortOrder = 'asc'; // asc, desc
-            this.draggedAccount = null;
-            this.draggedElement = null;
-            this.dropTargetElement = null;
+            this.balanceCache = new Map();
+            this.btcPrice = 0;
+            
+            // View modes
+            this.viewMode = 'grid'; // grid, list, details
+            this.groupBy = 'none'; // none, balance, type, activity
+            this.showFilters = false;
+            this.filters = {
+                balance: 'all', // all, empty, low, medium, high
+                activity: 'all', // all, active, inactive
+                type: 'all' // all, hd, imported
+            };
         }
         
         show() {
@@ -17445,6 +17452,7 @@
                 }, [
                     this.createHeader(),
                     this.createToolbar(),
+                    this.showFilters && this.createFilterPanel(),
                     this.createAccountGrid(accounts, currentAccountId),
                     this.createFooter()
                 ])
@@ -17573,15 +17581,23 @@
                 $.span({}, [`~/moosh/accounts $ manage (${accounts.length} account${accounts.length !== 1 ? 's' : ''})`]),
                 $.button({
                     style: {
-                        background: 'transparent',
-                        border: 'none',
+                        background: '#000',
+                        border: '2px solid #f57315',
                         color: '#f57315',
                         cursor: 'pointer',
-                        fontSize: '20px',
-                        padding: '5px'
+                        fontSize: '14px',
+                        padding: '6px 12px',
+                        fontFamily: 'JetBrains Mono, monospace',
+                        transition: 'all 0.2s ease'
+                    },
+                    onmouseover: (e) => {
+                        e.currentTarget.style.background = 'rgba(245, 115, 21, 0.1)';
+                    },
+                    onmouseout: (e) => {
+                        e.currentTarget.style.background = '#000';
                     },
                     onclick: () => this.close()
-                }, ['×'])
+                }, ['CLOSE'])
             ]);
         }
         
@@ -17591,8 +17607,8 @@
             return $.div({
                 className: 'account-toolbar',
                 style: {
-                    padding: '15px',
-                    borderBottom: '1px solid #333',
+                    padding: '20px',
+                    borderBottom: '2px solid #333',
                     display: 'flex',
                     gap: '15px',
                     alignItems: 'center',
@@ -17607,11 +17623,19 @@
                         value: this.searchQuery,
                         style: {
                             width: '100%',
-                            padding: '8px 12px',
-                            background: '#111',
-                            border: '1px solid #333',
+                            padding: '10px 15px',
+                            background: '#000',
+                            border: '2px solid #333',
                             color: '#fff',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'border-color 0.2s ease'
+                        },
+                        onfocus: (e) => {
+                            e.target.style.borderColor = '#f57315';
+                        },
+                        onblur: (e) => {
+                            e.target.style.borderColor = '#333';
                         },
                         oninput: (e) => {
                             this.searchQuery = e.target.value;
@@ -17620,82 +17644,254 @@
                     })
                 ]),
                 
+                // View mode selector
+                $.div({ style: { display: 'flex', gap: '5px' } }, [
+                    $.button({
+                        style: {
+                            padding: '8px 12px',
+                            background: this.viewMode === 'grid' ? '#f57315' : '#000',
+                            border: '2px solid #f57315',
+                            color: this.viewMode === 'grid' ? '#000' : '#f57315',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'all 0.2s ease'
+                        },
+                        onclick: () => {
+                            this.viewMode = 'grid';
+                            this.updateAccountGrid();
+                        }
+                    }, ['GRID']),
+                    $.button({
+                        style: {
+                            padding: '8px 12px',
+                            background: this.viewMode === 'list' ? '#f57315' : '#000',
+                            border: '2px solid #f57315',
+                            color: this.viewMode === 'list' ? '#000' : '#f57315',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'all 0.2s ease'
+                        },
+                        onclick: () => {
+                            this.viewMode = 'list';
+                            this.updateAccountGrid();
+                        }
+                    }, ['LIST']),
+                    $.button({
+                        style: {
+                            padding: '8px 12px',
+                            background: this.viewMode === 'details' ? '#f57315' : '#000',
+                            border: '2px solid #f57315',
+                            color: this.viewMode === 'details' ? '#000' : '#f57315',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'all 0.2s ease'
+                        },
+                        onclick: () => {
+                            this.viewMode = 'details';
+                            this.updateAccountGrid();
+                        }
+                    }, ['DETAILS'])
+                ]),
+                
                 // Sort dropdown
                 $.div({ style: { display: 'flex', gap: '10px', alignItems: 'center' } }, [
-                    $.span({ style: { color: '#666', fontSize: '14px' } }, ['Sort by:']),
                     $.select({
                         style: {
-                            padding: '6px 10px',
-                            background: '#111',
-                            border: '1px solid #333',
-                            color: '#fff',
-                            fontSize: '14px'
+                            padding: '8px 12px',
+                            background: '#000',
+                            border: '2px solid #333',
+                            color: '#f57315',
+                            fontSize: '12px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            cursor: 'pointer'
                         },
+                        value: this.sortBy,
                         onchange: (e) => {
                             this.sortBy = e.target.value;
                             this.updateAccountGrid();
                         }
                     }, [
-                        $.option({ value: 'custom', selected: this.sortBy === 'custom' }, ['Custom Order']),
-                        $.option({ value: 'name' }, ['Name']),
-                        $.option({ value: 'created' }, ['Date Created']),
-                        $.option({ value: 'balance' }, ['Balance'])
+                        $.option({ value: 'name' }, ['Sort: Name']),
+                        $.option({ value: 'date' }, ['Sort: Date']),
+                        $.option({ value: 'balance' }, ['Sort: Balance']),
+                        $.option({ value: 'activity' }, ['Sort: Activity'])
                     ]),
                     $.button({
                         style: {
-                            padding: '6px 10px',
-                            background: '#111',
-                            border: '1px solid #333',
-                            color: '#fff',
+                            padding: '8px',
+                            background: '#000',
+                            border: '2px solid #333',
+                            color: '#f57315',
                             cursor: 'pointer',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'all 0.2s ease'
                         },
                         onclick: () => {
                             this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
                             this.updateAccountGrid();
-                        }
+                        },
+                        title: this.sortOrder === 'asc' ? 'Ascending' : 'Descending'
                     }, [this.sortOrder === 'asc' ? '↑' : '↓'])
                 ]),
                 
-                // Drag hint when in custom mode
-                this.sortBy === 'custom' && $.div({ 
-                    style: { 
-                        color: '#f57315', 
+                // Filter button
+                $.button({
+                    style: {
+                        padding: '8px 16px',
+                        background: this.showFilters ? '#f57315' : '#000',
+                        border: '2px solid #f57315',
+                        color: this.showFilters ? '#000' : '#f57315',
+                        cursor: 'pointer',
                         fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                    } 
-                }, [
-                    $.span({}, ['🔄']),
-                    $.span({}, ['Drag cards to reorder'])
-                ]),
+                        fontFamily: 'JetBrains Mono, monospace',
+                        transition: 'all 0.2s ease',
+                        marginLeft: 'auto'
+                    },
+                    onclick: () => {
+                        this.showFilters = !this.showFilters;
+                        this.updateAccountGrid();
+                    }
+                }, ['FILTERS']),
                 
                 // Actions
                 $.div({ style: { display: 'flex', gap: '10px' } }, [
                     $.button({
                         style: {
                             padding: '8px 16px',
-                            background: '#f57315',
-                            border: 'none',
-                            color: '#000',
+                            background: '#000',
+                            border: '2px solid #f57315',
+                            color: '#f57315',
                             cursor: 'pointer',
                             fontSize: '14px',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'all 0.2s ease'
+                        },
+                        onmouseover: (e) => {
+                            e.currentTarget.style.background = '#f57315';
+                            e.currentTarget.style.color = '#000';
+                        },
+                        onmouseout: (e) => {
+                            e.currentTarget.style.background = '#000';
+                            e.currentTarget.style.color = '#f57315';
                         },
                         onclick: () => this.createNewAccount()
                     }, ['+ New Account']),
                     $.button({
                         style: {
                             padding: '8px 16px',
-                            background: '#333',
-                            border: 'none',
-                            color: '#fff',
+                            background: '#000',
+                            border: '2px solid #666',
+                            color: '#666',
                             cursor: 'pointer',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'all 0.2s ease'
+                        },
+                        onmouseover: (e) => {
+                            e.currentTarget.style.background = '#222';
+                            e.currentTarget.style.color = '#fff';
+                        },
+                        onmouseout: (e) => {
+                            e.currentTarget.style.background = '#000';
+                            e.currentTarget.style.color = '#666';
                         },
                         onclick: () => this.importAccount()
                     }, ['Import'])
+                ])
+            ]);
+        }
+        
+        createFilterPanel() {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            return $.div({
+                style: {
+                    padding: '20px',
+                    background: '#111',
+                    borderBottom: '2px solid #333',
+                    display: 'flex',
+                    gap: '30px',
+                    flexWrap: 'wrap'
+                }
+            }, [
+                // Balance filter
+                $.div({ style: { display: 'flex', flexDirection: 'column', gap: '10px' } }, [
+                    $.label({ style: { color: '#f57315', fontSize: '12px', fontWeight: 'bold' } }, ['BALANCE FILTER']),
+                    $.div({ style: { display: 'flex', gap: '10px', flexWrap: 'wrap' } }, [
+                        ['all', 'empty', 'low', 'medium', 'high'].map(value => 
+                            $.button({
+                                style: {
+                                    padding: '6px 12px',
+                                    background: this.filters.balance === value ? '#f57315' : '#000',
+                                    border: '2px solid #f57315',
+                                    color: this.filters.balance === value ? '#000' : '#f57315',
+                                    cursor: 'pointer',
+                                    fontSize: '11px',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: () => {
+                                    this.filters.balance = value;
+                                    this.updateAccountGrid();
+                                }
+                            }, [value.toUpperCase()])
+                        )
+                    ])
+                ]),
+                
+                // Activity filter
+                $.div({ style: { display: 'flex', flexDirection: 'column', gap: '10px' } }, [
+                    $.label({ style: { color: '#69fd97', fontSize: '12px', fontWeight: 'bold' } }, ['ACTIVITY FILTER']),
+                    $.div({ style: { display: 'flex', gap: '10px' } }, [
+                        ['all', 'active', 'inactive'].map(value => 
+                            $.button({
+                                style: {
+                                    padding: '6px 12px',
+                                    background: this.filters.activity === value ? '#69fd97' : '#000',
+                                    border: '2px solid #69fd97',
+                                    color: this.filters.activity === value ? '#000' : '#69fd97',
+                                    cursor: 'pointer',
+                                    fontSize: '11px',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: () => {
+                                    this.filters.activity = value;
+                                    this.updateAccountGrid();
+                                }
+                            }, [value.toUpperCase()])
+                        )
+                    ])
+                ]),
+                
+                // Type filter
+                $.div({ style: { display: 'flex', flexDirection: 'column', gap: '10px' } }, [
+                    $.label({ style: { color: '#00d4ff', fontSize: '12px', fontWeight: 'bold' } }, ['TYPE FILTER']),
+                    $.div({ style: { display: 'flex', gap: '10px' } }, [
+                        ['all', 'hd', 'imported'].map(value => 
+                            $.button({
+                                style: {
+                                    padding: '6px 12px',
+                                    background: this.filters.type === value ? '#00d4ff' : '#000',
+                                    border: '2px solid #00d4ff',
+                                    color: this.filters.type === value ? '#000' : '#00d4ff',
+                                    cursor: 'pointer',
+                                    fontSize: '11px',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: () => {
+                                    this.filters.type = value;
+                                    this.updateAccountGrid();
+                                }
+                            }, [value.toUpperCase()])
+                        )
+                    ])
                 ])
             ]);
         }
@@ -17725,18 +17921,27 @@
                 ]);
             }
             
-            return $.div({
-                className: 'account-grid',
-                style: {
-                    flex: '1',
-                    overflow: 'auto',
-                    padding: '15px',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                    gap: '15px',
-                    alignContent: 'start'
-                }
-            }, filteredAccounts.map(account => this.createAccountCard(account, account.id === currentAccountId)));
+            // Render based on view mode
+            switch (this.viewMode) {
+                case 'list':
+                    return this.createListView(filteredAccounts, currentAccountId);
+                case 'details':
+                    return this.createDetailsView(filteredAccounts, currentAccountId);
+                case 'grid':
+                default:
+                    return $.div({
+                        className: 'account-grid',
+                        style: {
+                            flex: '1',
+                            overflow: 'auto',
+                            padding: '20px',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                            gap: '20px',
+                            alignContent: 'start'
+                        }
+                    }, filteredAccounts.map(account => this.createAccountCard(account, account.id === currentAccountId)));
+            }
         }
         
         createAccountCard(account, isActive) {
@@ -17745,13 +17950,12 @@
             
             return $.div({
                 className: 'account-card',
-                draggable: this.sortBy === 'custom',
                 'data-account-id': account.id,
                 style: {
                     background: isActive ? 'rgba(245, 115, 21, 0.1)' : '#111',
                     border: `2px solid ${isActive ? '#f57315' : '#333'}`,
-                    padding: '15px',
-                    cursor: this.sortBy === 'custom' ? 'move' : 'pointer',
+                    padding: '20px',
+                    cursor: 'default',
                     transition: 'all 0.2s',
                     position: 'relative',
                     userSelect: 'none'
@@ -17761,51 +17965,28 @@
                 },
                 onmouseout: (e) => {
                     if (!isActive) e.currentTarget.style.borderColor = '#333';
-                },
-                onclick: (e) => {
-                    // Don't switch if clicking on buttons or editing
-                    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-                    if (!isActive && !isEditing && this.sortBy !== 'custom') {
-                        this.switchToAccount(account);
-                    }
-                },
-                ondragstart: (e) => {
-                    if (this.sortBy !== 'custom') return;
-                    this.handleDragStart(e, account);
-                },
-                ondragover: (e) => {
-                    if (this.sortBy !== 'custom') return;
-                    this.handleDragOver(e);
-                },
-                ondrop: (e) => {
-                    if (this.sortBy !== 'custom') return;
-                    this.handleDrop(e, account);
-                },
-                ondragend: (e) => {
-                    if (this.sortBy !== 'custom') return;
-                    this.handleDragEnd(e);
-                },
-                // Touch support for mobile
-                ontouchstart: (e) => {
-                    if (this.sortBy !== 'custom') return;
-                    this.handleTouchStart(e, account);
-                },
-                ontouchmove: (e) => {
-                    if (this.sortBy !== 'custom') return;
-                    this.handleTouchMove(e);
-                },
-                ontouchend: (e) => {
-                    if (this.sortBy !== 'custom') return;
-                    this.handleTouchEnd(e);
                 }
             }, [
+                // Active indicator (separate row)
+                isActive && $.div({
+                    style: {
+                        background: '#f57315',
+                        color: '#000',
+                        padding: '8px 12px',
+                        margin: '-20px -20px 15px -20px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        textAlign: 'center'
+                    }
+                }, ['ACTIVE ACCOUNT']),
+                
                 // Header
                 $.div({ 
                     style: { 
                         display: 'flex', 
                         justifyContent: 'space-between', 
                         alignItems: 'center',
-                        marginBottom: '10px'
+                        marginBottom: '15px'
                     } 
                 }, [
                     isEditing ? 
@@ -17837,72 +18018,90 @@
                         $.div({ 
                             tag: 'h4',
                             style: { 
-                                color: isActive ? '#f57315' : '#fff',
+                                color: '#f57315',
                                 margin: '0',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
+                                fontSize: '18px',
+                                fontWeight: 'bold'
                             } 
-                        }, [
-                            account.name,
-                            isActive && $.span({ 
-                                style: { 
-                                    fontSize: '12px',
-                                    background: '#f57315',
-                                    color: '#000',
-                                    padding: '2px 6px',
-                                    fontWeight: 'normal'
-                                } 
-                            }, ['ACTIVE'])
-                        ]),
+                        }, [account.name]),
                     
                     // Action buttons
                     $.div({ style: { display: 'flex', gap: '5px' } }, [
                         !isEditing && $.button({
                             style: {
-                                background: 'transparent',
-                                border: '1px solid #666',
-                                color: '#666',
+                                background: '#000',
+                                border: '1px solid #333',
+                                color: '#f57315',
                                 padding: '4px 8px',
                                 fontSize: '12px',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                fontFamily: 'JetBrains Mono, monospace',
+                                transition: 'all 0.2s ease'
+                            },
+                            onmouseover: (e) => {
+                                e.currentTarget.style.background = '#111';
+                                e.currentTarget.style.borderColor = '#f57315';
+                            },
+                            onmouseout: (e) => {
+                                e.currentTarget.style.background = '#000';
+                                e.currentTarget.style.borderColor = '#333';
                             },
                             onclick: (e) => {
                                 e.stopPropagation();
                                 this.editingAccountId = account.id;
                                 this.updateAccountGrid();
                             }
-                        }, ['✏️']),
+                        }, ['EDIT']),
                         
                         $.button({
                             style: {
-                                background: 'transparent',
-                                border: '1px solid #666',
-                                color: '#666',
+                                background: '#000',
+                                border: '1px solid #333',
+                                color: '#69fd97',
                                 padding: '4px 8px',
                                 fontSize: '12px',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                fontFamily: 'JetBrains Mono, monospace',
+                                transition: 'all 0.2s ease'
+                            },
+                            onmouseover: (e) => {
+                                e.currentTarget.style.background = '#111';
+                                e.currentTarget.style.borderColor = '#69fd97';
+                            },
+                            onmouseout: (e) => {
+                                e.currentTarget.style.background = '#000';
+                                e.currentTarget.style.borderColor = '#333';
                             },
                             onclick: (e) => {
                                 e.stopPropagation();
                                 this.exportAccount(account);
                             }
-                        }, ['📤']),
+                        }, ['EXPORT']),
                         
                         (this.app.state.get('accounts').length > 1 && !isActive) && $.button({
                             style: {
-                                background: 'transparent',
+                                background: '#000',
                                 border: '1px solid #ff4444',
                                 color: '#ff4444',
                                 padding: '4px 8px',
                                 fontSize: '12px',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                fontFamily: 'JetBrains Mono, monospace',
+                                transition: 'all 0.2s ease'
+                            },
+                            onmouseover: (e) => {
+                                e.currentTarget.style.background = '#220000';
+                                e.currentTarget.style.borderColor = '#ff6666';
+                            },
+                            onmouseout: (e) => {
+                                e.currentTarget.style.background = '#000';
+                                e.currentTarget.style.borderColor = '#ff4444';
                             },
                             onclick: (e) => {
                                 e.stopPropagation();
                                 this.confirmDeleteAccount(account);
                             }
-                        }, ['🗑️'])
+                        }, ['DELETE'])
                     ])
                 ]),
                 
@@ -17943,18 +18142,28 @@
                     ]),
                     $.button({
                         style: {
-                            background: 'transparent',
-                            border: '1px solid #333',
-                            color: '#666',
+                            background: '#000',
+                            border: '2px solid #f57315',
+                            color: '#f57315',
                             padding: '4px 8px',
                             fontSize: '11px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'all 0.2s ease'
+                        },
+                        onmouseover: (e) => {
+                            e.currentTarget.style.background = 'rgba(245, 115, 21, 0.1)';
+                            e.currentTarget.style.borderColor = '#f57315';
+                        },
+                        onmouseout: (e) => {
+                            e.currentTarget.style.background = '#000';
+                            e.currentTarget.style.borderColor = '#f57315';
                         },
                         onclick: (e) => {
                             e.stopPropagation();
                             this.refreshAccountBalance(account);
                         }
-                    }, ['↻'])
+                    }, ['REFRESH'])
                 ]),
                 
                 // Address preview
@@ -17972,6 +18181,42 @@
                     } 
                 }, [
                     account.addresses.bech32 || account.addresses.segwit || 'No addresses generated'
+                ]),
+                
+                // Make Active button (only show if not active)
+                !isActive && $.div({
+                    style: {
+                        marginTop: '15px',
+                        display: 'flex',
+                        justifyContent: 'center'
+                    }
+                }, [
+                    $.button({
+                        style: {
+                            padding: '10px 20px',
+                            background: '#000',
+                            border: '2px solid #f57315',
+                            color: '#f57315',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            transition: 'all 0.2s ease',
+                            width: '100%'
+                        },
+                        onmouseover: (e) => {
+                            e.currentTarget.style.background = '#f57315';
+                            e.currentTarget.style.color = '#000';
+                        },
+                        onmouseout: (e) => {
+                            e.currentTarget.style.background = '#000';
+                            e.currentTarget.style.color = '#f57315';
+                        },
+                        onclick: (e) => {
+                            e.stopPropagation();
+                            this.switchToAccount(account);
+                        }
+                    }, ['MAKE ACTIVE'])
                 ])
             ]);
         }
@@ -17990,9 +18235,7 @@
                 }
             }, [
                 $.div({ style: { color: '#666', fontSize: '14px' } }, [
-                    selectedCount > 0 ? 
-                        `${selectedCount} account${selectedCount !== 1 ? 's' : ''} selected` :
-                        'Click on an account to switch to it'
+                    `${(this.app.state.get('accounts') || []).length} account${(this.app.state.get('accounts') || []).length !== 1 ? 's' : ''} total`
                 ]),
                 $.button({
                     style: {
@@ -18008,16 +18251,356 @@
             ]);
         }
         
-        filterAccounts(accounts) {
-            if (!this.searchQuery) return accounts;
+        createListView(accounts, currentAccountId) {
+            const $ = window.ElementFactory || ElementFactory;
             
-            const query = this.searchQuery.toLowerCase();
-            return accounts.filter(account => {
-                return account.name.toLowerCase().includes(query) ||
-                       (account.addresses && Object.values(account.addresses).some(addr => 
-                           addr.toLowerCase().includes(query)
-                       ));
-            });
+            return $.div({
+                className: 'account-grid',
+                style: {
+                    flex: '1',
+                    overflow: 'auto',
+                    padding: '20px'
+                }
+            }, [
+                $.div({
+                    style: {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
+                    }
+                }, accounts.map(account => {
+                    const isActive = account.id === currentAccountId;
+                    const balance = this.balanceCache.get(account.id);
+                    
+                    return $.div({
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '15px 20px',
+                            background: isActive ? 'rgba(245, 115, 21, 0.1)' : '#111',
+                            border: `2px solid ${isActive ? '#f57315' : '#333'}`,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            gap: '20px'
+                        },
+                        onclick: (e) => e.stopPropagation(),
+                        onmouseover: (e) => {
+                            if (!isActive) e.currentTarget.style.borderColor = '#666';
+                        },
+                        onmouseout: (e) => {
+                            if (!isActive) e.currentTarget.style.borderColor = '#333';
+                        }
+                    }, [
+                        // Name
+                        $.div({ style: { flex: '1', minWidth: '150px' } }, [
+                            $.div({ style: { fontWeight: 'bold', fontSize: '14px', color: '#f57315' } }, [account.name]),
+                            $.div({ style: { fontSize: '11px', color: '#666', marginTop: '4px' } }, [
+                                `Created: ${new Date(account.createdAt).toLocaleDateString()}`
+                            ])
+                        ]),
+                        
+                        // Address preview
+                        $.div({ 
+                            style: { 
+                                flex: '2', 
+                                fontSize: '12px', 
+                                color: '#888',
+                                fontFamily: 'monospace',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            } 
+                        }, [account.addresses?.segwit || account.addresses?.taproot || 'No address']),
+                        
+                        // Balance
+                        $.div({ style: { minWidth: '120px', textAlign: 'right' } }, [
+                            $.div({ 
+                                style: { 
+                                    color: balance?.btc > 0 ? '#f57315' : '#666',
+                                    fontWeight: 'bold',
+                                    fontSize: '14px'
+                                } 
+                            }, [balance ? `${balance.btc.toFixed(8)} BTC` : 'Loading...']),
+                            balance && $.div({ 
+                                style: { fontSize: '11px', color: '#888', marginTop: '2px' } 
+                            }, [`≈ $${balance.usd.toFixed(2)}`])
+                        ]),
+                        
+                        // Actions
+                        $.div({ style: { display: 'flex', gap: '10px' } }, [
+                            !isActive && $.button({
+                                style: {
+                                    padding: '6px 12px',
+                                    background: '#000',
+                                    border: '2px solid #f57315',
+                                    color: '#f57315',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onmouseover: (e) => {
+                                    e.currentTarget.style.background = '#f57315';
+                                    e.currentTarget.style.color = '#000';
+                                },
+                                onmouseout: (e) => {
+                                    e.currentTarget.style.background = '#000';
+                                    e.currentTarget.style.color = '#f57315';
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.switchToAccount(account);
+                                }
+                            }, ['MAKE ACTIVE']),
+                            $.button({
+                                style: {
+                                    padding: '6px 12px',
+                                    background: '#000',
+                                    border: '2px solid #69fd97',
+                                    color: '#69fd97',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.exportAccount(account);
+                                }
+                            }, ['EXPORT']),
+                            this.app.state.get('accounts').length > 1 && !isActive && $.button({
+                                style: {
+                                    padding: '6px 12px',
+                                    background: '#000',
+                                    border: '2px solid #ff4444',
+                                    color: '#ff4444',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.confirmDeleteAccount(account);
+                                }
+                            }, ['DELETE'])
+                        ])
+                    ]);
+                }))
+            ]);
+        }
+        
+        createDetailsView(accounts, currentAccountId) {
+            const $ = window.ElementFactory || ElementFactory;
+            
+            return $.div({
+                className: 'account-grid',
+                style: {
+                    flex: '1',
+                    overflow: 'auto',
+                    padding: '20px'
+                }
+            }, [
+                // Table header
+                $.div({
+                    style: {
+                        display: 'grid',
+                        gridTemplateColumns: '30px 200px 1fr 150px 120px 100px',
+                        gap: '15px',
+                        padding: '10px 15px',
+                        background: '#000',
+                        borderBottom: '2px solid #333',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        color: '#f57315',
+                        position: 'sticky',
+                        top: '0',
+                        zIndex: '10'
+                    }
+                }, [
+                    $.span({}, ['#']),
+                    $.span({}, ['NAME']),
+                    $.span({}, ['ADDRESS']),
+                    $.span({ style: { textAlign: 'right' } }, ['BALANCE']),
+                    $.span({ style: { textAlign: 'center' } }, ['CREATED']),
+                    $.span({ style: { textAlign: 'center' } }, ['ACTIONS'])
+                ]),
+                
+                // Table rows
+                $.div({
+                    style: {
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }
+                }, accounts.map((account, index) => {
+                    const isActive = account.id === currentAccountId;
+                    const balance = this.balanceCache.get(account.id);
+                    
+                    return $.div({
+                        style: {
+                            display: 'grid',
+                            gridTemplateColumns: '30px 200px 1fr 150px 120px 100px',
+                            gap: '15px',
+                            padding: '15px',
+                            background: isActive ? 'rgba(245, 115, 21, 0.1)' : (index % 2 === 0 ? '#111' : '#0a0a0a'),
+                            borderBottom: '1px solid #222',
+                            alignItems: 'center',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                        },
+                        onclick: (e) => e.stopPropagation(),
+                        onmouseover: (e) => {
+                            if (!isActive) e.currentTarget.style.background = 'rgba(245, 115, 21, 0.05)';
+                        },
+                        onmouseout: (e) => {
+                            if (!isActive) e.currentTarget.style.background = index % 2 === 0 ? '#111' : '#0a0a0a';
+                        }
+                    }, [
+                        $.span({ style: { color: '#666' } }, [(index + 1).toString()]),
+                        $.span({ style: { fontWeight: isActive ? 'bold' : 'normal', color: '#f57315' } }, [account.name]),
+                        $.span({ 
+                            style: { 
+                                fontFamily: 'monospace',
+                                fontSize: '11px',
+                                color: '#888',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            } 
+                        }, [account.addresses?.segwit || account.addresses?.taproot || 'No address']),
+                        $.div({ style: { textAlign: 'right' } }, [
+                            $.span({ 
+                                style: { 
+                                    color: balance?.btc > 0 ? '#f57315' : '#666',
+                                    fontWeight: 'bold'
+                                } 
+                            }, [balance ? `${balance.btc.toFixed(8)}` : '-']),
+                            balance && balance.btc > 0 && $.span({ 
+                                style: { fontSize: '10px', color: '#888', marginLeft: '5px' } 
+                            }, [`($${balance.usd.toFixed(2)})`])
+                        ]),
+                        $.span({ 
+                            style: { textAlign: 'center', color: '#666', fontSize: '11px' } 
+                        }, [new Date(account.createdAt).toLocaleDateString()]),
+                        $.div({ 
+                            style: { 
+                                display: 'flex', 
+                                gap: '5px',
+                                justifyContent: 'center'
+                            } 
+                        }, [
+                            !isActive && $.button({
+                                style: {
+                                    padding: '4px 8px',
+                                    background: '#000',
+                                    border: '1px solid #f57315',
+                                    color: '#f57315',
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace'
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.switchToAccount(account);
+                                }
+                            }, ['ACTIVE']),
+                            $.button({
+                                style: {
+                                    padding: '4px 8px',
+                                    background: '#000',
+                                    border: '1px solid #69fd97',
+                                    color: '#69fd97',
+                                    fontSize: '10px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace'
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.exportAccount(account);
+                                }
+                            }, ['EXP'])
+                        ])
+                    ]);
+                }))
+            ]);
+        }
+        
+        filterAccounts(accounts) {
+            let filtered = [...accounts];
+            
+            // Search filter
+            if (this.searchQuery) {
+                const query = this.searchQuery.toLowerCase();
+                filtered = filtered.filter(account => {
+                    return account.name.toLowerCase().includes(query) ||
+                           (account.addresses && Object.values(account.addresses).some(addr => 
+                               addr.toLowerCase().includes(query)
+                           ));
+                });
+            }
+            
+            // Balance filter
+            if (this.filters.balance !== 'all') {
+                filtered = filtered.filter(account => {
+                    const balance = this.balanceCache.get(account.id);
+                    const btc = balance?.btc || 0;
+                    
+                    switch (this.filters.balance) {
+                        case 'empty':
+                            return btc === 0;
+                        case 'low':
+                            return btc > 0 && btc < 0.001; // Less than 0.001 BTC
+                        case 'medium':
+                            return btc >= 0.001 && btc < 0.1; // 0.001 to 0.1 BTC
+                        case 'high':
+                            return btc >= 0.1; // 0.1 BTC or more
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            // Activity filter (based on last transaction or usage)
+            if (this.filters.activity !== 'all') {
+                const now = Date.now();
+                const weekAgo = now - (7 * 24 * 60 * 60 * 1000);
+                
+                filtered = filtered.filter(account => {
+                    // For now, use creation date as activity indicator
+                    // In a real implementation, you'd track actual usage
+                    const lastActivity = new Date(account.createdAt).getTime();
+                    
+                    switch (this.filters.activity) {
+                        case 'active':
+                            return lastActivity > weekAgo;
+                        case 'inactive':
+                            return lastActivity <= weekAgo;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            // Type filter
+            if (this.filters.type !== 'all') {
+                filtered = filtered.filter(account => {
+                    const isImported = account.imported || false;
+                    
+                    switch (this.filters.type) {
+                        case 'hd':
+                            return !isImported;
+                        case 'imported':
+                            return isImported;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            return filtered;
         }
         
         sortAccounts(accounts) {
@@ -18027,16 +18610,14 @@
                 let compareValue = 0;
                 
                 switch (this.sortBy) {
-                    case 'custom':
-                        // Sort by custom order if available, otherwise by index
-                        const orderA = a.customOrder !== undefined ? a.customOrder : accounts.indexOf(a);
-                        const orderB = b.customOrder !== undefined ? b.customOrder : accounts.indexOf(b);
-                        compareValue = orderA - orderB;
-                        break;
                     case 'name':
                         compareValue = a.name.localeCompare(b.name);
                         break;
-                    case 'created':
+                    case 'date':
+                        compareValue = new Date(a.createdAt) - new Date(b.createdAt);
+                        break;
+                    case 'activity':
+                        // For now, use creation date as activity indicator
                         compareValue = new Date(a.createdAt) - new Date(b.createdAt);
                         break;
                     case 'balance':
@@ -18079,7 +18660,9 @@
             
             if (switched) {
                 this.app.showNotification(`Switched to ${account.name}`, 'success');
-                this.close();
+                
+                // Update the account grid to show new active account
+                this.updateAccountGrid();
                 
                 // Refresh UI if on dashboard
                 if (this.app.state.get('currentPage') === 'dashboard' && this.app.dashboard) {
@@ -18171,227 +18754,18 @@
         
         createNewAccount() {
             this.close();
-            // Use the existing MultiAccountModal for creation
-            this.app.multiAccountModal.isCreating = true;
-            this.app.multiAccountModal.show();
+            // Create new MultiAccountModal instance
+            const modal = new MultiAccountModal(this.app);
+            modal.isCreating = true;
+            modal.show();
         }
         
         importAccount() {
             this.close();
-            // Use the existing MultiAccountModal for import
-            this.app.multiAccountModal.isImporting = true;
-            this.app.multiAccountModal.show();
-        }
-        
-        // Drag and Drop Handlers
-        handleDragStart(e, account) {
-            this.draggedAccount = account;
-            this.draggedElement = e.currentTarget;
-            e.currentTarget.style.opacity = '0.5';
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
-        }
-        
-        handleDragOver(e) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-            e.dataTransfer.dropEffect = 'move';
-            
-            const accountCard = e.currentTarget;
-            const rect = accountCard.getBoundingClientRect();
-            const midpoint = rect.top + rect.height / 2;
-            
-            // Remove any existing drop indicators
-            document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
-            
-            // Add drop indicator
-            const indicator = document.createElement('div');
-            indicator.className = 'drop-indicator';
-            indicator.style.cssText = `
-                position: absolute;
-                left: 0;
-                right: 0;
-                height: 3px;
-                background: #f57315;
-                z-index: 1000;
-            `;
-            
-            if (e.clientY < midpoint) {
-                indicator.style.top = '-2px';
-            } else {
-                indicator.style.bottom = '-2px';
-            }
-            
-            accountCard.style.position = 'relative';
-            accountCard.appendChild(indicator);
-            
-            return false;
-        }
-        
-        handleDrop(e, targetAccount) {
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
-            
-            // Remove drop indicators
-            document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
-            
-            if (this.draggedAccount && this.draggedAccount.id !== targetAccount.id) {
-                this.reorderAccounts(this.draggedAccount.id, targetAccount.id, e);
-            }
-            
-            return false;
-        }
-        
-        handleDragEnd(e) {
-            e.currentTarget.style.opacity = '';
-            document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
-            this.draggedAccount = null;
-            this.draggedElement = null;
-        }
-        
-        reorderAccounts(draggedId, targetId, dropEvent) {
-            const accounts = this.app.state.get('accounts') || [];
-            const draggedIndex = accounts.findIndex(a => a.id === draggedId);
-            const targetIndex = accounts.findIndex(a => a.id === targetId);
-            
-            if (draggedIndex === -1 || targetIndex === -1) return;
-            
-            // Remove dragged account
-            const [draggedAccount] = accounts.splice(draggedIndex, 1);
-            
-            // Determine insert position based on drop location
-            const targetCard = dropEvent.currentTarget;
-            const rect = targetCard.getBoundingClientRect();
-            const midpoint = rect.top + rect.height / 2;
-            const insertBefore = dropEvent.clientY < midpoint;
-            
-            // Calculate new index
-            let newIndex = targetIndex;
-            if (!insertBefore && draggedIndex < targetIndex) {
-                newIndex = targetIndex;
-            } else if (!insertBefore && draggedIndex > targetIndex) {
-                newIndex = targetIndex + 1;
-            } else if (insertBefore && draggedIndex > targetIndex) {
-                newIndex = targetIndex;
-            } else if (insertBefore && draggedIndex < targetIndex) {
-                newIndex = targetIndex - 1;
-            }
-            
-            // Insert at new position
-            accounts.splice(newIndex, 0, draggedAccount);
-            
-            // Add custom order to each account
-            accounts.forEach((account, index) => {
-                account.customOrder = index;
-            });
-            
-            // Save to state
-            this.app.state.set('accounts', accounts);
-            
-            // Update the grid
-            this.updateAccountGrid();
-            
-            this.app.showNotification('Account order updated', 'success');
-        }
-        
-        // Touch Event Handlers for Mobile
-        handleTouchStart(e, account) {
-            this.touchStartY = e.touches[0].clientY;
-            this.touchStartX = e.touches[0].clientX;
-            this.touchAccount = account;
-            this.touchElement = e.currentTarget;
-            this.longPressTimer = setTimeout(() => {
-                this.isLongPress = true;
-                this.touchElement.style.opacity = '0.5';
-                this.touchElement.style.transform = 'scale(1.05)';
-                // Haptic feedback if available
-                if (window.navigator.vibrate) {
-                    window.navigator.vibrate(50);
-                }
-            }, 500); // 500ms for long press
-        }
-        
-        handleTouchMove(e) {
-            if (!this.isLongPress) {
-                // Cancel long press if moved too much
-                const moveX = Math.abs(e.touches[0].clientX - this.touchStartX);
-                const moveY = Math.abs(e.touches[0].clientY - this.touchStartY);
-                if (moveX > 10 || moveY > 10) {
-                    clearTimeout(this.longPressTimer);
-                }
-                return;
-            }
-            
-            e.preventDefault(); // Prevent scrolling while dragging
-            
-            // Find element under touch point
-            const touch = e.touches[0];
-            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-            const cardBelow = elementBelow?.closest('.account-card');
-            
-            if (cardBelow && cardBelow !== this.touchElement) {
-                // Show drop indicator
-                const rect = cardBelow.getBoundingClientRect();
-                const midpoint = rect.top + rect.height / 2;
-                
-                document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
-                
-                const indicator = document.createElement('div');
-                indicator.className = 'drop-indicator';
-                indicator.style.cssText = `
-                    position: absolute;
-                    left: 0;
-                    right: 0;
-                    height: 3px;
-                    background: #f57315;
-                    z-index: 1000;
-                `;
-                
-                if (touch.clientY < midpoint) {
-                    indicator.style.top = '-2px';
-                } else {
-                    indicator.style.bottom = '-2px';
-                }
-                
-                cardBelow.style.position = 'relative';
-                cardBelow.appendChild(indicator);
-                
-                this.touchTargetElement = cardBelow;
-            }
-        }
-        
-        handleTouchEnd(e) {
-            clearTimeout(this.longPressTimer);
-            
-            if (this.touchElement) {
-                this.touchElement.style.opacity = '';
-                this.touchElement.style.transform = '';
-            }
-            
-            document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
-            
-            if (this.isLongPress && this.touchTargetElement) {
-                // Get target account ID
-                const targetId = this.touchTargetElement.getAttribute('data-account-id');
-                const targetAccount = (this.app.state.get('accounts') || []).find(a => a.id === targetId);
-                
-                if (targetAccount && this.touchAccount && this.touchAccount.id !== targetAccount.id) {
-                    // Create a mock drop event for reorderAccounts
-                    const mockEvent = {
-                        currentTarget: this.touchTargetElement,
-                        clientY: this.touchStartY
-                    };
-                    this.reorderAccounts(this.touchAccount.id, targetAccount.id, mockEvent);
-                }
-            }
-            
-            // Reset touch state
-            this.isLongPress = false;
-            this.touchAccount = null;
-            this.touchElement = null;
-            this.touchTargetElement = null;
+            // Create new MultiAccountModal instance
+            const modal = new MultiAccountModal(this.app);
+            modal.isImporting = true;
+            modal.show();
         }
         
         close() {
@@ -19509,11 +19883,11 @@
             const isUnknown = contentType === 'application/octet-stream' || contentType === 'unknown' || !contentType;
             
             let icon = 'MOOSH';
-            if (isImage) icon = '🖼️';
-            else if (isText) icon = '📝';
+            if (isImage) icon = 'IMG';
+            else if (isText) icon = 'TXT';
             else if (isJson) icon = '{ }';
-            else if (isHtml) icon = '🌐';
-            else if (isCss) icon = '🎨';
+            else if (isHtml) icon = 'HTML';
+            else if (isCss) icon = 'CSS';
             else if (isJs) icon = 'JS';
             else if (isUnknown) icon = '❓';
             const isSelected = this.selectedInscriptions.has(inscription.id);
@@ -20169,9 +20543,9 @@
                                 margin: '0'
                             }
                         }, [
-                            isImage ? '🖼️' : 
-                            isText ? '📝' : 
-                            isRecursive ? '🔄' : $.span({ style: { color: 'var(--text-accent)', fontWeight: 'bold' } }, ['MOOSH']),
+                            isImage ? 'IMG' : 
+                            isText ? 'TXT' : 
+                            isRecursive ? 'REC' : $.span({ style: { color: 'var(--text-accent)', fontWeight: 'bold' } }, ['MOOSH']),
                             `Inscription #${inscription.number}`
                         ]),
                         $.button({
@@ -20244,7 +20618,7 @@
                                                 background: 'var(--bg-primary)'
                                             }
                                         }, [
-                                            $.div({ style: { fontSize: 'calc(24px * var(--scale-factor))', marginBottom: 'calc(8px * var(--scale-factor))' } }, ['🔄']),
+                                            $.div({ style: { fontSize: 'calc(24px * var(--scale-factor))', marginBottom: 'calc(8px * var(--scale-factor))' } }, ['[R]']),
                                             $.div({ style: { fontSize: 'calc(14px * var(--scale-factor))', color: 'var(--text-primary)', fontWeight: 'bold' } }, ['Recursive Inscription']),
                                             $.div({ style: { fontSize: 'calc(11px * var(--scale-factor))', color: 'var(--text-dim)', marginTop: 'calc(4px * var(--scale-factor))' } }, ['This inscription renders content dynamically'])
                                         ]);
@@ -20274,7 +20648,7 @@
                                             textAlign: 'center'
                                         }
                                     }, [
-                                        $.div({ style: { fontSize: 'calc(48px * var(--scale-factor))', marginBottom: 'calc(10px * var(--scale-factor))' } }, ['❌']),
+                                        $.div({ style: { fontSize: 'calc(48px * var(--scale-factor))', marginBottom: 'calc(10px * var(--scale-factor))' } }, ['[X]']),
                                         $.div({ style: { fontSize: 'calc(14px * var(--scale-factor))', color: 'var(--text-secondary)' } }, ['Failed to load content']),
                                         $.a({
                                             href: `https://ordinals.com/inscription/${inscription.id}`,
@@ -20743,7 +21117,7 @@
                             color: 'var(--text-dim)'
                         }
                     }, [
-                        '⚠️ Important: Ordinals transfers require careful UTXO management. ',
+                        'IMPORTANT: Ordinals transfers require careful UTXO management. ',
                         isBulk ? 'Each inscription will be sent in a separate transaction.' : 'Make sure the recipient address can handle Ordinals.',
                         ' Always verify the address before sending.'
                     ]),
@@ -22700,7 +23074,7 @@
                 'BTC': '₿',
                 'USDT': '₮',
                 'USDC': '$',
-                'MOOSH': '🚀'
+                'MOOSH': 'M'
             };
             return icons[token] || '○';
         }
@@ -23647,7 +24021,7 @@
                             fontSize: '12px',
                             color: '#ff4444'
                         }
-                    }, ['⚠️ Never share your seed phrase with anyone. Write it down and store it in a safe place.']),
+                    }, ['WARNING: Never share your seed phrase with anyone. Write it down and store it in a safe place.']),
                     $.button({
                         style: {
                             background: 'transparent',
@@ -23736,7 +24110,7 @@
                             fontSize: '12px',
                             color: '#ff4444'
                         }
-                    }, ['⚠️ Never share your private keys with anyone. Anyone with these keys can steal your funds.']),
+                    }, ['WARNING: Never share your private keys with anyone. Anyone with these keys can steal your funds.']),
                     
                     $.button({
                         style: {
@@ -25001,21 +25375,7 @@
                         overflow: 'hidden'
                     }
                 }, [
-                    $.span({ style: 'color: #666666;' }, ['~/moosh/wallet/dashboard $']),
-                    $.span({ style: 'color: var(--text-primary); margin-left: 8px;' }, [
-                        'active ',
-                        $.span({ 
-                            style: 'color: var(--text-accent); animation: blink 1s ease-in-out infinite; display: inline;' 
-                        }, ['●']),
-                        $.span({ 
-                            style: 'color: var(--text-accent); margin-left: 8px; font-weight: 600;' 
-                        }, [
-                            (() => {
-                                const currentAccount = this.app.state.getCurrentAccount();
-                                return currentAccount ? `(${currentAccount.name || 'Unnamed Account'})` : '';
-                            })()
-                        ])
-                    ])
+                    $.span({ style: 'color: #666666;' }, ['~/moosh/wallet/dashboard $'])
                 ]),
                 
                 // Main content area
@@ -25092,7 +25452,7 @@
                                 },
                                 onclick: () => this.showMultiAccountManager(),
                                 title: 'Manage Accounts'
-                            }, ['📁 Manage']),
+                            }, ['Manage']),
                             
                             // Refresh button
                             $.button({
@@ -25125,7 +25485,7 @@
                                 },
                                 onclick: () => this.handleRefresh(),
                                 title: 'Refresh Data'
-                            }, [isXS ? '↻' : 'Refresh']),
+                            }, [isXS ? 'R' : 'Refresh']),
                             
                             // Hide/Show button
                             $.button({
@@ -25302,7 +25662,7 @@
                     className: 'header-btn',
                     title: 'Refresh',
                     onclick: () => this.handleRefresh()
-                }, ['↻']),
+                }, ['REFRESH']),
                 
                 $.button({
                     className: 'header-btn privacy-toggle',
