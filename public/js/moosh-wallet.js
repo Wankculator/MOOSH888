@@ -17386,8 +17386,11 @@
             this.searchQuery = '';
             this.selectedAccounts = new Set();
             this.editingAccountId = null;
-            this.sortBy = 'name'; // name, created, balance
+            this.sortBy = 'custom'; // custom, name, created, balance
             this.sortOrder = 'asc'; // asc, desc
+            this.draggedAccount = null;
+            this.draggedElement = null;
+            this.dropTargetElement = null;
         }
         
         show() {
@@ -17398,6 +17401,10 @@
                 this.modal.parentNode.removeChild(this.modal);
                 this.modal = null;
             }
+            
+            // Initialize balance cache
+            this.balanceCache = new Map();
+            this.btcPrice = 0;
             
             const $ = window.ElementFactory || ElementFactory;
             const accounts = this.app.state.get('accounts') || [];
@@ -17444,6 +17451,109 @@
             ]);
             
             document.body.appendChild(this.modal);
+            
+            // Fetch Bitcoin price and account balances
+            this.initializeBalances();
+        }
+        
+        async initializeBalances() {
+            try {
+                // Fetch Bitcoin price first
+                const priceData = await this.app.apiService.fetchBitcoinPrice();
+                this.btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
+                console.log('[AccountListModal] Bitcoin price:', this.btcPrice);
+                
+                // Fetch balances for all accounts
+                const accounts = this.app.state.get('accounts') || [];
+                await this.fetchAllBalances(accounts);
+            } catch (error) {
+                console.error('[AccountListModal] Error initializing balances:', error);
+            }
+        }
+        
+        async fetchAllBalances(accounts) {
+            // Batch fetch balances with a small delay between requests
+            for (const account of accounts) {
+                this.fetchAccountBalance(account);
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+        
+        async fetchAccountBalance(account) {
+            try {
+                // Use the primary address (prefer segwit for balance checking)
+                const address = account.addresses?.segwit || account.addresses?.bech32 || account.addresses?.taproot;
+                if (!address) {
+                    this.updateBalanceDisplay(account.id, 0, 0);
+                    return;
+                }
+                
+                // Check cache first
+                const cached = this.balanceCache.get(account.id);
+                if (cached && (Date.now() - cached.timestamp) < 60000) { // 1 minute cache
+                    this.updateBalanceDisplay(account.id, cached.btc, cached.usd);
+                    return;
+                }
+                
+                // Fetch fresh balance
+                const balanceData = await this.app.apiService.fetchAddressBalance(address);
+                const btcBalance = (balanceData.balance || 0) / 100000000; // Convert from satoshis
+                const usdBalance = btcBalance * this.btcPrice;
+                
+                // Update cache
+                this.balanceCache.set(account.id, {
+                    btc: btcBalance,
+                    usd: usdBalance,
+                    timestamp: Date.now()
+                });
+                
+                // Update UI
+                this.updateBalanceDisplay(account.id, btcBalance, usdBalance);
+            } catch (error) {
+                console.error(`[AccountListModal] Error fetching balance for ${account.name}:`, error);
+                this.updateBalanceDisplay(account.id, 0, 0, true);
+            }
+        }
+        
+        updateBalanceDisplay(accountId, btcBalance, usdBalance, isError = false) {
+            const btcElement = document.querySelector(`.balance-btc-${accountId}`);
+            const usdElement = document.querySelector(`.balance-usd-${accountId}`);
+            
+            if (btcElement) {
+                if (isError) {
+                    btcElement.textContent = 'Error';
+                    btcElement.style.color = '#ff4444';
+                } else {
+                    btcElement.textContent = `${btcBalance.toFixed(8)} BTC`;
+                    btcElement.style.color = btcBalance > 0 ? '#f57315' : '#666';
+                }
+            }
+            
+            if (usdElement) {
+                if (isError) {
+                    usdElement.textContent = '';
+                } else {
+                    usdElement.textContent = `≈ $${usdBalance.toFixed(2)} USD`;
+                }
+            }
+        }
+        
+        async refreshAccountBalance(account) {
+            // Show loading state
+            const btcElement = document.querySelector(`.balance-btc-${account.id}`);
+            if (btcElement) {
+                btcElement.textContent = 'Refreshing...';
+                btcElement.style.color = '#666';
+            }
+            
+            // Clear cache for this account
+            this.balanceCache.delete(account.id);
+            
+            // Fetch fresh balance
+            await this.fetchAccountBalance(account);
+            
+            this.app.showNotification('Balance refreshed', 'success');
         }
         
         createHeader() {
@@ -17526,6 +17636,7 @@
                             this.updateAccountGrid();
                         }
                     }, [
+                        $.option({ value: 'custom', selected: this.sortBy === 'custom' }, ['Custom Order']),
                         $.option({ value: 'name' }, ['Name']),
                         $.option({ value: 'created' }, ['Date Created']),
                         $.option({ value: 'balance' }, ['Balance'])
@@ -17544,6 +17655,20 @@
                             this.updateAccountGrid();
                         }
                     }, [this.sortOrder === 'asc' ? '↑' : '↓'])
+                ]),
+                
+                // Drag hint when in custom mode
+                this.sortBy === 'custom' && $.div({ 
+                    style: { 
+                        color: '#f57315', 
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                    } 
+                }, [
+                    $.span({}, ['🔄']),
+                    $.span({}, ['Drag cards to reorder'])
                 ]),
                 
                 // Actions
@@ -17620,13 +17745,16 @@
             
             return $.div({
                 className: 'account-card',
+                draggable: this.sortBy === 'custom',
+                'data-account-id': account.id,
                 style: {
                     background: isActive ? 'rgba(245, 115, 21, 0.1)' : '#111',
                     border: `2px solid ${isActive ? '#f57315' : '#333'}`,
                     padding: '15px',
-                    cursor: 'pointer',
+                    cursor: this.sortBy === 'custom' ? 'move' : 'pointer',
                     transition: 'all 0.2s',
-                    position: 'relative'
+                    position: 'relative',
+                    userSelect: 'none'
                 },
                 onmouseover: (e) => {
                     if (!isActive) e.currentTarget.style.borderColor = '#666';
@@ -17637,9 +17765,38 @@
                 onclick: (e) => {
                     // Don't switch if clicking on buttons or editing
                     if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-                    if (!isActive && !isEditing) {
+                    if (!isActive && !isEditing && this.sortBy !== 'custom') {
                         this.switchToAccount(account);
                     }
+                },
+                ondragstart: (e) => {
+                    if (this.sortBy !== 'custom') return;
+                    this.handleDragStart(e, account);
+                },
+                ondragover: (e) => {
+                    if (this.sortBy !== 'custom') return;
+                    this.handleDragOver(e);
+                },
+                ondrop: (e) => {
+                    if (this.sortBy !== 'custom') return;
+                    this.handleDrop(e, account);
+                },
+                ondragend: (e) => {
+                    if (this.sortBy !== 'custom') return;
+                    this.handleDragEnd(e);
+                },
+                // Touch support for mobile
+                ontouchstart: (e) => {
+                    if (this.sortBy !== 'custom') return;
+                    this.handleTouchStart(e, account);
+                },
+                ontouchmove: (e) => {
+                    if (this.sortBy !== 'custom') return;
+                    this.handleTouchMove(e);
+                },
+                ontouchend: (e) => {
+                    if (this.sortBy !== 'custom') return;
+                    this.handleTouchEnd(e);
                 }
             }, [
                 // Header
@@ -17759,6 +17916,47 @@
                     ])
                 ]),
                 
+                // Balance display
+                $.div({ 
+                    className: 'account-balance-display',
+                    style: { 
+                        marginTop: '10px',
+                        padding: '10px',
+                        background: '#000',
+                        border: '1px solid #333',
+                        fontSize: '14px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    } 
+                }, [
+                    $.div({}, [
+                        $.span({ 
+                            className: `balance-btc-${account.id}`,
+                            style: { color: '#f57315', fontWeight: 'bold' } 
+                        }, ['Loading...']),
+                        $.br({}),
+                        $.span({ 
+                            className: `balance-usd-${account.id}`,
+                            style: { fontSize: '12px', color: '#888' } 
+                        }, [''])
+                    ]),
+                    $.button({
+                        style: {
+                            background: 'transparent',
+                            border: '1px solid #333',
+                            color: '#666',
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            cursor: 'pointer'
+                        },
+                        onclick: (e) => {
+                            e.stopPropagation();
+                            this.refreshAccountBalance(account);
+                        }
+                    }, ['↻'])
+                ]),
+                
                 // Address preview
                 account.addresses && $.div({ 
                     style: { 
@@ -17829,6 +18027,12 @@
                 let compareValue = 0;
                 
                 switch (this.sortBy) {
+                    case 'custom':
+                        // Sort by custom order if available, otherwise by index
+                        const orderA = a.customOrder !== undefined ? a.customOrder : accounts.indexOf(a);
+                        const orderB = b.customOrder !== undefined ? b.customOrder : accounts.indexOf(b);
+                        compareValue = orderA - orderB;
+                        break;
                     case 'name':
                         compareValue = a.name.localeCompare(b.name);
                         break;
@@ -17836,8 +18040,14 @@
                         compareValue = new Date(a.createdAt) - new Date(b.createdAt);
                         break;
                     case 'balance':
-                        // TODO: Implement when balance tracking is added
-                        compareValue = 0;
+                        // Sort by cached balance if available
+                        const balanceA = this.balanceCache.get(a.id);
+                        const balanceB = this.balanceCache.get(b.id);
+                        if (balanceA && balanceB) {
+                            compareValue = balanceA.btc - balanceB.btc;
+                        } else {
+                            compareValue = 0;
+                        }
                         break;
                 }
                 
@@ -17971,6 +18181,217 @@
             // Use the existing MultiAccountModal for import
             this.app.multiAccountModal.isImporting = true;
             this.app.multiAccountModal.show();
+        }
+        
+        // Drag and Drop Handlers
+        handleDragStart(e, account) {
+            this.draggedAccount = account;
+            this.draggedElement = e.currentTarget;
+            e.currentTarget.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+        }
+        
+        handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            
+            const accountCard = e.currentTarget;
+            const rect = accountCard.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            
+            // Remove any existing drop indicators
+            document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+            
+            // Add drop indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'drop-indicator';
+            indicator.style.cssText = `
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: #f57315;
+                z-index: 1000;
+            `;
+            
+            if (e.clientY < midpoint) {
+                indicator.style.top = '-2px';
+            } else {
+                indicator.style.bottom = '-2px';
+            }
+            
+            accountCard.style.position = 'relative';
+            accountCard.appendChild(indicator);
+            
+            return false;
+        }
+        
+        handleDrop(e, targetAccount) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            // Remove drop indicators
+            document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+            
+            if (this.draggedAccount && this.draggedAccount.id !== targetAccount.id) {
+                this.reorderAccounts(this.draggedAccount.id, targetAccount.id, e);
+            }
+            
+            return false;
+        }
+        
+        handleDragEnd(e) {
+            e.currentTarget.style.opacity = '';
+            document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+            this.draggedAccount = null;
+            this.draggedElement = null;
+        }
+        
+        reorderAccounts(draggedId, targetId, dropEvent) {
+            const accounts = this.app.state.get('accounts') || [];
+            const draggedIndex = accounts.findIndex(a => a.id === draggedId);
+            const targetIndex = accounts.findIndex(a => a.id === targetId);
+            
+            if (draggedIndex === -1 || targetIndex === -1) return;
+            
+            // Remove dragged account
+            const [draggedAccount] = accounts.splice(draggedIndex, 1);
+            
+            // Determine insert position based on drop location
+            const targetCard = dropEvent.currentTarget;
+            const rect = targetCard.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            const insertBefore = dropEvent.clientY < midpoint;
+            
+            // Calculate new index
+            let newIndex = targetIndex;
+            if (!insertBefore && draggedIndex < targetIndex) {
+                newIndex = targetIndex;
+            } else if (!insertBefore && draggedIndex > targetIndex) {
+                newIndex = targetIndex + 1;
+            } else if (insertBefore && draggedIndex > targetIndex) {
+                newIndex = targetIndex;
+            } else if (insertBefore && draggedIndex < targetIndex) {
+                newIndex = targetIndex - 1;
+            }
+            
+            // Insert at new position
+            accounts.splice(newIndex, 0, draggedAccount);
+            
+            // Add custom order to each account
+            accounts.forEach((account, index) => {
+                account.customOrder = index;
+            });
+            
+            // Save to state
+            this.app.state.set('accounts', accounts);
+            
+            // Update the grid
+            this.updateAccountGrid();
+            
+            this.app.showNotification('Account order updated', 'success');
+        }
+        
+        // Touch Event Handlers for Mobile
+        handleTouchStart(e, account) {
+            this.touchStartY = e.touches[0].clientY;
+            this.touchStartX = e.touches[0].clientX;
+            this.touchAccount = account;
+            this.touchElement = e.currentTarget;
+            this.longPressTimer = setTimeout(() => {
+                this.isLongPress = true;
+                this.touchElement.style.opacity = '0.5';
+                this.touchElement.style.transform = 'scale(1.05)';
+                // Haptic feedback if available
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(50);
+                }
+            }, 500); // 500ms for long press
+        }
+        
+        handleTouchMove(e) {
+            if (!this.isLongPress) {
+                // Cancel long press if moved too much
+                const moveX = Math.abs(e.touches[0].clientX - this.touchStartX);
+                const moveY = Math.abs(e.touches[0].clientY - this.touchStartY);
+                if (moveX > 10 || moveY > 10) {
+                    clearTimeout(this.longPressTimer);
+                }
+                return;
+            }
+            
+            e.preventDefault(); // Prevent scrolling while dragging
+            
+            // Find element under touch point
+            const touch = e.touches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const cardBelow = elementBelow?.closest('.account-card');
+            
+            if (cardBelow && cardBelow !== this.touchElement) {
+                // Show drop indicator
+                const rect = cardBelow.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                
+                document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+                
+                const indicator = document.createElement('div');
+                indicator.className = 'drop-indicator';
+                indicator.style.cssText = `
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    height: 3px;
+                    background: #f57315;
+                    z-index: 1000;
+                `;
+                
+                if (touch.clientY < midpoint) {
+                    indicator.style.top = '-2px';
+                } else {
+                    indicator.style.bottom = '-2px';
+                }
+                
+                cardBelow.style.position = 'relative';
+                cardBelow.appendChild(indicator);
+                
+                this.touchTargetElement = cardBelow;
+            }
+        }
+        
+        handleTouchEnd(e) {
+            clearTimeout(this.longPressTimer);
+            
+            if (this.touchElement) {
+                this.touchElement.style.opacity = '';
+                this.touchElement.style.transform = '';
+            }
+            
+            document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+            
+            if (this.isLongPress && this.touchTargetElement) {
+                // Get target account ID
+                const targetId = this.touchTargetElement.getAttribute('data-account-id');
+                const targetAccount = (this.app.state.get('accounts') || []).find(a => a.id === targetId);
+                
+                if (targetAccount && this.touchAccount && this.touchAccount.id !== targetAccount.id) {
+                    // Create a mock drop event for reorderAccounts
+                    const mockEvent = {
+                        currentTarget: this.touchTargetElement,
+                        clientY: this.touchStartY
+                    };
+                    this.reorderAccounts(this.touchAccount.id, targetAccount.id, mockEvent);
+                }
+            }
+            
+            // Reset touch state
+            this.isLongPress = false;
+            this.touchAccount = null;
+            this.touchElement = null;
+            this.touchTargetElement = null;
         }
         
         close() {
