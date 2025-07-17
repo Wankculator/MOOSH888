@@ -299,6 +299,149 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // COMPLIANCE UTILITIES - 100% MOOSH Standards Enforcement
+    // ═══════════════════════════════════════════════════════════════════════
+    class ComplianceUtils {
+        // Debounce utility - REQUIRED for all rapid actions
+        static debounce(func, wait = 300) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func.apply(this, args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Input validation - REQUIRED for all user inputs
+        static validateInput(value, type) {
+            switch(type) {
+                case 'accountName':
+                    if (!value || !value.trim()) {
+                        return { valid: false, error: 'Account name required' };
+                    }
+                    if (value.trim().length > 50) {
+                        return { valid: false, error: 'Name too long (max 50 characters)' };
+                    }
+                    // Check for HTML/script injection
+                    if (/<[^>]*>/g.test(value)) {
+                        return { valid: false, error: 'Invalid characters detected' };
+                    }
+                    return { valid: true, sanitized: value.trim() };
+                
+                case 'color':
+                    if (!value || typeof value !== 'string') {
+                        return { valid: false, error: 'Color value required' };
+                    }
+                    if (!value.match(/^#[0-9A-Fa-f]{6}$/)) {
+                        return { valid: false, error: 'Invalid color format (use #RRGGBB)' };
+                    }
+                    return { valid: true, value: value.toUpperCase() };
+                
+                case 'mnemonic':
+                    if (!value || !value.trim()) {
+                        return { valid: false, error: 'Seed phrase required' };
+                    }
+                    const words = value.trim().split(/\s+/);
+                    if (words.length !== 12 && words.length !== 24) {
+                        return { valid: false, error: 'Seed phrase must be 12 or 24 words' };
+                    }
+                    return { valid: true, sanitized: words.join(' ') };
+                
+                case 'password':
+                    if (!value || value.length < 8) {
+                        return { valid: false, error: 'Password must be at least 8 characters' };
+                    }
+                    if (value.length > 128) {
+                        return { valid: false, error: 'Password too long (max 128 characters)' };
+                    }
+                    return { valid: true };
+                
+                default:
+                    return { valid: false, error: 'Unknown input type' };
+            }
+        }
+
+        // ASCII indicators - NO EMOJIS
+        static getStatusIndicator(status) {
+            const indicators = {
+                'success': '[OK]',
+                'error': '[XX]',
+                'warning': '[!!]',
+                'info': '[..]',
+                'loading': '[~~]',
+                'ready': '[>>]',
+                'stop': '[X]',
+                'unknown': '[??]',
+                'money': '[$$]',
+                'settings': '[~]',
+                'count': '[#]'
+            };
+            return indicators[status] || '[??]';
+        }
+
+        // Safe array access with bounds checking
+        static safeArrayAccess(array, index, defaultValue = null) {
+            if (!Array.isArray(array) || index < 0 || index >= array.length) {
+                return defaultValue;
+            }
+            return array[index];
+        }
+
+        // Fix array index after deletion
+        static fixArrayIndex(currentIndex, arrayLength) {
+            if (arrayLength === 0) return -1;
+            if (currentIndex >= arrayLength) {
+                return Math.max(0, arrayLength - 1);
+            }
+            return Math.max(0, currentIndex);
+        }
+
+        // Format console log with component prefix
+        static log(component, message, type = 'log') {
+            const prefix = `[${component}]`;
+            const timestamp = new Date().toISOString();
+            
+            switch(type) {
+                case 'error':
+                    console.error(`${prefix} ${message}`, { timestamp });
+                    break;
+                case 'warn':
+                    console.warn(`${prefix} ${message}`, { timestamp });
+                    break;
+                default:
+                    console.log(`${prefix} ${message}`, { timestamp });
+            }
+        }
+
+        // Check if we can delete (prevent last item deletion)
+        static canDelete(currentCount, minimum = 1) {
+            return currentCount > minimum;
+        }
+
+        // Mobile detection
+        static isMobileDevice() {
+            return window.innerWidth <= 768 || 
+                   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        // Performance timing
+        static measurePerformance(operation, callback) {
+            const start = performance.now();
+            const result = callback();
+            const duration = performance.now() - start;
+            
+            if (duration > 100) {
+                this.log('Performance', `${operation} took ${duration.toFixed(2)}ms`, 'warn');
+            }
+            
+            return result;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // STYLE MANAGER - Dynamic CSS Injection System
     // ═══════════════════════════════════════════════════════════════════════
     class StyleManager {
@@ -2213,21 +2356,27 @@
         }
         
         updateAccountColor(accountId, color) {
-            // Validate color format
-            if (!color || typeof color !== 'string' || !color.match(/^#[0-9A-Fa-f]{6}$/)) {
-                console.warn('[StateManager] Invalid color format:', color);
+            // Validate color using ComplianceUtils
+            const colorValidation = ComplianceUtils.validateInput(color, 'color');
+            if (!colorValidation.valid) {
+                console.warn('[StateManager] Invalid color format:', color, colorValidation.error);
                 return false;
             }
             
             const account = this.state.accounts.find(acc => acc.id === accountId);
             if (account) {
-                account.color = color;
+                account.color = colorValidation.value;
                 this.persistAccounts();
                 this.emit('accounts', this.state.accounts);
                 return true;
             }
             return false;
         }
+        
+        // Create a debounced version for UI usage
+        updateAccountColorDebounced = ComplianceUtils.debounce((accountId, color) => {
+            this.updateAccountColor(accountId, color);
+        }, 300);
         
         loadAccounts() {
             try {
@@ -2324,6 +2473,13 @@
             try {
                 console.log('[StateManager] Creating account:', { name, isImport, walletType });
                 
+                // Validate account name
+                const nameValidation = ComplianceUtils.validateInput(name, 'accountName');
+                if (!nameValidation.valid) {
+                    throw new Error(nameValidation.error);
+                }
+                const validatedName = nameValidation.sanitized;
+                
                 const mnemonicString = Array.isArray(mnemonic) ? mnemonic.join(' ') : mnemonic;
                 
                 // Validate mnemonic before proceeding
@@ -2391,7 +2547,7 @@
                 // Create account object with all addresses
                 const account = {
                     id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    name: name || `Account ${this.state.accounts.length + 1}`,
+                    name: validatedName || `Account ${this.state.accounts.length + 1}`,
                     color: this.getNextAccountColor(), // Add color for visual identification
                     addresses: {
                         spark: sparkAddress,
@@ -2468,8 +2624,11 @@
         
         deleteAccount(accountId) {
             const accounts = this.getAccounts();
-            if (accounts.length <= 1) {
+            
+            // Check if we can delete (prevent last account deletion)
+            if (!ComplianceUtils.canDelete(accounts.length)) {
                 console.warn('[StateManager] Cannot delete the last account');
+                this.app?.showNotification?.('Cannot delete the last account', 'error');
                 return false;
             }
             
@@ -2482,7 +2641,16 @@
                     this.state.currentAccountId = accounts[0].id;
                 }
                 
+                // Fix currentAccountIndex if it's out of bounds
+                if (this.state.currentAccountIndex >= accounts.length) {
+                    this.state.currentAccountIndex = ComplianceUtils.fixArrayIndex(
+                        this.state.currentAccountIndex, 
+                        accounts.length
+                    );
+                }
+                
                 this.persistAccounts();
+                ComplianceUtils.log('StateManager', `Account ${accountId} deleted successfully`);
                 return true;
             }
             return false;
@@ -18508,6 +18676,39 @@
                                 style: {
                                     padding: '6px 12px',
                                     background: '#000',
+                                    border: '2px solid #333',
+                                    color: '#f57315',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.editingAccountId = account.id;
+                                    this.updateAccountGrid();
+                                }
+                            }, ['EDIT']),
+                            $.button({
+                                style: {
+                                    padding: '6px 12px',
+                                    background: '#000',
+                                    border: '2px solid #333',
+                                    color: '#f57315',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    transition: 'all 0.2s ease'
+                                },
+                                onclick: (e) => {
+                                    e.stopPropagation();
+                                    this.showColorPicker(account.id);
+                                }
+                            }, ['COLOR']),
+                            $.button({
+                                style: {
+                                    padding: '6px 12px',
+                                    background: '#000',
                                     border: '2px solid #69fd97',
                                     color: '#69fd97',
                                     fontSize: '11px',
@@ -18954,30 +19155,40 @@
                             gap: '10px',
                             marginBottom: '20px'
                         }
-                    }, this.app.state.getAccountColors().map(color => 
-                        $.button({
-                            style: {
-                                width: '60px',
-                                height: '60px',
-                                background: color,
-                                border: account.color === color ? '3px solid #fff' : '2px solid #333',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            },
-                            onmouseover: (e) => {
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                            },
-                            onmouseout: (e) => {
-                                e.currentTarget.style.transform = 'scale(1)';
-                            },
-                            onclick: () => {
-                                this.app.state.updateAccountColor(accountId, color);
-                                this.updateAccountGrid();
-                                document.body.removeChild(overlay);
-                                this.app.showNotification('Account color updated', 'success');
-                            }
-                        })
-                    )),
+                    }, this.app.state.getAccountColors().map(color => {
+                        const colorDiv = document.createElement('div');
+                        colorDiv.style.cssText = `
+                            width: 60px;
+                            height: 60px;
+                            background-color: ${color} !important;
+                            background: ${color} !important;
+                            border: ${account.color === color ? '3px solid #fff' : '2px solid #333'};
+                            cursor: pointer;
+                            transition: all 0.2s;
+                            border-radius: 0;
+                            display: block;
+                        `;
+                        
+                        colorDiv.addEventListener('mouseover', (e) => {
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                            e.currentTarget.style.border = '2px solid #fff';
+                        });
+                        
+                        colorDiv.addEventListener('mouseout', (e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.border = account.color === color ? '3px solid #fff' : '2px solid #333';
+                        });
+                        
+                        colorDiv.addEventListener('click', () => {
+                            // Use debounced version for color updates
+                            this.app.state.updateAccountColorDebounced(accountId, color);
+                            this.updateAccountGrid();
+                            document.body.removeChild(overlay);
+                            this.app.showNotification('Account color updated', 'success');
+                        });
+                        
+                        return colorDiv;
+                    })),
                     
                     $.button({
                         style: {
