@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOOSH Test - Address Truncation</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #f57315;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            border: 1px solid #f57315;
+            padding: 20px;
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+        }
+        
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #111;
+            border-left: 3px solid #f57315;
+            font-size: 12px;
+        }
+        
+        .status-ok { border-left-color: #00ff00; color: #00ff00; }
+        .status-error { border-left-color: #ff0000; color: #ff0000; }
+        .status-info { border-left-color: #f57315; color: #f57315; }
+        
+        button {
+            background: #000;
+            color: #f57315;
+            border: 2px solid #f57315;
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .size-simulator {
+            border: 2px solid #333;
+            margin: 20px 0;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .address-display {
+            padding: 6px 10px;
+            background: rgba(245, 115, 21, 0.05);
+            border: 1px solid rgba(245, 115, 21, 0.2);
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #f57315;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            overflow: hidden;
+            max-width: 100%;
+        }
+        
+        .address-display:hover {
+            background: rgba(245, 115, 21, 0.1);
+            border-color: #f57315;
+        }
+        
+        .address-label {
+            color: #ff8c42;
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-right: 4px;
+        }
+        
+        .address-value {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+            flex-shrink: 1;
+        }
+        
+        .size-label {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>[==] ADDRESS TRUNCATION TEST [==]</h1>
+            <p>Testing Long Address Display Scaling</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>[>] Test Address</h2>
+            <p style="font-size: 11px; word-break: break-all;">
+                bc1py7f4esa5fyqh29cmur5fs0ymrf3pgcvnl04zl3j8yjr6damrcqqsa67jf7
+            </p>
+        </div>
+        
+        <div class="test-section">
+            <h2>[>] Screen Size Simulations</h2>
+            
+            <!-- Desktop (1200px) -->
+            <div class="size-simulator" style="width: 100%; max-width: 1200px;">
+                <span class="size-label">Desktop (1200px)</span>
+                <div class="address-display" onclick="copyAddress(this)">
+                    <span class="address-label">Active Address:</span>
+                    <span class="address-value" id="desktop-address"></span>
+                </div>
+            </div>
+            
+            <!-- Tablet (768px) -->
+            <div class="size-simulator" style="width: 100%; max-width: 768px;">
+                <span class="size-label">Tablet (768px)</span>
+                <div class="address-display" onclick="copyAddress(this)">
+                    <span class="address-label">Active Address:</span>
+                    <span class="address-value" id="tablet-address"></span>
+                </div>
+            </div>
+            
+            <!-- Mobile (480px) -->
+            <div class="size-simulator" style="width: 100%; max-width: 480px;">
+                <span class="size-label">Mobile (480px)</span>
+                <div class="address-display" onclick="copyAddress(this)">
+                    <span class="address-label">Active Address:</span>
+                    <span class="address-value" id="mobile-address"></span>
+                </div>
+            </div>
+            
+            <!-- Small Mobile (320px) -->
+            <div class="size-simulator" style="width: 100%; max-width: 320px;">
+                <span class="size-label">Small Mobile (320px)</span>
+                <div class="address-display" onclick="copyAddress(this)" style="font-size: 9px;">
+                    <span class="address-label">Active Address:</span>
+                    <span class="address-value" id="xs-address"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>[>] Test Controls</h2>
+            <button onclick="testTruncation()">Test Truncation Logic</button>
+            <button onclick="testCopyFunction()">Test Copy Function</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>[>] Test Results</h2>
+            <div id="test-results"></div>
+        </div>
+    </div>
+    
+    <script>
+        const testAddress = 'bc1py7f4esa5fyqh29cmur5fs0ymrf3pgcvnl04zl3j8yjr6damrcqqsa67jf7';
+        
+        function truncateAddress(address, screenWidth) {
+            if (!address || address.length <= 20) return address;
+            
+            // Simulate screen size logic
+            const isXS = screenWidth <= 375;
+            const isMobile = screenWidth <= 768;
+            
+            // Different truncation lengths based on screen size
+            let visibleChars = isXS ? 8 : (isMobile ? 12 : 16);
+            
+            // Show first N and last N characters
+            const start = address.substring(0, visibleChars);
+            const end = address.substring(address.length - visibleChars);
+            
+            return `${start}...${end}`;
+        }
+        
+        function logResult(message, status = 'info') {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result status-${status}`;
+            const timestamp = new Date().toLocaleTimeString();
+            const indicator = status === 'ok' ? '[OK]' : status === 'error' ? '[X]' : '[>]';
+            resultDiv.textContent = `${timestamp} ${indicator} ${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+            logResult('Results cleared', 'info');
+        }
+        
+        function testTruncation() {
+            // Desktop
+            const desktopTruncated = truncateAddress(testAddress, 1200);
+            document.getElementById('desktop-address').textContent = desktopTruncated;
+            document.getElementById('desktop-address').setAttribute('data-full-address', testAddress);
+            logResult(`Desktop: ${desktopTruncated}`, 'ok');
+            
+            // Tablet
+            const tabletTruncated = truncateAddress(testAddress, 768);
+            document.getElementById('tablet-address').textContent = tabletTruncated;
+            document.getElementById('tablet-address').setAttribute('data-full-address', testAddress);
+            logResult(`Tablet: ${tabletTruncated}`, 'ok');
+            
+            // Mobile
+            const mobileTruncated = truncateAddress(testAddress, 480);
+            document.getElementById('mobile-address').textContent = mobileTruncated;
+            document.getElementById('mobile-address').setAttribute('data-full-address', testAddress);
+            logResult(`Mobile: ${mobileTruncated}`, 'ok');
+            
+            // XS
+            const xsTruncated = truncateAddress(testAddress, 320);
+            document.getElementById('xs-address').textContent = xsTruncated;
+            document.getElementById('xs-address').setAttribute('data-full-address', testAddress);
+            logResult(`XS Mobile: ${xsTruncated}`, 'ok');
+            
+            // Check if all fit within their containers
+            setTimeout(() => {
+                const containers = [
+                    { id: 'desktop-address', name: 'Desktop' },
+                    { id: 'tablet-address', name: 'Tablet' },
+                    { id: 'mobile-address', name: 'Mobile' },
+                    { id: 'xs-address', name: 'XS Mobile' }
+                ];
+                
+                containers.forEach(({ id, name }) => {
+                    const element = document.getElementById(id);
+                    const parent = element.parentElement;
+                    
+                    if (element.scrollWidth > parent.clientWidth) {
+                        logResult(`${name}: OVERFLOW DETECTED!`, 'error');
+                    } else {
+                        logResult(`${name}: Fits correctly`, 'ok');
+                    }
+                });
+            }, 100);
+        }
+        
+        async function copyAddress(element) {
+            const addressSpan = element.querySelector('.address-value');
+            const fullAddress = addressSpan.getAttribute('data-full-address') || testAddress;
+            
+            try {
+                await navigator.clipboard.writeText(fullAddress);
+                
+                // Visual feedback
+                const originalText = addressSpan.textContent;
+                addressSpan.textContent = 'Copied!';
+                element.style.background = 'rgba(105, 253, 151, 0.2)';
+                element.style.borderColor = '#69fd97';
+                
+                setTimeout(() => {
+                    addressSpan.textContent = originalText;
+                    element.style.background = 'rgba(245, 115, 21, 0.05)';
+                    element.style.borderColor = 'rgba(245, 115, 21, 0.2)';
+                }, 1000);
+                
+                logResult('Address copied successfully', 'ok');
+            } catch (error) {
+                logResult('Copy failed: ' + error.message, 'error');
+            }
+        }
+        
+        async function testCopyFunction() {
+            const desktopElement = document.getElementById('desktop-address').parentElement;
+            await copyAddress(desktopElement);
+            
+            // Verify clipboard
+            try {
+                const clipboardText = await navigator.clipboard.readText();
+                if (clipboardText === testAddress) {
+                    logResult('Clipboard contains full address', 'ok');
+                } else {
+                    logResult('Clipboard does not match expected address', 'error');
+                }
+            } catch (error) {
+                logResult('Cannot read clipboard (browser security)', 'info');
+            }
+        }
+        
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            logResult('Address truncation test initialized', 'ok');
+            testTruncation();
+        });
+    </script>
+</body>
+</html>

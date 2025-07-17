@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOOSH Wallet - Balance Display Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            color: #f57315;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #333;
+            background: #111;
+        }
+        
+        h1 {
+            color: #f57315;
+            border-bottom: 2px solid #f57315;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        h2 {
+            color: #ff8c42;
+            margin-bottom: 15px;
+        }
+        
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #000;
+            border-left: 3px solid #333;
+        }
+        
+        .test-item.success {
+            border-left-color: #4CAF50;
+        }
+        
+        .test-item.warning {
+            border-left-color: #ff8c42;
+        }
+        
+        .test-item.error {
+            border-left-color: #ff4444;
+        }
+        
+        button {
+            background: #000;
+            border: 2px solid #f57315;
+            color: #f57315;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .mock-account-card {
+            border: 2px solid #333;
+            border-left: 5px solid #f57315;
+            padding: 20px;
+            margin: 10px 0;
+            background: #111;
+        }
+        
+        .balance-display {
+            margin-top: 10px;
+            padding: 10px;
+            background: #000;
+            border: 1px solid #333;
+        }
+        
+        .log-output {
+            background: #000;
+            border: 1px solid #333;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        
+        .status {
+            display: inline-block;
+            min-width: 60px;
+            text-align: center;
+            padding: 2px 8px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .status.pass {
+            color: #4CAF50;
+        }
+        
+        .status.fail {
+            color: #ff4444;
+        }
+        
+        .status.warning {
+            color: #ff8c42;
+        }
+        
+        .status.info {
+            color: #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>[MOOSH TEST] Balance Display Verification</h1>
+    
+    <div class="test-section">
+        <h2>[>] Test Configuration</h2>
+        <button onclick="testAPIConnectivity()">Test API Connectivity</button>
+        <button onclick="testBTCPriceFetch()">Test BTC Price Fetch</button>
+        <button onclick="testBalanceFetch()">Test Balance Fetch</button>
+        <button onclick="testFullFlow()">Run Full Test Suite</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>[>] Mock Account Cards</h2>
+        <div id="mock-accounts">
+            <div class="mock-account-card">
+                <h3>Test Account 1</h3>
+                <div>Address: bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</div>
+                <div class="balance-display">
+                    <div class="balance-btc-test1">[..] Loading balance...</div>
+                    <div class="balance-usd-test1"></div>
+                </div>
+                <button onclick="refreshBalance('test1', 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh')">Refresh Balance</button>
+            </div>
+            
+            <div class="mock-account-card">
+                <h3>Test Account 2</h3>
+                <div>Address: bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h</div>
+                <div class="balance-display">
+                    <div class="balance-btc-test2">[..] Loading balance...</div>
+                    <div class="balance-usd-test2"></div>
+                </div>
+                <button onclick="refreshBalance('test2', 'bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h')">Refresh Balance</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>[>] Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>[>] Log Output</h2>
+        <div id="log-output" class="log-output"></div>
+    </div>
+    
+    <script>
+        let btcPrice = 0;
+        const balanceCache = new Map();
+        
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = {
+                'info': '[..]',
+                'success': '[OK]',
+                'error': '[XX]',
+                'warning': '[!!]'
+            }[type] || '[??]';
+            
+            logEl.textContent += `${timestamp} ${prefix} ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function addResult(test, status, message) {
+            const resultsEl = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-item ${status}`;
+            resultDiv.innerHTML = `<span class="status ${status}">[${status.toUpperCase()}]</span>${test}: ${message}`;
+            resultsEl.appendChild(resultDiv);
+        }
+        
+        function clearLog() {
+            document.getElementById('log-output').textContent = '';
+            document.getElementById('test-results').innerHTML = '';
+            log('Log cleared', 'info');
+        }
+        
+        async function testAPIConnectivity() {
+            log('Testing API connectivity...', 'info');
+            
+            const apis = [
+                { name: 'Blockchain.info', url: 'https://blockchain.info/q/addressbalance/bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' },
+                { name: 'Mempool.space', url: 'https://mempool.space/api/address/bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' },
+                { name: 'Blockchair', url: 'https://api.blockchair.com/bitcoin/dashboards/address/bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' }
+            ];
+            
+            for (const api of apis) {
+                try {
+                    const start = Date.now();
+                    const response = await fetch(api.url);
+                    const time = Date.now() - start;
+                    
+                    if (response.ok) {
+                        addResult(api.name, 'success', `Connected (${time}ms)`);
+                        log(`${api.name} responded in ${time}ms`, 'success');
+                    } else {
+                        addResult(api.name, 'warning', `HTTP ${response.status}`);
+                        log(`${api.name} returned status ${response.status}`, 'warning');
+                    }
+                } catch (error) {
+                    addResult(api.name, 'error', error.message);
+                    log(`${api.name} failed: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        async function testBTCPriceFetch() {
+            log('Testing BTC price fetch...', 'info');
+            
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+                const data = await response.json();
+                btcPrice = data.bitcoin.usd;
+                
+                addResult('BTC Price', 'success', `$${btcPrice.toFixed(2)} USD`);
+                log(`BTC Price fetched: $${btcPrice}`, 'success');
+                
+                // Update all USD displays
+                updateAllUSDDisplays();
+            } catch (error) {
+                addResult('BTC Price', 'error', error.message);
+                log(`Failed to fetch BTC price: ${error.message}`, 'error');
+                
+                // Use fallback price
+                btcPrice = 40000;
+                log('Using fallback BTC price: $40,000', 'warning');
+            }
+        }
+        
+        async function testBalanceFetch() {
+            log('Testing balance fetch...', 'info');
+            
+            const testAddresses = [
+                { id: 'test1', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', name: 'Test Address 1' },
+                { id: 'test2', address: 'bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h', name: 'Test Address 2' }
+            ];
+            
+            for (const test of testAddresses) {
+                await refreshBalance(test.id, test.address);
+            }
+        }
+        
+        async function refreshBalance(accountId, address) {
+            log(`Fetching balance for ${accountId}...`, 'info');
+            
+            const btcEl = document.querySelector(`.balance-btc-${accountId}`);
+            const usdEl = document.querySelector(`.balance-usd-${accountId}`);
+            
+            if (btcEl) {
+                btcEl.textContent = '[>>] Refreshing...';
+                btcEl.style.color = '#faa307';
+            }
+            
+            try {
+                // Try blockchain.info first
+                const response = await fetch(`https://blockchain.info/q/addressbalance/${address}`);
+                const satoshis = await response.text();
+                const btcBalance = parseInt(satoshis) / 100000000;
+                
+                // Update cache
+                balanceCache.set(accountId, {
+                    btc: btcBalance,
+                    usd: btcBalance * btcPrice,
+                    timestamp: Date.now()
+                });
+                
+                // Update display
+                if (btcEl) {
+                    btcEl.textContent = `${btcBalance.toFixed(8)} BTC`;
+                    btcEl.style.color = btcBalance > 0 ? '#f57315' : '#666';
+                }
+                
+                if (usdEl && btcPrice > 0) {
+                    const usdValue = btcBalance * btcPrice;
+                    usdEl.textContent = `$${usdValue.toFixed(2)} USD`;
+                    usdEl.style.color = '#888';
+                }
+                
+                addResult(`Balance ${accountId}`, 'success', `${btcBalance} BTC`);
+                log(`Balance for ${accountId}: ${btcBalance} BTC`, 'success');
+                
+            } catch (error) {
+                addResult(`Balance ${accountId}`, 'error', error.message);
+                log(`Failed to fetch balance for ${accountId}: ${error.message}`, 'error');
+                
+                if (btcEl) {
+                    btcEl.textContent = '[XX] Error';
+                    btcEl.style.color = '#ff4444';
+                }
+                
+                if (usdEl) {
+                    usdEl.textContent = 'Unable to fetch';
+                }
+            }
+        }
+        
+        function updateAllUSDDisplays() {
+            balanceCache.forEach((cache, accountId) => {
+                const usdEl = document.querySelector(`.balance-usd-${accountId}`);
+                if (usdEl && btcPrice > 0) {
+                    const usdValue = cache.btc * btcPrice;
+                    usdEl.textContent = `$${usdValue.toFixed(2)} USD`;
+                }
+            });
+        }
+        
+        async function testFullFlow() {
+            clearLog();
+            log('Starting full test suite...', 'info');
+            
+            // Test 1: API Connectivity
+            log('\n=== Test 1: API Connectivity ===', 'info');
+            await testAPIConnectivity();
+            
+            // Wait a bit
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test 2: BTC Price
+            log('\n=== Test 2: BTC Price Fetch ===', 'info');
+            await testBTCPriceFetch();
+            
+            // Wait a bit
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test 3: Balance Fetch
+            log('\n=== Test 3: Balance Fetching ===', 'info');
+            await testBalanceFetch();
+            
+            log('\nFull test suite completed!', 'success');
+            
+            // Summary
+            const total = document.querySelectorAll('.test-item').length;
+            const passed = document.querySelectorAll('.test-item.success').length;
+            const failed = document.querySelectorAll('.test-item.error').length;
+            const warnings = document.querySelectorAll('.test-item.warning').length;
+            
+            log(`\nSummary: ${passed}/${total} passed, ${failed} failed, ${warnings} warnings`, 
+                failed === 0 ? 'success' : 'warning');
+        }
+        
+        // Auto-run basic test on load
+        window.addEventListener('load', () => {
+            log('Balance Display Test loaded', 'info');
+            log('Click "Run Full Test Suite" to begin comprehensive testing', 'info');
+        });
+    </script>
+</body>
+</html>

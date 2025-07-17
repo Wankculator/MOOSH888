@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Professional Chart Test - MOOSH Wallet</title>
+    <style>
+        body {
+            background: #000;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Original Mode */
+        .original-mode {
+            --theme-color: #f57315;
+            --bg-color: rgba(245, 115, 21, 0.03);
+            --border-rgba: 245, 115, 21;
+        }
+        
+        /* Moosh Mode */
+        .moosh-mode {
+            --theme-color: #69fd97;
+            --bg-color: rgba(105, 253, 151, 0.03);
+            --border-rgba: 105, 253, 151;
+        }
+        
+        .balance-chart {
+            padding: 20px;
+            background: var(--bg-color);
+            border: 1px solid var(--theme-color);
+            margin: 20px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(var(--border-rgba), 0.2);
+            padding-bottom: 10px;
+        }
+        
+        .portfolio-info h3 {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--theme-color);
+            margin: 0 0 4px 0;
+        }
+        
+        .portfolio-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .btc-value {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .change-info {
+            text-align: right;
+        }
+        
+        .change-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .change-percent {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .positive { color: #00ff88; }
+        .negative { color: #ff4444; }
+        
+        .change-value {
+            font-size: 12px;
+        }
+        
+        .professional-chart {
+            height: 180px;
+            position: relative;
+            margin-bottom: 10px;
+            border-left: 1px solid rgba(var(--border-rgba), 0.3);
+            border-bottom: 1px solid rgba(var(--border-rgba), 0.3);
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .chart-bar {
+            position: absolute;
+            bottom: 10px;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .chart-bar:hover {
+            opacity: 1;
+        }
+        
+        .green-bar { background: #00ff88; }
+        .red-bar { background: #ff4444; }
+        
+        .grid-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 1px dashed rgba(var(--border-rgba), 0.1);
+            font-size: 9px;
+            color: #666;
+            padding-left: 5px;
+        }
+        
+        .period-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .period-btn {
+            padding: 4px 12px;
+            background: transparent;
+            border: 1px solid var(--theme-color);
+            color: var(--theme-color);
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        .period-btn:hover,
+        .period-btn.active {
+            background: var(--theme-color);
+            color: #000;
+        }
+        
+        .mode-toggle {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .mode-toggle button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            background: transparent;
+            border: 2px solid #fff;
+            color: #fff;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .mode-toggle button:hover {
+            background: #fff;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="mode-toggle">
+            <button onclick="setMode('original')">Original Mode</button>
+            <button onclick="setMode('moosh')">Moosh Mode</button>
+        </div>
+        
+        <div id="chartContainer" class="original-mode">
+            <div class="balance-chart">
+                <!-- Chart Header -->
+                <div class="chart-header">
+                    <div class="portfolio-info">
+                        <h3>Portfolio Balance</h3>
+                        <div class="portfolio-value">$5,234.56</div>
+                        <div class="btc-value">0.12345678 BTC</div>
+                    </div>
+                    <div class="change-info">
+                        <div class="change-label">24h Change</div>
+                        <div class="change-percent positive">+2.35%</div>
+                        <div class="change-value positive">+$119.23</div>
+                    </div>
+                </div>
+                
+                <!-- Professional Chart -->
+                <div class="professional-chart" id="chart">
+                    <!-- Grid lines -->
+                    <div class="grid-line" style="top: 10px;">$5.5K</div>
+                    <div class="grid-line" style="top: 55px;"></div>
+                    <div class="grid-line" style="top: 100px;"></div>
+                    <div class="grid-line" style="top: 145px;"></div>
+                    <div class="grid-line" style="top: 170px;">$4.8K</div>
+                </div>
+                
+                <!-- Period Selector -->
+                <div class="period-selector">
+                    <button class="period-btn active">24H</button>
+                    <button class="period-btn">7D</button>
+                    <button class="period-btn">30D</button>
+                    <button class="period-btn">ALL</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function setMode(mode) {
+            const container = document.getElementById('chartContainer');
+            container.className = mode === 'moosh' ? 'moosh-mode' : 'original-mode';
+            generateChart();
+        }
+        
+        function generateChart() {
+            const chart = document.getElementById('chart');
+            const bars = chart.querySelectorAll('.chart-bar');
+            bars.forEach(bar => bar.remove());
+            
+            // Generate sample bars
+            const numBars = 24;
+            const chartWidth = 760; // Approximate width
+            const barWidth = Math.max(2, (chartWidth / numBars) - 2);
+            
+            for (let i = 0; i < numBars; i++) {
+                const height = 40 + Math.random() * 100;
+                const isGreen = Math.random() > 0.4;
+                
+                const bar = document.createElement('div');
+                bar.className = `chart-bar ${isGreen ? 'green-bar' : 'red-bar'}`;
+                bar.style.left = `${i * (chartWidth / numBars)}px`;
+                bar.style.width = `${barWidth}px`;
+                bar.style.height = `${height}px`;
+                
+                // Add hover effect
+                bar.onmouseover = function() {
+                    showTooltip(this, i, height, isGreen);
+                };
+                bar.onmouseout = hideTooltip;
+                
+                chart.appendChild(bar);
+            }
+        }
+        
+        function showTooltip(bar, index, height, isGreen) {
+            // Would show tooltip in real implementation
+            console.log(`Bar ${index}: Height ${height}, ${isGreen ? 'Green' : 'Red'}`);
+        }
+        
+        function hideTooltip() {
+            // Would hide tooltip
+        }
+        
+        // Period selector functionality
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.onclick = function() {
+                document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                generateChart(); // Regenerate with new data
+            };
+        });
+        
+        // Initial chart generation
+        generateChart();
+    </script>
+</body>
+</html>

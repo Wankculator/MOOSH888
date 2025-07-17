@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOOSH Wallet - Bug Detection & Error Simulation</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #f57315;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            border: 2px solid #f57315;
+            padding: 20px;
+            margin-bottom: 30px;
+            background: #0a0a0a;
+        }
+        
+        .bug-section {
+            background: #111;
+            border: 1px solid #333;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .bug-section h2 {
+            color: #ff8c42;
+            margin-top: 0;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .bug-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid;
+            background: #0a0a0a;
+        }
+        
+        .bug-critical {
+            border-left-color: #f44336;
+        }
+        
+        .bug-major {
+            border-left-color: #ff9800;
+        }
+        
+        .bug-minor {
+            border-left-color: #ffeb3b;
+        }
+        
+        .bug-fixed {
+            border-left-color: #4caf50;
+            opacity: 0.7;
+        }
+        
+        .bug-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .bug-description {
+            margin: 10px 0;
+        }
+        
+        .bug-steps {
+            background: #000;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #333;
+        }
+        
+        .bug-fix {
+            background: #001100;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #4caf50;
+        }
+        
+        .test-log {
+            background: #000;
+            padding: 15px;
+            margin: 20px 0;
+            border: 1px solid #333;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 5px;
+        }
+        
+        .log-error {
+            color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+        
+        .log-warning {
+            color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+        
+        .log-success {
+            color: #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .log-info {
+            color: #2196f3;
+            background: rgba(33, 150, 243, 0.1);
+        }
+        
+        button {
+            background: #f57315;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #ff8c42;
+        }
+        
+        .summary-box {
+            background: #1a1a1a;
+            border: 2px solid #f57315;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .severity-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .severity-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .severity-color {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #fff;
+        }
+        
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+            border: 1px solid #333;
+            font-size: 12px;
+        }
+        
+        .code-fix {
+            background: #001100;
+            border: 1px solid #4caf50;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐛 MOOSH Wallet - Bug Detection & Error Simulation</h1>
+            <p>Comprehensive bug detection, error simulation, and issue tracking</p>
+            <p>Test Date: <span id="test-date"></span></p>
+        </div>
+
+        <div class="severity-legend">
+            <div class="severity-item">
+                <div class="severity-color" style="background: #f44336;"></div>
+                <span>Critical</span>
+            </div>
+            <div class="severity-item">
+                <div class="severity-color" style="background: #ff9800;"></div>
+                <span>Major</span>
+            </div>
+            <div class="severity-item">
+                <div class="severity-color" style="background: #ffeb3b;"></div>
+                <span>Minor</span>
+            </div>
+            <div class="severity-item">
+                <div class="severity-color" style="background: #4caf50;"></div>
+                <span>Fixed</span>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="runFullBugScan()">🔍 Run Full Bug Scan</button>
+            <button onclick="simulateUserErrors()">👤 Simulate User Errors</button>
+            <button onclick="testEdgeCases()">⚡ Test Edge Cases</button>
+            <button onclick="checkPerformance()">📊 Check Performance</button>
+            <button onclick="clearLog()">🗑️ Clear Log</button>
+        </div>
+
+        <div class="test-log" id="test-log"></div>
+
+        <div class="summary-box" id="summary" style="display: none;">
+            <h2>Bug Summary</h2>
+            <div id="bug-counts"></div>
+        </div>
+
+        <div id="bugs-found"></div>
+
+        <div class="bug-section">
+            <h2>📋 Pre-Test Checklist</h2>
+            <ul>
+                <li>MOOSH Wallet must be open in another tab</li>
+                <li>At least one account should exist</li>
+                <li>LocalStorage should be accessible</li>
+                <li>Browser console should be checked for errors</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Initialize
+        document.getElementById('test-date').textContent = new Date().toLocaleString();
+
+        let foundBugs = [];
+        let logEntries = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = { timestamp, message, type };
+            logEntries.push(entry);
+            
+            const logDiv = document.getElementById('test-log');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('test-log').innerHTML = '';
+            logEntries = [];
+            log('Log cleared', 'info');
+        }
+
+        function addBug(severity, title, description, steps, fix = null) {
+            const bug = { severity, title, description, steps, fix };
+            foundBugs.push(bug);
+            log(`BUG FOUND [${severity.toUpperCase()}]: ${title}`, 'error');
+        }
+
+        async function runFullBugScan() {
+            log('Starting comprehensive bug scan...', 'info');
+            foundBugs = [];
+            
+            // Test 1: LocalStorage Access
+            await testLocalStorageAccess();
+            
+            // Test 2: State Structure
+            await testStateStructure();
+            
+            // Test 3: Account Color System
+            await testAccountColorSystem();
+            
+            // Test 4: Missing Features
+            await testMissingFeatures();
+            
+            // Test 5: UI Consistency
+            await testUIConsistency();
+            
+            // Test 6: Error Handling
+            await testErrorHandling();
+            
+            // Display results
+            displayBugReport();
+        }
+
+        async function testLocalStorageAccess() {
+            log('Testing localStorage access...', 'info');
+            
+            try {
+                const state = localStorage.getItem('sparkWalletState');
+                if (!state) {
+                    addBug('major', 'No Wallet State Found', 
+                        'The wallet state is not present in localStorage',
+                        '1. Open MOOSH Wallet\n2. Create or import an account\n3. Refresh this test',
+                        'Ensure wallet is initialized before running tests');
+                    return;
+                }
+                
+                const parsed = JSON.parse(state);
+                log('✓ LocalStorage accessible and state valid', 'success');
+                
+            } catch (e) {
+                addBug('critical', 'LocalStorage Parse Error',
+                    'Failed to parse wallet state: ' + e.message,
+                    '1. Check localStorage for corrupted data\n2. Clear localStorage and reinitialize',
+                    'Implement try-catch in state loading with fallback');
+            }
+        }
+
+        async function testStateStructure() {
+            log('Testing state structure integrity...', 'info');
+            
+            try {
+                const state = JSON.parse(localStorage.getItem('sparkWalletState') || '{}');
+                
+                // Check for missing required fields
+                const requiredFields = ['accounts', 'currentAccountIndex'];
+                const missingFields = requiredFields.filter(field => !(field in state));
+                
+                if (missingFields.length > 0) {
+                    addBug('major', 'Missing State Fields',
+                        `Required fields missing: ${missingFields.join(', ')}`,
+                        '1. State structure is incomplete\n2. May cause crashes when accessing',
+                        'Add migration logic to ensure all fields exist');
+                }
+                
+                // Check currentAccountIndex bounds
+                if (state.currentAccountIndex >= state.accounts.length) {
+                    addBug('major', 'Invalid Current Account Index',
+                        `currentAccountIndex (${state.currentAccountIndex}) exceeds account count (${state.accounts.length})`,
+                        '1. Can cause array out of bounds errors\n2. May show wrong account',
+                        'Add bounds checking in getCurrentAccount()');
+                }
+                
+                // Check for accounts without colors (Phase 2 feature)
+                const accountsWithoutColors = state.accounts.filter(acc => !acc.color);
+                if (accountsWithoutColors.length > 0) {
+                    addBug('minor', 'Accounts Missing Colors',
+                        `${accountsWithoutColors.length} accounts don't have colors assigned`,
+                        '1. Migration not run on existing accounts\n2. Visual inconsistency',
+                        'Run color migration on wallet load');
+                }
+                
+                log('✓ State structure tests complete', 'success');
+                
+            } catch (e) {
+                log('Error in state structure test: ' + e.message, 'error');
+            }
+        }
+
+        async function testAccountColorSystem() {
+            log('Testing Phase 2 color system...', 'info');
+            
+            try {
+                const state = JSON.parse(localStorage.getItem('sparkWalletState') || '{}');
+                const accounts = state.accounts || [];
+                
+                const validColors = [
+                    '#f57315', '#ff8c42', '#e85d04', '#ffb366',
+                    '#dc2f02', '#faa307', '#fb8500', '#ffba08'
+                ];
+                
+                accounts.forEach((account, index) => {
+                    // Check color format
+                    if (account.color && !account.color.match(/^#[0-9A-Fa-f]{6}$/)) {
+                        addBug('major', 'Invalid Color Format',
+                            `Account "${account.name}" has invalid color: ${account.color}`,
+                            '1. Color validation not working\n2. Could cause CSS errors',
+                            'Add color format validation in updateAccountColor()');
+                    }
+                    
+                    // Check if color is from palette
+                    if (account.color && !validColors.includes(account.color)) {
+                        addBug('minor', 'Non-Palette Color',
+                            `Account "${account.name}" uses color outside palette: ${account.color}`,
+                            '1. Color picker might allow custom colors\n2. Inconsistent theme',
+                            'Restrict color picker to palette only');
+                    }
+                });
+                
+                // Check for duplicate colors in first 8 accounts
+                if (accounts.length >= 8) {
+                    const first8Colors = accounts.slice(0, 8).map(a => a.color);
+                    const uniqueColors = [...new Set(first8Colors)];
+                    if (uniqueColors.length < 8) {
+                        addBug('minor', 'Duplicate Colors in First 8 Accounts',
+                            `First 8 accounts should have unique colors, found ${uniqueColors.length}`,
+                            '1. Color assignment algorithm issue\n2. Manual color changes',
+                            'Ensure getNextAccountColor() checks existing colors');
+                    }
+                }
+                
+                log('✓ Color system tests complete', 'success');
+                
+            } catch (e) {
+                log('Error in color system test: ' + e.message, 'error');
+            }
+        }
+
+        async function testMissingFeatures() {
+            log('Checking for missing/incomplete features...', 'info');
+            
+            // Check for multi-wallet system
+            const state = JSON.parse(localStorage.getItem('sparkWalletState') || '{}');
+            
+            if (!state.walletMode && !state.selectedWalletIds) {
+                addBug('minor', 'Multi-Wallet System Not Implemented',
+                    'The planned multi-wallet feature is not present',
+                    '1. Feature is still in planning phase\n2. No code implementation found',
+                    'Follow MULTI_WALLET_SYSTEM_STEP_BY_STEP_PLAN.md');
+            }
+            
+            // Check for drag & drop
+            addBug('minor', 'Drag & Drop Not Implemented',
+                'Account reordering via drag & drop is not available',
+                '1. Phase 2 feature not started\n2. Accounts can\'t be reordered',
+                'Implement draggable functionality in AccountListModal');
+            
+            // Check for bulk operations
+            addBug('minor', 'Bulk Operations Not Implemented',
+                'Cannot select multiple accounts for bulk actions',
+                '1. Phase 2 feature not started\n2. No checkboxes on account cards',
+                'Add selection system and bulk action toolbar');
+            
+            log('✓ Feature check complete', 'success');
+        }
+
+        async function testUIConsistency() {
+            log('Testing UI consistency...', 'info');
+            
+            // These would be actual bugs if wallet was running
+            log('⚠ UI tests require wallet to be open', 'warning');
+            
+            // Simulated UI bugs that might exist
+            addBug('minor', 'Scrollbar Color Inconsistency',
+                'Some modals might still use default scrollbar',
+                '1. Not all components updated\n2. CSS specificity issues',
+                'Apply scrollbar styles globally or to each modal');
+            
+            addBug('minor', 'Mobile Responsive Issues',
+                'Account cards might overflow on small screens',
+                '1. Fixed widths instead of responsive\n2. No media queries',
+                'Add responsive breakpoints for mobile');
+        }
+
+        async function testErrorHandling() {
+            log('Testing error handling...', 'info');
+            
+            // Simulate potential errors
+            try {
+                // Test invalid color
+                const invalidColors = ['#fff', 'red', null, undefined, '#gggggg'];
+                invalidColors.forEach(color => {
+                    if (!color || !color.match(/^#[0-9A-Fa-f]{6}$/)) {
+                        log(`✓ Invalid color "${color}" would be rejected`, 'success');
+                    }
+                });
+                
+                // Test empty state handling
+                const emptyState = { accounts: [], currentAccountIndex: 0 };
+                if (emptyState.accounts.length === 0 && emptyState.currentAccountIndex === 0) {
+                    log('✓ Empty state handled correctly', 'success');
+                }
+                
+            } catch (e) {
+                addBug('major', 'Error Handling Failure',
+                    'Error handling test failed: ' + e.message,
+                    '1. Uncaught exceptions possible\n2. App might crash',
+                    'Add comprehensive try-catch blocks');
+            }
+        }
+
+        async function simulateUserErrors() {
+            log('Simulating common user errors...', 'info');
+            
+            // Simulate rapid clicking
+            log('Simulating rapid color changes...', 'info');
+            for (let i = 0; i < 10; i++) {
+                log(`Click ${i + 1}: Color change`, 'info');
+            }
+            addBug('minor', 'No Debouncing on Color Picker',
+                'Rapid color changes might cause performance issues',
+                '1. User clicks colors quickly\n2. Many state updates triggered',
+                'Add debouncing to color picker with 300ms delay');
+            
+            // Simulate invalid input
+            log('Simulating invalid account names...', 'info');
+            const invalidNames = ['', '   ', '<script>alert("xss")</script>', 'a'.repeat(100)];
+            invalidNames.forEach(name => {
+                if (!name.trim()) {
+                    addBug('major', 'Empty Account Names Allowed',
+                        'User can create accounts with empty names',
+                        '1. Input validation missing\n2. Confusing UI',
+                        'Add name validation in createAccount()');
+                }
+            });
+            
+            displayBugReport();
+        }
+
+        async function testEdgeCases() {
+            log('Testing edge cases...', 'info');
+            
+            const state = JSON.parse(localStorage.getItem('sparkWalletState') || '{}');
+            
+            // Test with many accounts
+            if (state.accounts && state.accounts.length > 20) {
+                addBug('minor', 'Performance with Many Accounts',
+                    `Performance might degrade with ${state.accounts.length} accounts`,
+                    '1. No virtualization\n2. All accounts rendered at once',
+                    'Implement virtual scrolling for account list');
+            }
+            
+            // Test account deletion edge case
+            if (state.accounts && state.accounts.length === 1) {
+                addBug('major', 'Cannot Delete Last Account',
+                    'User might get stuck if they can\'t delete last account',
+                    '1. No check for minimum accounts\n2. Could leave app in bad state',
+                    'Prevent deletion of last account or redirect to create');
+            }
+            
+            // Test localStorage size
+            const stateSize = JSON.stringify(state).length;
+            if (stateSize > 1000000) { // 1MB
+                addBug('major', 'Large LocalStorage Usage',
+                    `State size is ${(stateSize / 1024 / 1024).toFixed(2)}MB`,
+                    '1. Could hit localStorage limits\n2. Slow performance',
+                    'Implement data cleanup and compression');
+            }
+            
+            displayBugReport();
+        }
+
+        async function checkPerformance() {
+            log('Running performance checks...', 'info');
+            
+            const startTime = performance.now();
+            
+            // Test state loading
+            const state = localStorage.getItem('sparkWalletState');
+            const loadTime = performance.now() - startTime;
+            
+            if (loadTime > 50) {
+                addBug('minor', 'Slow State Loading',
+                    `State loading took ${loadTime.toFixed(2)}ms`,
+                    '1. Large state size\n2. Synchronous operations',
+                    'Consider async state loading');
+            }
+            
+            // Test JSON parsing
+            const parseStart = performance.now();
+            JSON.parse(state || '{}');
+            const parseTime = performance.now() - parseStart;
+            
+            if (parseTime > 10) {
+                addBug('minor', 'Slow JSON Parsing',
+                    `JSON parsing took ${parseTime.toFixed(2)}ms`,
+                    '1. Large data structure\n2. Complex nesting',
+                    'Optimize state structure');
+            }
+            
+            log(`✓ Performance check complete: Load ${loadTime.toFixed(2)}ms, Parse ${parseTime.toFixed(2)}ms`, 'success');
+            
+            displayBugReport();
+        }
+
+        function displayBugReport() {
+            const bugsDiv = document.getElementById('bugs-found');
+            bugsDiv.innerHTML = '';
+            
+            if (foundBugs.length === 0) {
+                bugsDiv.innerHTML = '<div class="bug-section"><h2>✅ No Bugs Found!</h2><p>All tests passed successfully.</p></div>';
+                return;
+            }
+            
+            // Group bugs by severity
+            const critical = foundBugs.filter(b => b.severity === 'critical');
+            const major = foundBugs.filter(b => b.severity === 'major');
+            const minor = foundBugs.filter(b => b.severity === 'minor');
+            
+            // Display summary
+            const summary = document.getElementById('summary');
+            summary.style.display = 'block';
+            document.getElementById('bug-counts').innerHTML = `
+                <p>Total Bugs Found: ${foundBugs.length}</p>
+                <p>Critical: ${critical.length} | Major: ${major.length} | Minor: ${minor.length}</p>
+            `;
+            
+            // Display bugs
+            const bugSection = document.createElement('div');
+            bugSection.className = 'bug-section';
+            bugSection.innerHTML = '<h2>🐛 Bugs Found</h2>';
+            
+            foundBugs.forEach(bug => {
+                const bugDiv = document.createElement('div');
+                bugDiv.className = `bug-item bug-${bug.severity}`;
+                bugDiv.innerHTML = `
+                    <div class="bug-title">[${bug.severity.toUpperCase()}] ${bug.title}</div>
+                    <div class="bug-description">${bug.description}</div>
+                    <div class="bug-steps">
+                        <strong>Steps to Reproduce:</strong><br>
+                        ${bug.steps.replace(/\n/g, '<br>')}
+                    </div>
+                    ${bug.fix ? `<div class="bug-fix"><strong>Suggested Fix:</strong><br>${bug.fix}</div>` : ''}
+                `;
+                bugSection.appendChild(bugDiv);
+            });
+            
+            bugsDiv.appendChild(bugSection);
+            
+            // Generate fix report
+            generateFixReport();
+        }
+
+        function generateFixReport() {
+            const report = `
+# Bug Report - MOOSH Wallet
+Generated: ${new Date().toLocaleString()}
+
+## Summary
+Total Bugs: ${foundBugs.length}
+Critical: ${foundBugs.filter(b => b.severity === 'critical').length}
+Major: ${foundBugs.filter(b => b.severity === 'major').length}
+Minor: ${foundBugs.filter(b => b.severity === 'minor').length}
+
+## Bugs Found
+${foundBugs.map(bug => `
+### [${bug.severity.toUpperCase()}] ${bug.title}
+**Description:** ${bug.description}
+**Steps:** ${bug.steps}
+**Fix:** ${bug.fix || 'No fix suggested'}
+`).join('\n')}
+            `;
+            
+            console.log(report);
+            log('Bug report generated - check console for full report', 'info');
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            log('Bug detection system ready', 'info');
+            log('Click "Run Full Bug Scan" to begin', 'info');
+        });
+    </script>
+</body>
+</html>

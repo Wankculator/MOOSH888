@@ -36,9 +36,10 @@ This plan outlines how to build a professional multi-wallet system for MOOSH tha
 - Can't rename accounts
 - No wallet management center
 
-❌ **State Issues**
-- Addresses not always saved properly
-- Balance not updating per wallet type
+✅ **RECENTLY FIXED** (January 2025)
+- ~~Drag & drop account ordering~~ - Removed as unnecessary
+- ~~Balance not displaying on account cards~~ - Now shows BTC & USD
+- ~~Real-time balance updates~~ - Implemented with caching
 
 ---
 

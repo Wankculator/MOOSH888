@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MOOSH Test - Drag & Drop Account Reordering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            color: #f57315;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .terminal-header {
+            border-bottom: 1px solid #f57315;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #111;
+            border-left: 3px solid #f57315;
+        }
+        
+        .success {
+            border-left-color: #4CAF50;
+            color: #4CAF50;
+        }
+        
+        .warning {
+            border-left-color: #ff8c42;
+            color: #ff8c42;
+        }
+        
+        .error {
+            border-left-color: #ff4444;
+            color: #ff4444;
+        }
+        
+        button {
+            background: #000;
+            border: 2px solid #f57315;
+            color: #f57315;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .account-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .account-card {
+            border: 2px solid #333;
+            padding: 15px;
+            background: #111;
+            cursor: move;
+            transition: all 0.2s;
+        }
+        
+        .account-card:hover {
+            border-color: #f57315;
+        }
+        
+        .account-card.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .log-output {
+            background: #000;
+            border: 1px solid #333;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-header">
+        <h1>[MOOSH TEST] Drag & Drop Account Reordering</h1>
+        <p>Testing Phase 2 feature: Account reordering with drag and drop</p>
+    </div>
+
+    <div class="test-section">
+        <h2>[>] Test Controls</h2>
+        <div class="test-controls">
+            <button onclick="testDragDropSetup()">Test Setup</button>
+            <button onclick="testDragStartEvent()">Test Drag Start</button>
+            <button onclick="testDragOverEvent()">Test Drag Over</button>
+            <button onclick="testDropEvent()">Test Drop</button>
+            <button onclick="testAccountReorder()">Test Reorder</button>
+            <button onclick="testMobileTouch()">Test Touch Support</button>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>[>] Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>[>] Account Preview</h2>
+        <div id="account-preview" class="account-preview"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>[>] Log Output</h2>
+        <div id="log-output" class="log-output"></div>
+    </div>
+
+    <script>
+        // Test utilities
+        const log = (message, type = 'info') => {
+            const logEl = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = {
+                'info': '[..]',
+                'success': '[OK]',
+                'error': '[XX]',
+                'warning': '[!!]'
+            }[type] || '[??]';
+            
+            logEl.textContent += `${timestamp} ${prefix} ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        };
+
+        const addResult = (test, success, message) => {
+            const resultsEl = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${success ? 'success' : 'error'}`;
+            resultDiv.textContent = `[${success ? 'OK' : 'XX'}] ${test}: ${message}`;
+            resultsEl.appendChild(resultDiv);
+        };
+
+        const clearLog = () => {
+            document.getElementById('log-output').textContent = '';
+            document.getElementById('test-results').innerHTML = '';
+            log('Log cleared', 'info');
+        };
+
+        // Mock accounts for testing
+        const mockAccounts = [
+            { id: 'acc_1', name: 'Main Wallet', color: '#f57315' },
+            { id: 'acc_2', name: 'Trading Account', color: '#ff8c42' },
+            { id: 'acc_3', name: 'Cold Storage', color: '#e85d04' },
+            { id: 'acc_4', name: 'DeFi Wallet', color: '#ffb366' }
+        ];
+
+        // Create draggable account cards
+        const createAccountCards = () => {
+            const preview = document.getElementById('account-preview');
+            preview.innerHTML = '';
+            
+            mockAccounts.forEach((account, index) => {
+                const card = document.createElement('div');
+                card.className = 'account-card';
+                card.draggable = true;
+                card.dataset.accountId = account.id;
+                card.style.borderLeftColor = account.color;
+                card.innerHTML = `
+                    <strong style="color: ${account.color}">${account.name}</strong>
+                    <div>ID: ${account.id}</div>
+                    <div>Position: ${index + 1}</div>
+                `;
+                
+                // Add drag event listeners
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragend', handleDragEnd);
+                
+                preview.appendChild(card);
+            });
+        };
+
+        let draggedElement = null;
+        let draggedAccount = null;
+
+        const handleDragStart = (e) => {
+            draggedElement = e.target;
+            draggedAccount = mockAccounts.find(acc => acc.id === e.target.dataset.accountId);
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            log(`Drag started: ${draggedAccount.name}`, 'info');
+        };
+
+        const handleDragOver = (e) => {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        };
+
+        const handleDrop = (e) => {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            const targetCard = e.target.closest('.account-card');
+            if (targetCard && targetCard !== draggedElement) {
+                const targetAccount = mockAccounts.find(acc => acc.id === targetCard.dataset.accountId);
+                
+                // Reorder accounts
+                const draggedIndex = mockAccounts.findIndex(acc => acc.id === draggedAccount.id);
+                const targetIndex = mockAccounts.findIndex(acc => acc.id === targetAccount.id);
+                
+                const [removed] = mockAccounts.splice(draggedIndex, 1);
+                mockAccounts.splice(targetIndex, 0, removed);
+                
+                log(`Dropped ${draggedAccount.name} at position ${targetIndex + 1}`, 'success');
+                
+                // Refresh display
+                createAccountCards();
+            }
+            
+            return false;
+        };
+
+        const handleDragEnd = (e) => {
+            e.target.classList.remove('dragging');
+            log('Drag ended', 'info');
+        };
+
+        // Test functions
+        const testDragDropSetup = () => {
+            log('Testing drag & drop setup...', 'info');
+            try {
+                createAccountCards();
+                const cards = document.querySelectorAll('.account-card');
+                
+                if (cards.length === mockAccounts.length) {
+                    addResult('Drag & Drop Setup', true, `Created ${cards.length} draggable cards`);
+                    
+                    // Check draggable attribute
+                    const allDraggable = Array.from(cards).every(card => card.draggable === true);
+                    addResult('Draggable Attribute', allDraggable, 
+                        allDraggable ? 'All cards are draggable' : 'Some cards are not draggable');
+                } else {
+                    addResult('Drag & Drop Setup', false, 'Card count mismatch');
+                }
+            } catch (error) {
+                addResult('Drag & Drop Setup', false, error.message);
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+
+        const testDragStartEvent = () => {
+            log('Testing drag start event...', 'info');
+            try {
+                const firstCard = document.querySelector('.account-card');
+                if (firstCard) {
+                    const event = new DragEvent('dragstart', {
+                        dataTransfer: new DataTransfer()
+                    });
+                    firstCard.dispatchEvent(event);
+                    
+                    const hasDraggingClass = firstCard.classList.contains('dragging');
+                    addResult('Drag Start Event', hasDraggingClass, 
+                        hasDraggingClass ? 'Dragging class added' : 'Dragging class not added');
+                } else {
+                    addResult('Drag Start Event', false, 'No cards found');
+                }
+            } catch (error) {
+                addResult('Drag Start Event', false, error.message);
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+
+        const testDragOverEvent = () => {
+            log('Testing drag over event...', 'info');
+            try {
+                const cards = document.querySelectorAll('.account-card');
+                if (cards.length >= 2) {
+                    const event = new DragEvent('dragover', {
+                        dataTransfer: new DataTransfer()
+                    });
+                    cards[1].dispatchEvent(event);
+                    
+                    addResult('Drag Over Event', true, 'Drag over event handled');
+                } else {
+                    addResult('Drag Over Event', false, 'Not enough cards');
+                }
+            } catch (error) {
+                addResult('Drag Over Event', false, error.message);
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+
+        const testDropEvent = () => {
+            log('Testing drop event...', 'info');
+            try {
+                const cards = document.querySelectorAll('.account-card');
+                if (cards.length >= 2) {
+                    // Simulate drag from first to last card
+                    draggedElement = cards[0];
+                    draggedAccount = mockAccounts[0];
+                    
+                    const event = new DragEvent('drop', {
+                        dataTransfer: new DataTransfer()
+                    });
+                    cards[cards.length - 1].dispatchEvent(event);
+                    
+                    addResult('Drop Event', true, 'Drop event handled');
+                } else {
+                    addResult('Drop Event', false, 'Not enough cards');
+                }
+            } catch (error) {
+                addResult('Drop Event', false, error.message);
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+
+        const testAccountReorder = () => {
+            log('Testing account reorder...', 'info');
+            try {
+                const originalOrder = [...mockAccounts];
+                
+                // Simulate moving first account to last position
+                const [first] = mockAccounts.splice(0, 1);
+                mockAccounts.push(first);
+                
+                createAccountCards();
+                
+                const reordered = mockAccounts[mockAccounts.length - 1].id === originalOrder[0].id;
+                addResult('Account Reorder', reordered, 
+                    reordered ? 'Accounts reordered successfully' : 'Reorder failed');
+                
+                // Log new order
+                mockAccounts.forEach((acc, i) => {
+                    log(`Position ${i + 1}: ${acc.name}`, 'info');
+                });
+            } catch (error) {
+                addResult('Account Reorder', false, error.message);
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+
+        const testMobileTouch = () => {
+            log('Testing mobile touch support...', 'info');
+            try {
+                const touchSupported = 'ontouchstart' in window;
+                addResult('Touch Detection', true, 
+                    touchSupported ? 'Touch events supported' : 'Touch events not supported');
+                
+                // Check if we need to add touch event handlers
+                if (touchSupported) {
+                    log('TODO: Implement touch event handlers for mobile drag & drop', 'warning');
+                    addResult('Touch Implementation', false, 'Touch drag & drop not yet implemented');
+                }
+            } catch (error) {
+                addResult('Mobile Touch', false, error.message);
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+
+        const runAllTests = async () => {
+            clearLog();
+            log('Running all drag & drop tests...', 'info');
+            
+            testDragDropSetup();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testDragStartEvent();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testDragOverEvent();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testDropEvent();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testAccountReorder();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testMobileTouch();
+            
+            log('All tests completed!', 'success');
+        };
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            log('Test page loaded', 'info');
+            testDragDropSetup();
+        });
+    </script>
+</body>
+</html>

@@ -81,7 +81,13 @@
       "Bash(time curl:*)",
       "Bash(xdg-open:*)",
       "Bash(cd:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(cd:*)",
+      "Bash(cd:*)",
+      "Bash(cd:*)",
+      "Bash(cd:*)",
+      "Bash(git reset:*)",
+      "Bash(explorer.exe http://localhost:3333/test-chart-fixes.html)"
     ],
     "deny": []
   }

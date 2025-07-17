@@ -2861,16 +2861,27 @@
                     const lastKnownPrice = this.getLastKnownPrice();
                     
                     // Try CoinGecko API directly
-                    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', {
-                        mode: 'cors',
-                        headers: {
-                            'Accept': 'application/json'
+                    let data;
+                    try {
+                        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', {
+                            method: 'GET',
+                            mode: 'cors',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
-                    });
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        data = await response.json();
+                    } catch (directError) {
+                        ComplianceUtils.log('APIService', 'Direct API failed, trying proxy: ' + directError.message, 'warn');
+                        // Try CORS proxy
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true')}`;
+                        const proxyResponse = await fetch(proxyUrl);
+                        data = await proxyResponse.json();
                     }
-                    const data = await response.json();
                     ComplianceUtils.log('APIService', 'Bitcoin price fetched successfully', 'info');
                     
                     // Validate API response
@@ -4209,6 +4220,38 @@
             this.state = {
                 isOpen: false
             };
+            
+            // Initialize active accounts array
+            this.activeAccountIds = [];
+            
+            // Load from localStorage or default to current account
+            const savedActiveAccounts = localStorage.getItem('mooshActiveAccounts');
+            if (savedActiveAccounts) {
+                try {
+                    this.activeAccountIds = JSON.parse(savedActiveAccounts);
+                    // Validate that saved accounts still exist
+                    const accounts = this.app.state.getAccounts();
+                    const accountIds = accounts.map(a => a.id);
+                    this.activeAccountIds = this.activeAccountIds.filter(id => accountIds.includes(id));
+                } catch (e) {
+                    this.activeAccountIds = [];
+                }
+            }
+            
+            // If no active accounts or saved accounts were invalid, use current account
+            if (this.activeAccountIds.length === 0) {
+                const currentAccount = this.app.state.getCurrentAccount();
+                if (currentAccount) {
+                    this.activeAccountIds = [currentAccount.id];
+                    localStorage.setItem('mooshActiveAccounts', JSON.stringify(this.activeAccountIds));
+                }
+            }
+            
+            // Ensure max 8 accounts
+            if (this.activeAccountIds.length > 8) {
+                this.activeAccountIds = this.activeAccountIds.slice(0, 8);
+                localStorage.setItem('mooshActiveAccounts', JSON.stringify(this.activeAccountIds));
+            }
         }
 
         setState(newState) {
@@ -4226,7 +4269,9 @@
         }
 
         toggleDropdown() {
+            ComplianceUtils.log('AccountSwitcher', 'Toggling dropdown. Current state: ' + this.state.isOpen);
             this.setState({ isOpen: !this.state.isOpen });
+            ComplianceUtils.log('AccountSwitcher', 'New state: ' + this.state.isOpen);
         }
 
         closeDropdown() {
@@ -4234,13 +4279,60 @@
         }
 
         switchToAccount(accountId) {
-            console.log('[AccountSwitcher] Switching to account:', accountId);
+            ComplianceUtils.log('AccountSwitcher', 'Switching to account: ' + accountId);
             this.app.state.switchAccount(accountId);
+            
+            // Ensure the switched account is in active accounts
+            if (!this.activeAccountIds.includes(accountId)) {
+                this.toggleAccountActive(accountId);
+            }
+            
             this.closeDropdown();
             
             // Refresh dashboard data
             if (this.app.dashboard && this.app.dashboard.loadCurrentAccountData) {
                 this.app.dashboard.loadCurrentAccountData();
+            }
+        }
+        
+        toggleAccountActive(accountId) {
+            const index = this.activeAccountIds.indexOf(accountId);
+            
+            if (index === -1) {
+                // Add account (max 8)
+                if (this.activeAccountIds.length < 8) {
+                    this.activeAccountIds.push(accountId);
+                    ComplianceUtils.log('AccountSwitcher', 'Added account to active: ' + accountId);
+                } else {
+                    this.app.showNotification('Maximum 8 active accounts allowed', 'error');
+                    return;
+                }
+            } else {
+                // Remove account (keep at least 1)
+                if (this.activeAccountIds.length > 1) {
+                    this.activeAccountIds.splice(index, 1);
+                    ComplianceUtils.log('AccountSwitcher', 'Removed account from active: ' + accountId);
+                    
+                    // If we removed the current account, switch to first active
+                    const currentAccountId = this.app.state.get('currentAccountId');
+                    if (accountId === currentAccountId && this.activeAccountIds.length > 0) {
+                        this.switchToAccount(this.activeAccountIds[0]);
+                    }
+                } else {
+                    this.app.showNotification('Must keep at least one active account', 'error');
+                    return;
+                }
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('mooshActiveAccounts', JSON.stringify(this.activeAccountIds));
+            
+            // Update display
+            this.update();
+            
+            // Notify dashboard to refresh if needed
+            if (this.app.dashboard && this.app.dashboard.refreshActiveAccounts) {
+                this.app.dashboard.refreshActiveAccounts();
             }
         }
 
@@ -4376,6 +4468,21 @@
             this.listenToState('accounts', () => {
                 this.update();
             });
+            
+            // Close dropdown when clicking outside
+            const handleClickOutside = (e) => {
+                if (this.element && !this.element.contains(e.target) && this.state.isOpen) {
+                    this.closeDropdown();
+                }
+            };
+            
+            // Add slight delay to prevent immediate closing
+            setTimeout(() => {
+                document.addEventListener('click', handleClickOutside);
+            }, 100);
+            
+            // Store the handler for cleanup
+            this._clickOutsideHandler = handleClickOutside;
         }
 
         render() {
@@ -4386,6 +4493,11 @@
             // Check if mobile
             const isMobile = window.innerWidth <= 768;
             const isXS = window.innerWidth <= 375;
+            
+            // Check theme
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            const themeColor = isMooshMode ? '#69fd97' : '#f57315';
+            const hoverColor = isMooshMode ? '#7fffb3' : '#ff8c42';
             
             // Show "No Accounts" if there are no accounts
             if (!currentAccount || accounts.length === 0) {
@@ -4423,8 +4535,8 @@
                         },
                         onmouseover: function() {
                             this.style.background = 'rgba(105, 253, 151, 0.1)';
-                            this.style.borderColor = '#69fd97';
-                            this.style.color = '#69fd97';
+                            this.style.borderColor = themeColor;
+                            this.style.color = themeColor;
                         },
                         onmouseout: function() {
                             this.style.background = 'rgba(105, 253, 151, 0.05)';
@@ -4438,15 +4550,30 @@
                 ]);
             }
 
-            const accountName = currentAccount.name || 'Unnamed Account';
-            const maxLength = isXS ? 12 : (isMobile ? 15 : 20);
-            const truncatedName = accountName.length > maxLength ? accountName.substring(0, maxLength) + '...' : accountName;
+            // Determine display text based on active accounts
+            let displayText = '';
+            if (this.activeAccountIds.length === 0) {
+                displayText = 'No active accounts';
+            } else if (this.activeAccountIds.length === 1) {
+                const activeAccount = accounts.find(acc => acc.id === this.activeAccountIds[0]);
+                if (activeAccount) {
+                    const accountName = activeAccount.name || 'Unnamed Account';
+                    const maxLength = isXS ? 12 : (isMobile ? 15 : 20);
+                    displayText = accountName.length > maxLength ? accountName.substring(0, maxLength) + '...' : accountName;
+                } else {
+                    displayText = 'Account not found';
+                }
+            } else {
+                // Multiple accounts active
+                displayText = `${this.activeAccountIds.length} accounts connected`;
+            }
 
             return $.div({ 
                 className: 'account-switcher',
                 style: {
                     position: 'relative',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    zIndex: '100'
                 }
             }, [
                 // Trigger button
@@ -4455,10 +4582,10 @@
                     style: {
                         fontSize: isXS ? '10px' : '11px',
                         fontFamily: 'JetBrains Mono, monospace',
-                        color: '#69fd97',
+                        color: themeColor,
                         padding: isXS ? '5px 8px' : '6px 12px',
-                        background: 'rgba(105, 253, 151, 0.1)',
-                        border: '1px solid #69fd97',
+                        background: `rgba(${isMooshMode ? '105, 253, 151' : '245, 115, 21'}, 0.1)`,
+                        border: `1px solid ${themeColor}`,
                         borderRadius: '0',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
@@ -4470,15 +4597,21 @@
                         minHeight: isMobile ? '32px' : '36px',
                         justifyContent: 'space-between'
                     },
-                    onclick: () => this.toggleDropdown(),
+                    onclick: (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.toggleDropdown();
+                    },
                     onmouseover: function() {
-                        this.style.background = 'rgba(105, 253, 151, 0.2)';
+                        this.style.background = `rgba(${isMooshMode ? '105, 253, 151' : '245, 115, 21'}, 0.2)`;
+                        this.style.color = hoverColor;
                     },
                     onmouseout: function() {
-                        this.style.background = 'rgba(105, 253, 151, 0.1)';
+                        this.style.background = `rgba(${isMooshMode ? '105, 253, 151' : '245, 115, 21'}, 0.1)`;
+                        this.style.color = themeColor;
                     }
                 }, [
-                    $.span({}, [truncatedName]),
+                    $.span({}, [displayText]),
                     $.span({ 
                         style: {
                             fontSize: '10px',
@@ -4489,8 +4622,8 @@
                     }, ['▼'])
                 ]),
                 
-                // Dropdown menu
-                this.state.isOpen && $.div({
+                // Dropdown menu - always render but control visibility
+                $.div({
                     className: 'account-dropdown',
                     style: {
                         position: 'absolute',
@@ -4498,24 +4631,44 @@
                         left: '0',
                         marginTop: '4px',
                         background: '#000000',
-                        border: '1px solid #69fd97',
+                        border: `1px solid ${themeColor}`,
                         borderRadius: '0',
-                        minWidth: isXS ? '120px' : (isMobile ? '160px' : '200px'),
-                        maxWidth: isMobile ? '90vw' : '300px',
+                        minWidth: isXS ? '120px' : (isMobile ? '160px' : '250px'),
+                        maxWidth: isMobile ? '90vw' : '350px',
                         zIndex: '1000',
                         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
-                        maxHeight: isMobile ? '200px' : '300px',
-                        overflowY: 'auto'
+                        maxHeight: isMobile ? '200px' : '400px',
+                        overflowY: 'auto',
+                        display: this.state.isOpen ? 'block' : 'none'
                     }
                 }, [
-                    // Account list
+                    // Header showing active accounts count
+                    $.div({
+                        style: {
+                            padding: '8px 12px',
+                            borderBottom: `1px solid ${themeColor}`,
+                            fontSize: '10px',
+                            color: '#888',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }
+                    }, [
+                        $.span({}, [`Active accounts: ${this.activeAccountIds.length}/8`]),
+                        $.span({ style: { fontSize: '9px' } }, ['Click to switch, checkbox to toggle'])
+                    ]),
+                    
+                    // Account list with checkboxes
                     ...accounts.map(account => {
-                        const isActive = account.id === currentAccount.id;
+                        const isCurrentAccount = account.id === currentAccount.id;
+                        const isActive = this.activeAccountIds.includes(account.id);
+                        
                         return $.div({
-                            className: `account-item ${isActive ? 'active' : ''}`,
+                            className: `account-item ${isCurrentAccount ? 'active' : ''}`,
                             style: {
-                                padding: isMobile ? '12px 10px' : '10px 12px',
-                                minHeight: isMobile ? '44px' : 'auto',
+                                padding: isMobile ? '10px 8px' : '8px 12px',
+                                minHeight: isMobile ? '40px' : 'auto',
                                 cursor: 'pointer',
                                 borderBottom: '1px solid #333333',
                                 display: 'flex',
@@ -4523,37 +4676,83 @@
                                 alignItems: 'center',
                                 fontSize: isXS ? '10px' : '11px',
                                 fontFamily: 'JetBrains Mono, monospace',
-                                color: isActive ? '#69fd97' : '#f57315',
-                                background: isActive ? 'rgba(105, 253, 151, 0.1)' : 'transparent',
+                                color: isCurrentAccount ? themeColor : '#f57315',
+                                background: isCurrentAccount ? `rgba(${isMooshMode ? '105, 253, 151' : '245, 115, 21'}, 0.1)` : 'transparent',
                                 transition: 'all 0.2s ease'
                             },
-                            onclick: () => !isActive && this.switchToAccount(account.id),
                             onmouseover: function() {
-                                if (!isActive) {
-                                    this.style.background = 'rgba(245, 115, 21, 0.1)';
-                                    this.style.color = '#ff8800';
+                                if (!isCurrentAccount) {
+                                    this.style.background = 'rgba(245, 115, 21, 0.05)';
+                                    this.style.color = hoverColor;
                                 }
                             },
                             onmouseout: function() {
-                                if (!isActive) {
+                                if (!isCurrentAccount) {
                                     this.style.background = 'transparent';
                                     this.style.color = '#f57315';
                                 }
                             }
                         }, [
-                            $.div({ style: 'display: flex; align-items: center; gap: 8px;' }, [
-                                isActive && $.span({ style: 'color: #69fd97;' }, ['✓ ']),
-                                $.span({}, [account.name || 'Unnamed Account'])
-                            ]),
-                            $.span({ 
-                                style: { 
-                                    fontSize: '10px', 
-                                    opacity: '0.7',
-                                    color: isActive ? '#69fd97' : '#888888'
-                                } 
+                            // Left side - checkbox and account name
+                            $.div({ 
+                                style: 'display: flex; align-items: center; gap: 8px; flex: 1;',
+                                onclick: () => this.switchToAccount(account.id)
                             }, [
-                                account.type === 'imported' ? 'Imported' : 'Generated'
-                            ])
+                                // ASCII checkbox
+                                $.span({
+                                    style: {
+                                        width: '16px',
+                                        height: '16px',
+                                        border: `1px solid ${isActive ? themeColor : '#666'}`,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                        color: themeColor,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease'
+                                    },
+                                    onclick: (e) => {
+                                        e.stopPropagation();
+                                        this.toggleAccountActive(account.id);
+                                    },
+                                    onmouseover: function(e) {
+                                        e.stopPropagation();
+                                        this.style.borderColor = themeColor;
+                                        this.style.background = 'rgba(245, 115, 21, 0.1)';
+                                    },
+                                    onmouseout: function(e) {
+                                        e.stopPropagation();
+                                        this.style.borderColor = isActive ? themeColor : '#666';
+                                        this.style.background = 'transparent';
+                                    }
+                                }, [isActive ? 'X' : '']),
+                                
+                                $.div({ style: 'display: flex; flex-direction: column; gap: 2px;' }, [
+                                    $.div({ style: 'display: flex; align-items: center; gap: 6px;' }, [
+                                        isCurrentAccount && $.span({ style: { color: themeColor, fontSize: '10px' } }, ['[>]']),
+                                        $.span({}, [account.name || 'Unnamed Account'])
+                                    ]),
+                                    $.span({ 
+                                        style: { 
+                                            fontSize: '9px', 
+                                            opacity: '0.6',
+                                            color: '#888888'
+                                        } 
+                                    }, [account.type === 'imported' ? 'Imported' : 'Generated'])
+                                ])
+                            ]),
+                            
+                            // Right side - balance indicator (optional)
+                            account.balance !== undefined && $.span({ 
+                                style: { 
+                                    fontSize: '9px', 
+                                    opacity: '0.7',
+                                    color: isCurrentAccount ? themeColor : '#888888',
+                                    whiteSpace: 'nowrap'
+                                } 
+                            }, [`${account.balance || 0} BTC`])
                         ]);
                     }),
                     
@@ -4567,9 +4766,10 @@
                             gap: '8px',
                             fontSize: '11px',
                             fontFamily: 'JetBrains Mono, monospace',
-                            color: '#69fd97',
+                            color: themeColor,
                             background: 'transparent',
-                            transition: 'all 0.2s ease'
+                            transition: 'all 0.2s ease',
+                            borderTop: `1px solid ${themeColor}`
                         },
                         onclick: () => {
                             this.closeDropdown();
@@ -4577,10 +4777,12 @@
                             modal.show();
                         },
                         onmouseover: function() {
-                            this.style.background = 'rgba(105, 253, 151, 0.1)';
+                            this.style.background = `rgba(${isMooshMode ? '105, 253, 151' : '245, 115, 21'}, 0.1)`;
+                            this.style.color = hoverColor;
                         },
                         onmouseout: function() {
                             this.style.background = 'transparent';
+                            this.style.color = themeColor;
                         }
                     }, [
                         $.span({ style: 'font-size: 14px;' }, ['+']),
@@ -4589,26 +4791,13 @@
                 ])
             ]);
         }
-
-        mount(container) {
-            this.element = this.render();
-            container.appendChild(this.element);
-            
-            // Listen for account changes
-            this.listenToState('currentAccountId', () => {
-                this.update();
-            });
-            
-            this.listenToState('accounts', () => {
-                this.update();
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (this.element && !this.element.contains(e.target)) {
-                    this.closeDropdown();
-                }
-            });
+        
+        destroy() {
+            // Clean up event listener
+            if (this._clickOutsideHandler) {
+                document.removeEventListener('click', this._clickOutsideHandler);
+            }
+            super.destroy();
         }
     }
 
@@ -8816,7 +9005,7 @@
                             marginBottom: 'calc(8px * var(--scale-factor))'
                         }
                     }, [
-                        $.span({ id: 'btc-balance' }, ['0.00000000']),
+                        $.span({ id: 'btc-balance' }, ['Loading...']),
                         $.span({ style: { fontSize: 'calc(18px * var(--scale-factor))' } }, [' BTC'])
                     ]),
                     $.div({
@@ -8826,7 +9015,7 @@
                         }
                     }, [
                         '≈ $',
-                        $.span({ id: 'usd-balance' }, ['0.00']),
+                        $.span({ id: 'usd-balance' }, ['Loading...']),
                         ' USD'
                     ])
                 ]),
@@ -9248,13 +9437,13 @@
                         id: 'btcBalance',
                         className: 'text-primary',
                         style: 'font-size: calc(14px * var(--scale-factor)); font-weight: 600; color: #f57315; word-break: break-all;'
-                    }, ['0.00000000 BTC']),
+                    }, ['Loading...']),
                     $.div({ 
                         style: 'font-size: calc(10px * var(--scale-factor)); margin-top: calc(4px * var(--scale-factor)); color: #888888;'
                     }, [
                         '≈ ', 
                         $.span({ id: 'currencySymbol' }, ['$']),
-                        $.span({ id: 'btcUsdValue' }, ['0.00']), 
+                        $.span({ id: 'btcUsdValue' }, ['...']), 
                         ' ', 
                         $.span({ id: 'currencyCode' }, ['USD'])
                     ])
@@ -9563,10 +9752,11 @@
             
             balances.forEach(el => {
                 if (isHidden) {
-                    // Show real values (placeholder for now)
-                    if (el.id === 'btc-balance') el.textContent = '0.00000000';
-                    else if (el.id === 'usd-balance') el.textContent = '0.00';
-                    else el.textContent = '0.00';
+                    // Show real values - restore from data-original attribute
+                    const originalValue = el.getAttribute('data-original');
+                    if (originalValue) {
+                        el.textContent = originalValue;
+                    }
                 } else {
                     // Hide values
                     el.textContent = '••••••••';
@@ -11511,7 +11701,7 @@
                             marginBottom: 'calc(8px * var(--scale-factor))'
                         }
                     }, [
-                        $.span({ id: 'btc-balance' }, ['0.00000000']),
+                        $.span({ id: 'btc-balance' }, ['Loading...']),
                         $.span({ style: { fontSize: 'calc(18px * var(--scale-factor))' } }, [' BTC'])
                     ]),
                     $.div({
@@ -11521,7 +11711,7 @@
                         }
                     }, [
                         '≈ $',
-                        $.span({ id: 'usd-balance' }, ['0.00']),
+                        $.span({ id: 'usd-balance' }, ['Loading...']),
                         ' USD'
                     ])
                 ]),
@@ -12132,13 +12322,13 @@
                         id: 'btcBalance',
                         className: 'text-primary',
                         style: 'font-size: calc(14px * var(--scale-factor)); font-weight: 600; color: #f57315; word-break: break-all;'
-                    }, ['0.00000000 BTC']),
+                    }, ['Loading...']),
                     $.div({ 
                         style: 'font-size: calc(10px * var(--scale-factor)); margin-top: calc(4px * var(--scale-factor)); color: #888888;'
                     }, [
                         '≈ ', 
                         $.span({ id: 'currencySymbol' }, ['$']),
-                        $.span({ id: 'btcUsdValue' }, ['0.00']), 
+                        $.span({ id: 'btcUsdValue' }, ['...']), 
                         ' ', 
                         $.span({ id: 'currencyCode' }, ['USD'])
                     ])
@@ -12447,10 +12637,11 @@
             
             balances.forEach(el => {
                 if (isHidden) {
-                    // Show real values (placeholder for now)
-                    if (el.id === 'btc-balance') el.textContent = '0.00000000';
-                    else if (el.id === 'usd-balance') el.textContent = '0.00';
-                    else el.textContent = '0.00';
+                    // Show real values - restore from data-original attribute
+                    const originalValue = el.getAttribute('data-original');
+                    if (originalValue) {
+                        el.textContent = originalValue;
+                    }
                 } else {
                     // Hide values
                     el.textContent = '••••••••';
@@ -13650,7 +13841,7 @@
                             marginBottom: 'calc(8px * var(--scale-factor))'
                         }
                     }, [
-                        $.span({ id: 'btc-balance' }, ['0.00000000']),
+                        $.span({ id: 'btc-balance' }, ['Loading...']),
                         $.span({ style: { fontSize: 'calc(18px * var(--scale-factor))' } }, [' BTC'])
                     ]),
                     $.div({
@@ -13660,7 +13851,7 @@
                         }
                     }, [
                         '≈ $',
-                        $.span({ id: 'usd-balance' }, ['0.00']),
+                        $.span({ id: 'usd-balance' }, ['Loading...']),
                         ' USD'
                     ])
                 ]),
@@ -14271,13 +14462,13 @@
                         id: 'btcBalance',
                         className: 'text-primary',
                         style: 'font-size: calc(14px * var(--scale-factor)); font-weight: 600; color: #f57315; word-break: break-all;'
-                    }, ['0.00000000 BTC']),
+                    }, ['Loading...']),
                     $.div({ 
                         style: 'font-size: calc(10px * var(--scale-factor)); margin-top: calc(4px * var(--scale-factor)); color: #888888;'
                     }, [
                         '≈ ', 
                         $.span({ id: 'currencySymbol' }, ['$']),
-                        $.span({ id: 'btcUsdValue' }, ['0.00']), 
+                        $.span({ id: 'btcUsdValue' }, ['...']), 
                         ' ', 
                         $.span({ id: 'currencyCode' }, ['USD'])
                     ])
@@ -14586,10 +14777,11 @@
             
             balances.forEach(el => {
                 if (isHidden) {
-                    // Show real values (placeholder for now)
-                    if (el.id === 'btc-balance') el.textContent = '0.00000000';
-                    else if (el.id === 'usd-balance') el.textContent = '0.00';
-                    else el.textContent = '0.00';
+                    // Show real values - restore from data-original attribute
+                    const originalValue = el.getAttribute('data-original');
+                    if (originalValue) {
+                        el.textContent = originalValue;
+                    }
                 } else {
                     // Hide values
                     el.textContent = '••••••••';
@@ -18210,8 +18402,21 @@
             
             document.body.appendChild(this.modal);
             
-            // Add custom styles for currency selector
+            // Add custom styles for currency selector - ALWAYS refresh for theme
             this.addCurrencySelectorStyles();
+            
+            // Set up theme change observer to refresh styles
+            if (!this.themeObserver) {
+                this.themeObserver = new MutationObserver(() => {
+                    // Refresh currency selector styles when theme changes
+                    this.addCurrencySelectorStyles();
+                });
+                
+                this.themeObserver.observe(document.body, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            }
             
             // Fetch Bitcoin price and account balances
             this.initializeBalances();
@@ -18224,7 +18429,7 @@
                 existingStyles.remove();
             }
             
-            // Check if we're in Moosh mode
+            // Check if we're in Moosh mode - MUST check every time
             const isMooshMode = document.body.classList.contains('moosh-mode');
             const primaryColor = isMooshMode ? '#69fd97' : '#f57315';
             const hoverColor = isMooshMode ? '#7fffb3' : '#ff8c42';
@@ -18236,29 +18441,45 @@
             const style = document.createElement('style');
             style.id = 'currency-selector-styles';
             style.textContent = `
-                /* Currency selector theme styles */
+                /* Currency selector theme styles - matching dashboard exactly */
                 #currency-selector {
                     -webkit-appearance: none;
                     -moz-appearance: none;
                     appearance: none;
+                    background: #000 !important;
                     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${encodedColor}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
                     background-repeat: no-repeat;
                     background-position: right 8px center;
                     background-size: 16px;
                     padding-right: 35px !important;
+                    border-color: ${primaryColor} !important;
+                    color: ${primaryColor} !important;
                 }
                 
                 #currency-selector:hover {
                     border-color: ${hoverColor} !important;
                     color: ${hoverColor} !important;
+                    background: #000 !important;
                 }
                 
                 #currency-selector:focus {
                     border-color: ${hoverColor} !important;
                     box-shadow: 0 0 0 2px ${shadowColorRgba} !important;
+                    outline: none !important;
+                    background: #000 !important;
                 }
                 
-                /* Style the dropdown */
+                /* Remove ALL scrollbars from select dropdown */
+                #currency-selector {
+                    scrollbar-width: none !important; /* Firefox */
+                    -ms-overflow-style: none !important; /* IE/Edge */
+                }
+                
+                #currency-selector::-webkit-scrollbar {
+                    display: none !important; /* Chrome/Safari/Opera */
+                }
+                
+                /* Style the dropdown options */
                 #currency-selector option {
                     background: #000 !important;
                     color: ${primaryColor} !important;
@@ -18274,8 +18495,23 @@
                     box-shadow: 0 0 10px 100px #1a1a1a inset !important;
                 }
                 
+                /* Remove scrollbar from option list */
+                #currency-selector optgroup {
+                    scrollbar-width: none !important;
+                    -ms-overflow-style: none !important;
+                }
+                
+                #currency-selector optgroup::-webkit-scrollbar {
+                    display: none !important;
+                }
+                
                 /* Firefox specific */
                 @-moz-document url-prefix() {
+                    #currency-selector {
+                        background: #000 !important;
+                        scrollbar-width: none !important;
+                    }
+                    
                     #currency-selector option {
                         background: #000 !important;
                         color: ${primaryColor} !important;
@@ -18290,6 +18526,10 @@
                 
                 /* Webkit browsers */
                 @media screen and (-webkit-min-device-pixel-ratio:0) {
+                    #currency-selector {
+                        background: #000 !important;
+                    }
+                    
                     #currency-selector option {
                         background: #000 !important;
                         color: ${primaryColor} !important;
@@ -19810,6 +20050,12 @@
             if (this.accountUpdateHandler) {
                 this.app.state.off('accounts', this.accountUpdateHandler);
                 this.accountUpdateHandler = null;
+            }
+            
+            // Clean up theme observer
+            if (this.themeObserver) {
+                this.themeObserver.disconnect();
+                this.themeObserver = null;
             }
             
             this.searchQuery = '';
@@ -26143,6 +26389,13 @@
         }
         
         afterMount() {
+            // Start updating live data (BTC price, etc.)
+            this.updateLiveData();
+            
+            // Set up interval to update live data every 30 seconds
+            this.liveDataInterval = setInterval(() => {
+                this.updateLiveData();
+            }, 30000);
             
             // Listen for account changes using reactive state
             this.listenToState('currentAccountId', (newAccountId, oldAccountId) => {
@@ -26221,6 +26474,12 @@
             // Clean up listener
             if (this.accountSwitchHandler) {
                 this.app.state.off('accountSwitched', this.accountSwitchHandler);
+            }
+            
+            // Clean up live data interval
+            if (this.liveDataInterval) {
+                clearInterval(this.liveDataInterval);
+                this.liveDataInterval = null;
             }
             
             // Call parent unmount
@@ -26419,7 +26678,9 @@
                     boxSizing: 'border-box',
                     background: '#000000',
                     border: '1px solid #f57315',
-                    borderRadius: '0'
+                    borderRadius: '0',
+                    position: 'relative',
+                    zIndex: '10'
                 }
             }, [
                 // Terminal header with path
@@ -26431,8 +26692,22 @@
                         fontSize: isXS ? '10px' : '12px',
                         fontFamily: 'JetBrains Mono, monospace',
                         whiteSpace: 'nowrap',
-                        overflow: 'hidden'
-                    }
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                    },
+                    onclick: () => this.handleTerminalClick(),
+                    onmouseover: (e) => {
+                        e.currentTarget.style.background = 'rgba(245, 115, 21, 0.1)';
+                        const span = e.currentTarget.querySelector('span');
+                        if (span) span.style.color = '#f57315';
+                    },
+                    onmouseout: (e) => {
+                        e.currentTarget.style.background = '';
+                        const span = e.currentTarget.querySelector('span');
+                        if (span) span.style.color = '#666666';
+                    },
+                    title: 'Click to show terminal commands'
                 }, [
                     $.span({ style: 'color: #666666;' }, ['~/moosh/wallet/dashboard $'])
                 ]),
@@ -26444,7 +26719,8 @@
                         padding: isXS ? '8px 12px' : '12px 16px',
                         width: '100%',
                         boxSizing: 'border-box',
-                        overflow: 'visible'
+                        overflow: 'visible',
+                        position: 'relative'
                     }
                 }, [
                     // Dashboard header row
@@ -26474,7 +26750,10 @@
                             $.div({ 
                                 id: 'accountSwitcherContainer',
                                 style: {
-                                    display: 'inline-block'
+                                    display: 'inline-block',
+                                    position: 'relative',
+                                    overflow: 'visible',
+                                    zIndex: '1000'
                                 }
                             }),
                             
@@ -26617,11 +26896,15 @@
                         ])
                     ]),
                     
-                    // Container to center the address frame
+                    // Container to center the address frame with responsive width
                     $.div({
                         style: {
                             textAlign: 'center',
-                            marginTop: '6px'
+                            marginTop: '6px',
+                            maxWidth: '100%',
+                            paddingLeft: '10px',
+                            paddingRight: '10px',
+                            boxSizing: 'border-box'
                         }
                     }, [
                         // Wallet address display - with frame that fits content and click to copy
@@ -26635,11 +26918,13 @@
                                 fontSize: isXS ? '9px' : '10px',
                                 fontFamily: 'JetBrains Mono, monospace',
                                 color: 'var(--text-dim)',
-                                whiteSpace: 'nowrap',
-                                display: 'inline-block',
+                                display: 'flex',
+                                alignItems: 'center',
                                 lineHeight: '1.2',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease'
+                                transition: 'all 0.2s ease',
+                                maxWidth: '100%',
+                                overflow: 'hidden'
                             },
                             onclick: () => this.copyActiveAddress(),
                             onmouseover: (e) => {
@@ -26650,12 +26935,26 @@
                                 e.currentTarget.style.background = 'rgba(245, 115, 21, 0.05)';
                                 e.currentTarget.style.borderColor = 'rgba(245, 115, 21, 0.2)';
                             },
-                            title: 'Click to copy address'
+                            title: 'Click to copy full address'
                         }, [
-                            $.span({ style: { color: 'var(--text-primary)', fontWeight: '500' } }, ['Active Address: ']),
                             $.span({ 
-                                id: 'currentWalletAddress'
-                            }, [this.getCurrentWalletAddress()])
+                                style: { 
+                                    color: 'var(--text-primary)', 
+                                    fontWeight: '500',
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: '0'
+                                } 
+                            }, ['Active Address: ']),
+                            $.span({ 
+                                id: 'currentWalletAddress',
+                                style: {
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    minWidth: '0',
+                                    flexShrink: '1'
+                                }
+                            }, [this.truncateAddress(this.getCurrentWalletAddress())])
                         ])
                     ]),
                     
@@ -27240,11 +27539,208 @@
             return `No ${selectedType} address available`;
         }
         
+        truncateAddress(address) {
+            if (!address || address.length <= 20) return address;
+            
+            // Check if mobile
+            const isMobile = window.innerWidth <= 768;
+            const isXS = window.innerWidth <= 375;
+            
+            // Different truncation lengths based on screen size
+            let visibleChars = isXS ? 8 : (isMobile ? 12 : 16);
+            
+            // Show first N and last N characters
+            const start = address.substring(0, visibleChars);
+            const end = address.substring(address.length - visibleChars);
+            
+            return `${start}...${end}`;
+        }
+        
+        handleTerminalClick() {
+            // Show a terminal command palette
+            const $ = window.ElementFactory || ElementFactory;
+            
+            // Remove existing command palette if any
+            const existingPalette = document.getElementById('terminal-command-palette');
+            if (existingPalette) {
+                existingPalette.remove();
+                return;
+            }
+            
+            // Create command palette
+            const commands = [
+                { cmd: 'balance', desc: 'Show detailed balance information', action: () => this.showDetailedBalance() },
+                { cmd: 'export', desc: 'Export wallet data', action: () => this.exportWalletData() },
+                { cmd: 'history', desc: 'Show transaction history', action: () => this.showTransactionHistory() },
+                { cmd: 'refresh', desc: 'Refresh all data', action: () => this.handleRefresh() },
+                { cmd: 'accounts', desc: 'Manage accounts', action: () => this.showMultiAccountManager() },
+                { cmd: 'help', desc: 'Show available commands', action: () => this.showHelp() }
+            ];
+            
+            const palette = $.div({
+                id: 'terminal-command-palette',
+                style: {
+                    position: 'absolute',
+                    top: '100%',
+                    left: '0',
+                    right: '0',
+                    marginTop: '4px',
+                    background: '#000',
+                    border: '1px solid #f57315',
+                    borderRadius: '0',
+                    zIndex: '1000',
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)'
+                }
+            }, [
+                // Command input
+                $.div({
+                    style: {
+                        padding: '10px',
+                        borderBottom: '1px solid #333',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }
+                }, [
+                    $.span({ style: { color: '#f57315', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px' } }, ['$']),
+                    $.input({
+                        type: 'text',
+                        id: 'terminal-command-input',
+                        placeholder: 'Type a command...',
+                        style: {
+                            background: 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            color: '#f57315',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: '12px',
+                            flex: '1'
+                        },
+                        onkeydown: (e) => {
+                            if (e.key === 'Enter') {
+                                const value = e.target.value.trim();
+                                const command = commands.find(c => c.cmd === value);
+                                if (command) {
+                                    command.action();
+                                    palette.remove();
+                                } else {
+                                    this.app.showNotification(`Command not found: ${value}`, 'error');
+                                }
+                            } else if (e.key === 'Escape') {
+                                palette.remove();
+                            }
+                        },
+                        oninput: (e) => {
+                            const value = e.target.value.toLowerCase();
+                            const items = palette.querySelectorAll('.command-item');
+                            items.forEach(item => {
+                                const cmd = item.getAttribute('data-cmd');
+                                if (cmd.includes(value) || value === '') {
+                                    item.style.display = 'flex';
+                                } else {
+                                    item.style.display = 'none';
+                                }
+                            });
+                        }
+                    })
+                ]),
+                
+                // Command list
+                $.div({
+                    style: {
+                        padding: '5px'
+                    }
+                }, commands.map(cmd => 
+                    $.div({
+                        className: 'command-item',
+                        'data-cmd': cmd.cmd,
+                        style: {
+                            padding: '8px 10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: '11px',
+                            transition: 'all 0.2s ease'
+                        },
+                        onclick: () => {
+                            cmd.action();
+                            palette.remove();
+                        },
+                        onmouseover: (e) => {
+                            e.currentTarget.style.background = 'rgba(245, 115, 21, 0.1)';
+                            e.currentTarget.style.color = '#ff8c42';
+                        },
+                        onmouseout: (e) => {
+                            e.currentTarget.style.background = '';
+                            e.currentTarget.style.color = '';
+                        }
+                    }, [
+                        $.span({ style: { color: '#f57315' } }, [cmd.cmd]),
+                        $.span({ style: { color: '#666', fontSize: '10px' } }, [cmd.desc])
+                    ])
+                ))
+            ]);
+            
+            // Add to terminal box
+            const terminalBox = document.querySelector('.dashboard-terminal-box');
+            if (terminalBox) {
+                terminalBox.style.position = 'relative';
+                terminalBox.appendChild(palette);
+                
+                // Focus input
+                setTimeout(() => {
+                    const input = document.getElementById('terminal-command-input');
+                    if (input) input.focus();
+                }, 100);
+            }
+            
+            // Close palette when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', function closeCommandPalette(e) {
+                    if (!palette.contains(e.target) && !e.target.closest('.terminal-header')) {
+                        palette.remove();
+                        document.removeEventListener('click', closeCommandPalette);
+                    }
+                });
+            }, 100);
+        }
+        
+        showDetailedBalance() {
+            // Show detailed balance breakdown
+            const accounts = this.app.state.getAccounts();
+            let totalBTC = 0;
+            
+            accounts.forEach(account => {
+                if (account.balance) {
+                    totalBTC += parseFloat(account.balance) || 0;
+                }
+            });
+            
+            this.app.showNotification(`Total Balance: ${totalBTC.toFixed(8)} BTC across ${accounts.length} accounts`, 'info');
+        }
+        
+        exportWalletData() {
+            this.app.showNotification('Export feature coming soon', 'info');
+        }
+        
+        showTransactionHistory() {
+            this.app.showNotification('Transaction history coming soon', 'info');
+        }
+        
+        showHelp() {
+            this.app.showNotification('Commands: balance, export, history, refresh, accounts, help', 'info');
+        }
+        
         async copyActiveAddress() {
             const addressElement = document.getElementById('currentWalletAddress');
             if (!addressElement) return;
             
-            const address = addressElement.textContent;
+            // Get the full address from getCurrentWalletAddress, not the truncated display
+            const address = this.getCurrentWalletAddress();
             if (!address || address.includes('Not available') || address === 'Loading...') {
                 this.app.showNotification('No address to copy', 'error');
                 return;
@@ -27930,13 +28426,13 @@
                         id: 'btcBalance',
                         className: 'text-primary',
                         style: 'font-size: calc(14px * var(--scale-factor)); font-weight: 600; color: var(--text-primary); word-break: break-all;'
-                    }, ['0.00000000 BTC']),
+                    }, ['Loading...']),
                     $.div({ 
                         style: 'font-size: calc(10px * var(--scale-factor)); margin-top: calc(4px * var(--scale-factor)); color: #888888;'
                     }, [
                         '≈ ', 
                         $.span({ id: 'currencySymbol' }, ['$']),
-                        $.span({ id: 'btcUsdValue' }, ['0.00']), 
+                        $.span({ id: 'btcUsdValue' }, ['...']), 
                         ' ', 
                         $.span({ id: 'currencyCode' }, ['USD'])
                     ])
@@ -28245,10 +28741,11 @@
             
             balances.forEach(el => {
                 if (isHidden) {
-                    // Show real values (placeholder for now)
-                    if (el.id === 'btc-balance') el.textContent = '0.00000000';
-                    else if (el.id === 'usd-balance') el.textContent = '0.00';
-                    else el.textContent = '0.00';
+                    // Show real values - restore from data-original attribute
+                    const originalValue = el.getAttribute('data-original');
+                    if (originalValue) {
+                        el.textContent = originalValue;
+                    }
                 } else {
                     // Hide values
                     el.textContent = '••••••••';
@@ -29142,12 +29639,34 @@
                 // Fetch Bitcoin price for selected currency
                 let priceData;
                 try {
-                    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=${selectedCurrency}`);
+                    // Try with proper CORS headers
+                    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=${selectedCurrency}`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        mode: 'cors'
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
                     priceData = await response.json();
                 } catch (error) {
-                    console.error('[Dashboard] Failed to fetch price from CoinGecko:', error);
-                    // Try fallback through API
-                    priceData = await this.app.apiService.fetchBitcoinPrice();
+                    ComplianceUtils.log('Dashboard', 'CoinGecko direct fetch failed, trying proxy: ' + error.message, 'warn');
+                    
+                    // Try using a CORS proxy as fallback
+                    try {
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=${selectedCurrency}`)}`;
+                        const proxyResponse = await fetch(proxyUrl);
+                        priceData = await proxyResponse.json();
+                    } catch (proxyError) {
+                        ComplianceUtils.log('Dashboard', 'Proxy fetch failed, using API service: ' + proxyError.message, 'warn');
+                        // Final fallback through API service
+                        priceData = await this.app.apiService.fetchBitcoinPrice();
+                    }
                 }
                 
                 console.log('[Dashboard] Price data received:', priceData);
@@ -29227,7 +29746,7 @@
                             // Also update the wallet selector balance display
                             const balanceElement = document.getElementById('selectedWalletBalance');
                             if (balanceElement) {
-                                balanceElement.textContent = '0.00000000 BTC';
+                                balanceElement.textContent = btcBalance.toFixed(8) + ' BTC';
                             }
                             
                             // Refresh the balance chart for Spark wallet (0 balance)
@@ -29567,10 +30086,12 @@
             // Get the current wallet address
             const currentAddress = this.getCurrentWalletAddress();
             
-            // Update the main address display under the buttons
+            // Update the main address display under the buttons with truncated version
             const currentAddressElement = document.getElementById('currentWalletAddress');
             if (currentAddressElement) {
-                currentAddressElement.textContent = currentAddress;
+                currentAddressElement.textContent = this.truncateAddress(currentAddress);
+                // Store full address as data attribute for copy function
+                currentAddressElement.setAttribute('data-full-address', currentAddress);
             }
             
             // Update all instances of selectedWalletAddress
@@ -30065,6 +30586,11 @@
                 const blockHeightElement = document.getElementById('blockHeight');
                 if (blockHeightElement) {
                     blockHeightElement.textContent = networkInfo.height ? networkInfo.height.toLocaleString() : '000000';
+                }
+                
+                // Also refresh account balances when updating live data
+                if (this.refreshBalances) {
+                    await this.refreshBalances();
                 }
                 
             } catch (error) {

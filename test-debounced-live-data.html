@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOOSH Test - Debounced Live Data</title>
+    <style>
+        body {
+            background: #000;
+            color: #f57315;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid #333;
+            padding: 20px;
+        }
+        
+        .test-header {
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #222;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            background: #111;
+            font-size: 12px;
+        }
+        
+        .success { color: #69fd97; }
+        .error { color: #ff4444; }
+        .info { color: #888; }
+        .warning { color: #faa307; }
+        
+        button {
+            background: #f57315;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #ff8c42;
+        }
+        
+        #callLog {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #0a0a0a;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #222;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>[MOOSH] Debounced Live Data Test</h1>
+            <p class="info">Testing debounced updateLiveData implementation</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>[>] Test Controls</h2>
+            <button onclick="triggerRapidCalls()">Trigger Rapid Calls</button>
+            <button onclick="triggerDelayedCalls()">Trigger Delayed Calls</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>[=] Call Statistics</h2>
+            <div id="stats">
+                <p>Total Calls Triggered: <span id="totalCalls">0</span></p>
+                <p>Actual Executions: <span id="actualExecutions">0</span></p>
+                <p>Calls Debounced: <span id="debouncedCalls">0</span></p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>[*] Call Log</h2>
+            <div id="callLog"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Mock ComplianceUtils for testing
+        const ComplianceUtils = {
+            debounce: function(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            },
+            log: function(component, message, type = 'info') {
+                const timestamp = new Date().toISOString();
+                addLog(`[${timestamp}] [${component}] ${message}`, type);
+            }
+        };
+        
+        // Statistics tracking
+        let stats = {
+            totalCalls: 0,
+            actualExecutions: 0,
+            debouncedCalls: 0
+        };
+        
+        // Mock Dashboard class
+        class MockDashboard {
+            constructor() {
+                // Create debounced version
+                this.debouncedUpdateLiveData = ComplianceUtils.debounce(() => {
+                    this.updateLiveData();
+                }, 300);
+                
+                this.callCount = 0;
+            }
+            
+            updateLiveData() {
+                this.callCount++;
+                stats.actualExecutions++;
+                updateStats();
+                ComplianceUtils.log('Dashboard', `updateLiveData executed (call #${this.callCount})`, 'success');
+            }
+        }
+        
+        const dashboard = new MockDashboard();
+        
+        function triggerRapidCalls() {
+            ComplianceUtils.log('Test', 'Starting rapid call test...', 'info');
+            
+            // Trigger 10 calls in rapid succession
+            for (let i = 0; i < 10; i++) {
+                stats.totalCalls++;
+                ComplianceUtils.log('Test', `Triggering call ${i + 1}`, 'warning');
+                dashboard.debouncedUpdateLiveData();
+            }
+            
+            updateStats();
+            
+            // Check result after debounce delay
+            setTimeout(() => {
+                stats.debouncedCalls = stats.totalCalls - stats.actualExecutions;
+                updateStats();
+                ComplianceUtils.log('Test', `Rapid test complete. ${stats.debouncedCalls} calls were debounced.`, 'success');
+            }, 400);
+        }
+        
+        function triggerDelayedCalls() {
+            ComplianceUtils.log('Test', 'Starting delayed call test...', 'info');
+            let callNum = 0;
+            
+            // Trigger calls with 350ms delay (longer than debounce)
+            const interval = setInterval(() => {
+                callNum++;
+                stats.totalCalls++;
+                ComplianceUtils.log('Test', `Triggering delayed call ${callNum}`, 'warning');
+                dashboard.debouncedUpdateLiveData();
+                
+                updateStats();
+                
+                if (callNum >= 5) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        stats.debouncedCalls = stats.totalCalls - stats.actualExecutions;
+                        updateStats();
+                        ComplianceUtils.log('Test', 'Delayed test complete. Each call should execute.', 'success');
+                    }, 400);
+                }
+            }, 350);
+        }
+        
+        function updateStats() {
+            document.getElementById('totalCalls').textContent = stats.totalCalls;
+            document.getElementById('actualExecutions').textContent = stats.actualExecutions;
+            document.getElementById('debouncedCalls').textContent = stats.debouncedCalls;
+        }
+        
+        function addLog(message, type = 'info') {
+            const logDiv = document.getElementById('callLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = message;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('callLog').innerHTML = '';
+            stats = {
+                totalCalls: 0,
+                actualExecutions: 0,
+                debouncedCalls: 0
+            };
+            dashboard.callCount = 0;
+            updateStats();
+            ComplianceUtils.log('Test', 'Log cleared', 'info');
+        }
+        
+        // Initial message
+        ComplianceUtils.log('Test', 'Debounced Live Data Test Ready', 'success');
+        ComplianceUtils.log('Test', 'Click "Trigger Rapid Calls" to test debouncing', 'info');
+        ComplianceUtils.log('Test', 'Click "Trigger Delayed Calls" to test normal execution', 'info');
+    </script>
+</body>
+</html>

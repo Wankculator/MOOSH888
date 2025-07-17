@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Chart Data</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #666;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .info { color: #ffff00; }
+    </style>
+</head>
+<body>
+    <h1>Chart Data Test</h1>
+    
+    <div class="test-section">
+        <h2>Balance Elements Test</h2>
+        <div id="balance-test"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>State Data Test</h2>
+        <div id="state-test"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Chart Rendering Test</h2>
+        <div id="chart-test"></div>
+    </div>
+    
+    <script>
+        // Test 1: Check for balance elements
+        function testBalanceElements() {
+            const output = document.getElementById('balance-test');
+            let html = '';
+            
+            // Check for btc-balance element
+            const btcBalance = document.getElementById('btc-balance');
+            if (btcBalance) {
+                html += `<div class="success">✓ Found btc-balance: ${btcBalance.textContent}</div>`;
+                html += `<div class="info">  data-original: ${btcBalance.getAttribute('data-original')}</div>`;
+            } else {
+                html += `<div class="error">✗ btc-balance not found</div>`;
+            }
+            
+            // Check for btcBalance element
+            const btcBalanceAlt = document.getElementById('btcBalance');
+            if (btcBalanceAlt) {
+                html += `<div class="success">✓ Found btcBalance: ${btcBalanceAlt.textContent}</div>`;
+                html += `<div class="info">  data-original: ${btcBalanceAlt.getAttribute('data-original')}</div>`;
+            } else {
+                html += `<div class="error">✗ btcBalance not found</div>`;
+            }
+            
+            output.innerHTML = html;
+        }
+        
+        // Test 2: Check state data
+        function testStateData() {
+            const output = document.getElementById('state-test');
+            let html = '';
+            
+            // Check if app exists
+            if (window.app) {
+                html += `<div class="success">✓ App instance found</div>`;
+                
+                // Check current account
+                const currentAccount = window.app.state.get('currentAccount');
+                if (currentAccount) {
+                    html += `<div class="success">✓ Current account: ${currentAccount.name}</div>`;
+                    if (currentAccount.balances) {
+                        html += `<div class="info">  Bitcoin balance (sats): ${currentAccount.balances.bitcoin || 0}</div>`;
+                        html += `<div class="info">  BTC: ${(currentAccount.balances.bitcoin || 0) / 100000000}</div>`;
+                    } else {
+                        html += `<div class="error">  No balances object</div>`;
+                    }
+                } else {
+                    html += `<div class="error">✗ No current account</div>`;
+                }
+                
+                // Check BTC price
+                const btcPrice = window.app.state.get('btcPrice') || window.app.btcPrice;
+                html += `<div class="info">BTC Price: $${btcPrice || 'N/A'}</div>`;
+                
+                // Check hidden state
+                const isHidden = window.app.state.get('isBalanceHidden');
+                html += `<div class="info">Balance Hidden: ${isHidden}</div>`;
+                
+            } else {
+                html += `<div class="error">✗ App instance not found</div>`;
+            }
+            
+            output.innerHTML = html;
+        }
+        
+        // Test 3: Test chart data extraction
+        function testChartData() {
+            const output = document.getElementById('chart-test');
+            let html = '';
+            
+            // Extract balance from DOM
+            let walletBTC = 0;
+            const btcBalanceElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
+            if (btcBalanceElement) {
+                const balanceText = btcBalanceElement.getAttribute('data-original') || btcBalanceElement.textContent;
+                const match = balanceText.match(/(\d+\.?\d*)/);
+                if (match) {
+                    walletBTC = parseFloat(match[1]);
+                    html += `<div class="success">✓ Extracted balance: ${walletBTC} BTC</div>`;
+                } else {
+                    html += `<div class="error">✗ Could not parse balance from: ${balanceText}</div>`;
+                }
+            } else {
+                html += `<div class="error">✗ No balance element found</div>`;
+            }
+            
+            // Try state extraction
+            if (window.app) {
+                const currentAccount = window.app.state.get('currentAccount');
+                if (currentAccount && currentAccount.balances && currentAccount.balances.bitcoin !== undefined) {
+                    const stateBTC = currentAccount.balances.bitcoin / 100000000;
+                    html += `<div class="success">✓ State balance: ${stateBTC} BTC</div>`;
+                } else {
+                    html += `<div class="error">✗ No balance in state</div>`;
+                }
+            }
+            
+            output.innerHTML = html;
+        }
+        
+        // Run tests after page loads
+        setTimeout(() => {
+            testBalanceElements();
+            testStateData();
+            testChartData();
+        }, 2000);
+        
+        // Re-run every 5 seconds
+        setInterval(() => {
+            testBalanceElements();
+            testStateData();
+            testChartData();
+        }, 5000);
+    </script>
+</body>
+</html>

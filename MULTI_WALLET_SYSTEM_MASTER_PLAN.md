@@ -26,6 +26,118 @@ MOOSH will pioneer the first true multi-wallet aggregation system in the Bitcoin
 
 ---
 
+## 🚀 Recommended Features Before Multi-Wallet Implementation
+
+### 1. **Account Visual Identity System** 🎨
+**Priority**: HIGH
+**Effort**: 2-3 days
+**Value**: Makes multi-wallet selection intuitive
+
+**Implementation**:
+- Color-coded account cards (already partially implemented)
+- Custom emoji/icon selector for each account
+- Account type badges (Hardware/Hot/Cold/Trading)
+- Visual activity indicators (last transaction, active/dormant)
+
+**Benefits**:
+- Users can quickly identify accounts in multi-wallet mode
+- Reduces confusion when managing multiple wallets
+- Professional appearance
+
+### 2. **Quick Actions Menu** ⚡
+**Priority**: HIGH
+**Effort**: 3-4 days
+**Value**: Improves single-wallet UX before multi-wallet complexity
+
+**Features**:
+- Right-click context menu on account cards
+- Quick copy address (with address type selector)
+- Instant QR code popup
+- Quick send from specific account
+- Export account details
+- Archive/Hide account option
+
+### 3. **Smart Address Management** 📍
+**Priority**: CRITICAL
+**Effort**: 4-5 days
+**Value**: Fixes current import issues
+
+**Implementation**:
+- Auto-detect used address types on import
+- Show address derivation paths clearly
+- Address usage indicators (which addresses have transactions)
+- One-click "Scan for all address types" button
+- Address book with labels
+
+**Benefits**:
+- Eliminates "Fix Addresses" button need
+- Better wallet compatibility
+- Users understand their wallet structure
+
+### 4. **Transaction History Enhancement** 📊
+**Priority**: MEDIUM
+**Effort**: 3-4 days
+**Value**: Essential for multi-wallet context
+
+**Features**:
+- Per-account transaction history
+- Transaction tags/categories
+- Export to CSV/JSON
+- Search and filter capabilities
+- Running balance column
+
+### 5. **Security Enhancements** 🔒
+**Priority**: HIGH
+**Effort**: 2-3 days
+**Value**: Critical before managing multiple wallets
+
+**Implementation**:
+- Session timeout settings
+- View-only mode toggle
+- Export wallet warning system
+- Backup reminder system
+- Optional PIN for account switching
+
+### 6. **Import Wizard 2.0** 🧙‍♂️
+**Priority**: CRITICAL
+**Effort**: 5-6 days
+**Value**: Smooth onboarding for multi-wallet users
+
+**Features**:
+- Step-by-step guided import
+- Wallet type detection (Xverse, Electrum, etc.)
+- Preview addresses before import
+- Batch import multiple wallets
+- Import validation and health check
+
+### 7. **Account Templates** 🏗️
+**Priority**: LOW
+**Effort**: 2 days
+**Value**: Quick setup for common use cases
+
+**Templates**:
+- Trading Wallet (all address types)
+- Ordinals Wallet (taproot focused)
+- Hardware Wallet (native segwit)
+- Privacy Wallet (spark enabled)
+
+---
+
+## 🎯 Implementation Order Recommendation
+
+**Before Multi-Wallet Phase:**
+1. **Week 1**: Smart Address Management + Import Wizard 2.0
+2. **Week 2**: Account Visual Identity + Quick Actions Menu  
+3. **Week 3**: Security Enhancements + Transaction History
+
+**Why This Order?**
+- Fixes critical import issues first
+- Builds visual system needed for multi-wallet
+- Enhances security before complexity increases
+- Each feature works in single-wallet mode
+
+---
+
 ## 🚨 Technical Challenges & Solutions
 
 ### Challenge 1: Performance at Scale
@@ -993,6 +1105,22 @@ const edgeCases = {
 ---
 
 ## 📅 Implementation Phases
+
+### Phase 0: Pre-Implementation (COMPLETED ✅)
+**Goal**: Fix critical issues before multi-wallet implementation
+
+**Completed Tasks**:
+1. ✅ Removed drag & drop account ordering (unnecessary feature)
+2. ✅ Implemented real-time balance display on account cards
+3. ✅ Added BTC/USD price conversion with CoinGecko API
+4. ✅ Created smart caching system for balance data
+5. ✅ Added refresh buttons for manual balance updates
+
+**Results**:
+- Account cards now show live BTC balances
+- USD conversion displays below BTC amount
+- 60-second cache reduces API calls
+- Professional balance display with loading states
 
 ### Phase 1: Foundation (Week 1)
 **Goal**: Establish multi-wallet infrastructure without breaking existing functionality

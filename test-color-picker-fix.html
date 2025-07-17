@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Picker Fix Test - MOOSH Wallet</title>
+    <link rel="stylesheet" href="css/app.css">
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 20px;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .preview-box {
+            background: #111;
+            border: 2px solid #333;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .color-preview {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .color-swatch {
+            width: 80px;
+            height: 80px;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .color-swatch:hover {
+            transform: scale(1.1);
+            border-color: #fff;
+        }
+        
+        .test-button {
+            padding: 10px 20px;
+            background: #000;
+            border: 2px solid #f57315;
+            color: #f57315;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        .test-button:hover {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .success { color: #69fd97; }
+        .info { color: #00d4ff; }
+        .warning { color: #f57315; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div class="test-container">
+        <h1 style="color: #f57315; text-align: center;">COLOR PICKER FIX TEST</h1>
+        
+        <div class="preview-box">
+            <h3 style="color: #f57315;">Fix Applied</h3>
+            <ul style="line-height: 1.8;">
+                <li class="success">✓ Added backgroundColor property explicitly</li>
+                <li class="success">✓ Set display: block for color buttons</li>
+                <li class="success">✓ Added empty text content to buttons</li>
+                <li class="success">✓ Enhanced hover effects with white border</li>
+                <li class="info">→ Colors should now display properly instead of black squares</li>
+            </ul>
+        </div>
+        
+        <div class="preview-box">
+            <h3 style="color: #f57315;">Color Palette Preview</h3>
+            <div class="color-preview" id="colorPreview"></div>
+        </div>
+        
+        <div style="text-align: center; margin: 40px 0;">
+            <button class="test-button" onclick="openAccountManager()">OPEN ACCOUNT MANAGER</button>
+            <button class="test-button" onclick="testColorPicker()">TEST COLOR PICKER DIRECTLY</button>
+        </div>
+        
+        <div class="preview-box">
+            <h3 style="color: #f57315;">Testing Instructions</h3>
+            <ol style="line-height: 1.8;">
+                <li>Click "OPEN ACCOUNT MANAGER" to open the account list</li>
+                <li>Click the "COLOR" button on any account card</li>
+                <li>Verify that you see 8 colored squares (not black)</li>
+                <li>Each square should show a different shade of orange</li>
+                <li>Hover effects should show white border</li>
+                <li>Click a color to apply it to the account</li>
+            </ol>
+        </div>
+        
+        <div id="results" style="margin-top: 20px;"></div>
+    </div>
+    
+    <script src="js/moosh-wallet.js"></script>
+    <script>
+        // Display the color palette
+        window.addEventListener('load', () => {
+            const colors = window.app.state.getAccountColors();
+            const preview = document.getElementById('colorPreview');
+            
+            colors.forEach((color, index) => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = color;
+                swatch.style.background = color;
+                swatch.textContent = color;
+                swatch.style.color = '#000';
+                swatch.style.fontWeight = 'bold';
+                preview.appendChild(swatch);
+            });
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="info">Color palette loaded - all 8 colors should be visible above</p>';
+        });
+        
+        function openAccountManager() {
+            const modal = new AccountListModal(window.app);
+            modal.show();
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="success">✓ Account Manager opened - click COLOR button on any account</p>';
+        }
+        
+        function testColorPicker() {
+            const accounts = window.app.state.get('accounts');
+            if (accounts.length === 0) {
+                const results = document.getElementById('results');
+                results.innerHTML = '<p class="warning">No accounts found - create an account first</p>';
+                return;
+            }
+            
+            const modal = new AccountListModal(window.app);
+            modal.showColorPicker(accounts[0].id);
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="success">✓ Color picker opened directly</p>';
+            
+            // Check if colors are visible
+            setTimeout(() => {
+                const colorButtons = document.querySelectorAll('[style*="backgroundColor"]');
+                let visibleColors = 0;
+                
+                colorButtons.forEach(btn => {
+                    const style = window.getComputedStyle(btn);
+                    const bgColor = style.backgroundColor;
+                    if (bgColor && bgColor !== 'rgb(0, 0, 0)' && bgColor !== 'transparent') {
+                        visibleColors++;
+                    }
+                });
+                
+                if (visibleColors >= 8) {
+                    results.innerHTML += '<p class="success">✓ All color buttons are showing colors correctly</p>';
+                } else {
+                    results.innerHTML += `<p class="warning">⚠ Only ${visibleColors} color buttons visible</p>`;
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>
