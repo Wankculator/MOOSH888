@@ -2183,6 +2183,52 @@
             return 0;
         }
         
+        // Account color palette - orange theme variations
+        getAccountColors() {
+            return [
+                '#f57315', // Primary orange
+                '#ff8c42', // Light orange
+                '#e85d04', // Dark orange
+                '#ffb366', // Peach
+                '#dc2f02', // Red-orange
+                '#faa307', // Yellow-orange
+                '#fb8500', // Bright orange
+                '#ffba08'  // Gold
+            ];
+        }
+        
+        getNextAccountColor() {
+            const colors = this.getAccountColors();
+            const usedColors = this.state.accounts.map(acc => acc.color).filter(Boolean);
+            
+            // Find first unused color
+            for (const color of colors) {
+                if (!usedColors.includes(color)) {
+                    return color;
+                }
+            }
+            
+            // If all colors are used, return random from palette
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        updateAccountColor(accountId, color) {
+            // Validate color format
+            if (!color || typeof color !== 'string' || !color.match(/^#[0-9A-Fa-f]{6}$/)) {
+                console.warn('[StateManager] Invalid color format:', color);
+                return false;
+            }
+            
+            const account = this.state.accounts.find(acc => acc.id === accountId);
+            if (account) {
+                account.color = color;
+                this.persistAccounts();
+                this.emit('accounts', this.state.accounts);
+                return true;
+            }
+            return false;
+        }
+        
         loadAccounts() {
             try {
                 console.log('[StateManager] Loading accounts from storage...');
@@ -2201,6 +2247,13 @@
                         });
                         
                         if (validAccounts.length > 0) {
+                            // Migrate accounts without colors
+                            validAccounts.forEach((account, index) => {
+                                if (!account.color) {
+                                    account.color = this.getAccountColors()[index % this.getAccountColors().length];
+                                }
+                            });
+                            
                             this.state.accounts = validAccounts;
                             
                             // Ensure current account ID is valid
@@ -2339,6 +2392,7 @@
                 const account = {
                     id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     name: name || `Account ${this.state.accounts.length + 1}`,
+                    color: this.getNextAccountColor(), // Add color for visual identification
                     addresses: {
                         spark: sparkAddress,
                         bitcoin: segwitAddress, // Keep for backward compatibility
@@ -17403,6 +17457,40 @@
         show() {
             console.log('[AccountListModal] Opening account management interface');
             
+            // Add scrollbar styles for AccountListModal
+            if (!document.getElementById('account-list-modal-scrollbar-styles')) {
+                const style = document.createElement('style');
+                style.id = 'account-list-modal-scrollbar-styles';
+                style.textContent = `
+                    /* AccountListModal Scrollbar Styles */
+                    .account-grid::-webkit-scrollbar {
+                        width: 8px;
+                        height: 8px;
+                    }
+                    
+                    .account-grid::-webkit-scrollbar-track {
+                        background: #000000;
+                        border: 1px solid #333333;
+                    }
+                    
+                    .account-grid::-webkit-scrollbar-thumb {
+                        background: #f57315;
+                        border-radius: 0;
+                    }
+                    
+                    .account-grid::-webkit-scrollbar-thumb:hover {
+                        background: #ff8c42;
+                    }
+                    
+                    /* Firefox Scrollbar */
+                    .account-grid {
+                        scrollbar-width: thin;
+                        scrollbar-color: #f57315 #000000;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
             // Clean up any existing modal
             if (this.modal && this.modal.parentNode) {
                 this.modal.parentNode.removeChild(this.modal);
@@ -17948,12 +18036,15 @@
             const $ = window.ElementFactory || ElementFactory;
             const isEditing = this.editingAccountId === account.id;
             
+            const accountColor = account.color || '#f57315';
+            
             return $.div({
                 className: 'account-card',
                 'data-account-id': account.id,
                 style: {
-                    background: isActive ? 'rgba(245, 115, 21, 0.1)' : '#111',
-                    border: `2px solid ${isActive ? '#f57315' : '#333'}`,
+                    background: isActive ? `${accountColor}20` : '#111',
+                    border: `2px solid ${isActive ? accountColor : (account.color || '#333')}`,
+                    borderLeft: `5px solid ${accountColor}`,
                     padding: '20px',
                     cursor: 'default',
                     transition: 'all 0.2s',
@@ -17961,16 +18052,22 @@
                     userSelect: 'none'
                 },
                 onmouseover: (e) => {
-                    if (!isActive) e.currentTarget.style.borderColor = '#666';
+                    if (!isActive) {
+                        e.currentTarget.style.borderColor = accountColor;
+                        e.currentTarget.style.background = `${accountColor}10`;
+                    }
                 },
                 onmouseout: (e) => {
-                    if (!isActive) e.currentTarget.style.borderColor = '#333';
+                    if (!isActive) {
+                        e.currentTarget.style.borderColor = account.color || '#333';
+                        e.currentTarget.style.background = '#111';
+                    }
                 }
             }, [
                 // Active indicator (separate row)
                 isActive && $.div({
                     style: {
-                        background: '#f57315',
+                        background: accountColor,
                         color: '#000',
                         padding: '8px 12px',
                         margin: '-20px -20px 15px -20px',
@@ -17980,27 +18077,30 @@
                     }
                 }, ['ACTIVE ACCOUNT']),
                 
-                // Header
-                $.div({ 
-                    style: { 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '15px'
-                    } 
-                }, [
-                    isEditing ? 
+                // Account name on its own line
+                isEditing ? 
+                    $.div({
+                        style: {
+                            background: '#000',
+                            border: `2px solid ${accountColor}`,
+                            padding: '8px',
+                            marginBottom: '15px'
+                        }
+                    }, [
                         $.input({
                             type: 'text',
                             value: account.name,
                             style: {
                                 background: '#000',
-                                border: '1px solid #f57315',
-                                color: '#fff',
-                                padding: '4px 8px',
-                                fontSize: '16px',
+                                border: 'none',
+                                color: accountColor,
+                                padding: '4px',
+                                fontSize: '20px',
                                 fontWeight: 'bold',
-                                width: '60%'
+                                width: '100%',
+                                fontFamily: 'JetBrains Mono, monospace',
+                                textAlign: 'center',
+                                outline: 'none'
                             },
                             onclick: (e) => e.stopPropagation(),
                             onkeydown: (e) => {
@@ -18014,19 +18114,38 @@
                             onblur: (e) => {
                                 this.saveAccountName(account.id, e.target.value);
                             }
-                        }) :
+                        })
+                    ]) :
+                    $.div({
+                        style: {
+                            background: '#000',
+                            border: `2px solid ${accountColor}`,
+                            padding: '12px 20px',
+                            marginBottom: '15px',
+                            textAlign: 'center'
+                        }
+                    }, [
                         $.div({ 
-                            tag: 'h4',
+                            tag: 'h3',
                             style: { 
-                                color: '#f57315',
+                                color: accountColor,
                                 margin: '0',
-                                fontSize: '18px',
-                                fontWeight: 'bold'
+                                fontSize: '20px',
+                                fontWeight: 'bold',
+                                fontFamily: 'JetBrains Mono, monospace'
                             } 
-                        }, [account.name]),
-                    
-                    // Action buttons
-                    $.div({ style: { display: 'flex', gap: '5px' } }, [
+                        }, [account.name])
+                    ]),
+                
+                // Action buttons in a row
+                $.div({ 
+                    style: { 
+                        display: 'flex', 
+                        gap: '5px',
+                        justifyContent: 'center',
+                        marginBottom: '15px'
+                    } 
+                }, [
                         !isEditing && $.button({
                             style: {
                                 background: '#000',
@@ -18052,6 +18171,31 @@
                                 this.updateAccountGrid();
                             }
                         }, ['EDIT']),
+                        
+                        !isEditing && $.button({
+                            style: {
+                                background: '#000',
+                                border: '1px solid #333',
+                                color: accountColor,
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                fontFamily: 'JetBrains Mono, monospace',
+                                transition: 'all 0.2s ease'
+                            },
+                            onmouseover: (e) => {
+                                e.currentTarget.style.background = '#111';
+                                e.currentTarget.style.borderColor = accountColor;
+                            },
+                            onmouseout: (e) => {
+                                e.currentTarget.style.background = '#000';
+                                e.currentTarget.style.borderColor = '#333';
+                            },
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                this.showColorPicker(account.id);
+                            }
+                        }, ['COLOR']),
                         
                         $.button({
                             style: {
@@ -18102,7 +18246,6 @@
                                 this.confirmDeleteAccount(account);
                             }
                         }, ['DELETE'])
-                    ])
                 ]),
                 
                 // Account info
@@ -18271,29 +18414,37 @@
                 }, accounts.map(account => {
                     const isActive = account.id === currentAccountId;
                     const balance = this.balanceCache.get(account.id);
+                    const accountColor = account.color || '#f57315';
                     
                     return $.div({
                         style: {
                             display: 'flex',
                             alignItems: 'center',
                             padding: '15px 20px',
-                            background: isActive ? 'rgba(245, 115, 21, 0.1)' : '#111',
-                            border: `2px solid ${isActive ? '#f57315' : '#333'}`,
+                            background: isActive ? `${accountColor}20` : '#111',
+                            border: `2px solid ${isActive ? accountColor : '#333'}`,
+                            borderLeft: `5px solid ${accountColor}`,
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             gap: '20px'
                         },
                         onclick: (e) => e.stopPropagation(),
                         onmouseover: (e) => {
-                            if (!isActive) e.currentTarget.style.borderColor = '#666';
+                            if (!isActive) {
+                                e.currentTarget.style.borderColor = accountColor;
+                                e.currentTarget.style.background = `${accountColor}10`;
+                            }
                         },
                         onmouseout: (e) => {
-                            if (!isActive) e.currentTarget.style.borderColor = '#333';
+                            if (!isActive) {
+                                e.currentTarget.style.borderColor = '#333';
+                                e.currentTarget.style.background = '#111';
+                            }
                         }
                     }, [
                         // Name
                         $.div({ style: { flex: '1', minWidth: '150px' } }, [
-                            $.div({ style: { fontWeight: 'bold', fontSize: '14px', color: '#f57315' } }, [account.name]),
+                            $.div({ style: { fontWeight: 'bold', fontSize: '14px', color: accountColor } }, [account.name]),
                             $.div({ style: { fontSize: '11px', color: '#666', marginTop: '4px' } }, [
                                 `Created: ${new Date(account.createdAt).toLocaleDateString()}`
                             ])
@@ -18436,6 +18587,7 @@
                 }, accounts.map((account, index) => {
                     const isActive = account.id === currentAccountId;
                     const balance = this.balanceCache.get(account.id);
+                    const accountColor = account.color || '#f57315';
                     
                     return $.div({
                         style: {
@@ -18443,8 +18595,9 @@
                             gridTemplateColumns: '30px 200px 1fr 150px 120px 100px',
                             gap: '15px',
                             padding: '15px',
-                            background: isActive ? 'rgba(245, 115, 21, 0.1)' : (index % 2 === 0 ? '#111' : '#0a0a0a'),
+                            background: isActive ? `${accountColor}20` : (index % 2 === 0 ? '#111' : '#0a0a0a'),
                             borderBottom: '1px solid #222',
+                            borderLeft: `5px solid ${accountColor}`,
                             alignItems: 'center',
                             fontSize: '12px',
                             cursor: 'pointer',
@@ -18452,14 +18605,14 @@
                         },
                         onclick: (e) => e.stopPropagation(),
                         onmouseover: (e) => {
-                            if (!isActive) e.currentTarget.style.background = 'rgba(245, 115, 21, 0.05)';
+                            if (!isActive) e.currentTarget.style.background = `${accountColor}10`;
                         },
                         onmouseout: (e) => {
                             if (!isActive) e.currentTarget.style.background = index % 2 === 0 ? '#111' : '#0a0a0a';
                         }
                     }, [
                         $.span({ style: { color: '#666' } }, [(index + 1).toString()]),
-                        $.span({ style: { fontWeight: isActive ? 'bold' : 'normal', color: '#f57315' } }, [account.name]),
+                        $.span({ style: { fontWeight: isActive ? 'bold' : 'normal', color: accountColor } }, [account.name]),
                         $.span({ 
                             style: { 
                                 fontFamily: 'monospace',
@@ -18730,7 +18883,8 @@
                 name: account.name,
                 mnemonic: account.mnemonic,
                 createdAt: account.createdAt,
-                type: account.type
+                type: account.type,
+                color: account.color
             };
             
             // Create download
@@ -18750,6 +18904,100 @@
             URL.revokeObjectURL(url);
             
             this.app.showNotification(`Account "${account.name}" exported`, 'success');
+        }
+        
+        showColorPicker(accountId) {
+            const $ = window.ElementFactory || ElementFactory;
+            const account = this.app.state.get('accounts').find(a => a.id === accountId);
+            if (!account) return;
+            
+            // Create color picker overlay
+            const overlay = $.div({
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    right: '0',
+                    bottom: '0',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: '10000'
+                },
+                onclick: (e) => {
+                    if (e.target === e.currentTarget) {
+                        document.body.removeChild(overlay);
+                    }
+                }
+            }, [
+                $.div({
+                    style: {
+                        background: '#111',
+                        border: '2px solid #333',
+                        padding: '20px',
+                        minWidth: '300px'
+                    }
+                }, [
+                    $.h3({ 
+                        style: { 
+                            color: '#f57315', 
+                            marginBottom: '20px',
+                            fontSize: '18px'
+                        } 
+                    }, ['Choose Account Color']),
+                    
+                    $.div({
+                        style: {
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(4, 60px)',
+                            gap: '10px',
+                            marginBottom: '20px'
+                        }
+                    }, this.app.state.getAccountColors().map(color => 
+                        $.button({
+                            style: {
+                                width: '60px',
+                                height: '60px',
+                                background: color,
+                                border: account.color === color ? '3px solid #fff' : '2px solid #333',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            },
+                            onmouseover: (e) => {
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                            },
+                            onmouseout: (e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                            },
+                            onclick: () => {
+                                this.app.state.updateAccountColor(accountId, color);
+                                this.updateAccountGrid();
+                                document.body.removeChild(overlay);
+                                this.app.showNotification('Account color updated', 'success');
+                            }
+                        })
+                    )),
+                    
+                    $.button({
+                        style: {
+                            width: '100%',
+                            padding: '10px',
+                            background: '#000',
+                            border: '2px solid #333',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontFamily: 'JetBrains Mono, monospace'
+                        },
+                        onclick: () => {
+                            document.body.removeChild(overlay);
+                        }
+                    }, ['CANCEL'])
+                ])
+            ]);
+            
+            document.body.appendChild(overlay);
         }
         
         createNewAccount() {

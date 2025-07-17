@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrollbar Style Test - MOOSH Wallet</title>
+    <link rel="stylesheet" href="css/app.css">
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 20px;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .test-button {
+            padding: 10px 20px;
+            background: #000;
+            border: 2px solid #f57315;
+            color: #f57315;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        .test-button:hover {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .preview-box {
+            background: #111;
+            border: 2px solid #333;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .success { color: #69fd97; }
+        .info { color: #00d4ff; }
+        .warning { color: #f57315; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div class="test-container">
+        <h1 style="color: #f57315; text-align: center;">SCROLLBAR STYLING TEST</h1>
+        
+        <div class="preview-box">
+            <h3 style="color: #f57315;">Scrollbar Updates</h3>
+            <ul style="line-height: 1.8;">
+                <li class="success">✓ Updated scrollbar track color to black (#000000)</li>
+                <li class="success">✓ Updated scrollbar thumb color to orange (#f57315)</li>
+                <li class="success">✓ Added hover effect with lighter orange (#ff8c42)</li>
+                <li class="success">✓ Matches MOOSH wallet theme colors</li>
+                <li class="info">→ Works in Chrome, Edge, Safari (WebKit browsers)</li>
+                <li class="info">→ Firefox fallback with thin scrollbar and orange color</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 40px 0;">
+            <button class="test-button" onclick="openAccountManager()">OPEN ACCOUNT MANAGER</button>
+            <button class="test-button" onclick="testScrolling()">TEST SCROLLING</button>
+        </div>
+        
+        <div class="preview-box">
+            <h3 style="color: #f57315;">What Changed?</h3>
+            <p style="color: #888; margin: 10px 0;">Previously: White/grey scrollbars (browser default)</p>
+            <p style="color: #f57315; margin: 10px 0;">Now: Black track with orange thumb matching wallet theme</p>
+            
+            <h4 style="color: #69fd97; margin-top: 20px;">Scrollbar CSS Applied:</h4>
+            <pre style="color: #666; font-size: 11px; background: #000; padding: 10px; border: 1px solid #333;">
+.account-grid::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.account-grid::-webkit-scrollbar-track {
+    background: #000000;
+    border: 1px solid #333333;
+}
+
+.account-grid::-webkit-scrollbar-thumb {
+    background: #f57315;
+    border-radius: 0;
+}
+
+.account-grid::-webkit-scrollbar-thumb:hover {
+    background: #ff8c42;
+}</pre>
+        </div>
+        
+        <div id="results" style="margin-top: 20px;"></div>
+    </div>
+    
+    <script src="js/moosh-wallet.js"></script>
+    <script>
+        function openAccountManager() {
+            const modal = new AccountListModal(window.app);
+            modal.show();
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="success">✓ Account Manager opened - check the scrollbar styling</p>';
+        }
+        
+        async function testScrolling() {
+            // Create many test accounts temporarily to force scrolling
+            const accounts = window.app.state.get('accounts') || [];
+            const originalCount = accounts.length;
+            
+            // Add temporary accounts
+            for (let i = 0; i < 15; i++) {
+                accounts.push({
+                    id: `temp-${i}`,
+                    name: `Test Account ${i + 1}`,
+                    type: 'hd',
+                    color: window.app.state.getAccountColors()[i % 8],
+                    created: new Date().toISOString(),
+                    addresses: {
+                        segwit: 'bc1q' + Math.random().toString(36).substring(2, 15)
+                    }
+                });
+            }
+            
+            window.app.state.set('accounts', accounts);
+            
+            // Open modal
+            const modal = new AccountListModal(window.app);
+            modal.show();
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="warning">→ Added temporary accounts to test scrolling</p>';
+            
+            // Clean up after 5 seconds
+            setTimeout(() => {
+                window.app.state.set('accounts', accounts.slice(0, originalCount));
+                results.innerHTML += '<p class="info">→ Temporary accounts removed</p>';
+            }, 5000);
+        }
+        
+        // Initial message
+        window.addEventListener('load', () => {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="info">Scrollbar styling has been updated to match MOOSH wallet theme</p>';
+        });
+    </script>
+</body>
+</html>

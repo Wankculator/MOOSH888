@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Name Frame Test - MOOSH Wallet</title>
+    <link rel="stylesheet" href="css/app.css">
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 20px;
+        }
+        
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .demo-card {
+            background: #111;
+            border: 2px solid #333;
+            border-left: 5px solid var(--color);
+            padding: 20px;
+        }
+        
+        .account-name-box {
+            background: #000;
+            border: 2px solid var(--color);
+            padding: 12px 20px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .account-name {
+            color: var(--color);
+            margin: 0;
+            font-size: 20px;
+            font-weight: bold;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .demo-button {
+            background: #000;
+            border: 1px solid #333;
+            color: #f57315;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+        }
+        
+        .feature-box {
+            background: #111;
+            border: 2px solid #333;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .test-button {
+            padding: 12px 24px;
+            background: #000;
+            border: 2px solid #f57315;
+            color: #f57315;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.2s;
+        }
+        
+        .test-button:hover {
+            background: #f57315;
+            color: #000;
+        }
+        
+        .success { color: #69fd97; }
+        .info { color: #00d4ff; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div class="demo-container">
+        <h1 style="color: #f57315; text-align: center;">ACCOUNT NAME FRAME DESIGN</h1>
+        
+        <div class="feature-box">
+            <h3 style="color: #69fd97;">New Terminal Box Frame</h3>
+            <ul style="line-height: 1.8;">
+                <li class="success">✓ Black background with colored border</li>
+                <li class="success">✓ Border color matches account color</li>
+                <li class="success">✓ Terminal-style box aesthetic</li>
+                <li class="success">✓ Clean padding and centering</li>
+                <li class="success">✓ Edit mode maintains frame style</li>
+            </ul>
+        </div>
+        
+        <h3 style="color: #f57315; text-align: center;">DESIGN PREVIEW</h3>
+        
+        <div class="preview-grid">
+            <div class="demo-card" style="--color: #f57315;">
+                <div class="account-name-box" style="--color: #f57315;">
+                    <h3 class="account-name" style="--color: #f57315;">Primary Account</h3>
+                </div>
+                <div class="button-row">
+                    <button class="demo-button">EDIT</button>
+                    <button class="demo-button" style="color: #f57315;">COLOR</button>
+                    <button class="demo-button" style="color: #69fd97;">EXPORT</button>
+                    <button class="demo-button" style="color: #ff4444; border-color: #ff4444;">DELETE</button>
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                    <p style="margin: 5px 0;">Created: 1/17/2025</p>
+                    <p style="margin: 5px 0;">Type: HD Wallet</p>
+                </div>
+            </div>
+            
+            <div class="demo-card" style="--color: #ff8c42;">
+                <div class="account-name-box" style="--color: #ff8c42;">
+                    <h3 class="account-name" style="--color: #ff8c42;">Trading Account</h3>
+                </div>
+                <div class="button-row">
+                    <button class="demo-button">EDIT</button>
+                    <button class="demo-button" style="color: #ff8c42;">COLOR</button>
+                    <button class="demo-button" style="color: #69fd97;">EXPORT</button>
+                    <button class="demo-button" style="color: #ff4444; border-color: #ff4444;">DELETE</button>
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                    <p style="margin: 5px 0;">Created: 1/16/2025</p>
+                    <p style="margin: 5px 0;">Type: HD Wallet</p>
+                </div>
+            </div>
+            
+            <div class="demo-card" style="--color: #e85d04;">
+                <div style="background: #e85d0420; border: 2px solid #e85d04; color: #000; padding: 8px 12px; margin: -20px -20px 15px -20px; font-size: 12px; font-weight: bold; text-align: center;">
+                    ACTIVE ACCOUNT
+                </div>
+                <div class="account-name-box" style="--color: #e85d04;">
+                    <h3 class="account-name" style="--color: #e85d04;">Savings Account</h3>
+                </div>
+                <div class="button-row">
+                    <button class="demo-button">EDIT</button>
+                    <button class="demo-button" style="color: #e85d04;">COLOR</button>
+                    <button class="demo-button" style="color: #69fd97;">EXPORT</button>
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                    <p style="margin: 5px 0;">Created: 1/15/2025</p>
+                    <p style="margin: 5px 0;">Type: HD Wallet</p>
+                </div>
+            </div>
+            
+            <div class="demo-card" style="--color: #faa307;">
+                <div class="account-name-box" style="--color: #faa307; background: #000; border: 2px solid #faa307; padding: 8px;">
+                    <input type="text" value="Edit Mode Example" style="background: #000; border: none; color: #faa307; padding: 4px; font-size: 20px; font-weight: bold; width: 100%; font-family: 'JetBrains Mono', monospace; text-align: center; outline: none;">
+                </div>
+                <div class="button-row">
+                    <button class="demo-button" style="color: #69fd97;">EXPORT</button>
+                    <button class="demo-button" style="color: #ff4444; border-color: #ff4444;">DELETE</button>
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                    <p style="margin: 5px 0;">Created: 1/14/2025</p>
+                    <p style="margin: 5px 0;">Type: HD Wallet</p>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin: 40px 0;">
+            <button class="test-button" onclick="openAccountManager()">OPEN ACCOUNT MANAGER</button>
+            <button class="test-button" onclick="testEditMode()">TEST EDIT MODE</button>
+            <button class="test-button" onclick="testAllColors()">CYCLE THROUGH COLORS</button>
+        </div>
+        
+        <div class="feature-box">
+            <h3 style="color: #f57315;">Visual Structure</h3>
+            <pre style="color: #888; font-size: 12px;">
+┌─────────────────────────────────┐
+│      ACTIVE ACCOUNT             │ (if active)
+├─────────────────────────────────┤
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │                           │  │ ← Black box with colored border
+│  │     My Account Name       │  │ ← Account color text
+│  │                           │  │
+│  └───────────────────────────┘  │
+│                                 │
+│   [EDIT] [COLOR] [EXPORT]       │ (centered buttons)
+│                                 │
+│   Created: 1/17/2025            │
+│   Type: HD Wallet               │
+│                                 │
+│   Balance: 0.00000000 BTC       │
+└─────────────────────────────────┘
+            </pre>
+        </div>
+    </div>
+    
+    <script src="js/moosh-wallet.js"></script>
+    <script>
+        function openAccountManager() {
+            const modal = new AccountListModal(window.app);
+            modal.show();
+        }
+        
+        function testEditMode() {
+            const modal = new AccountListModal(window.app);
+            modal.show();
+            
+            setTimeout(() => {
+                const editButtons = document.querySelectorAll('.account-card button');
+                for (let btn of editButtons) {
+                    if (btn.textContent === 'EDIT') {
+                        btn.click();
+                        console.log('Edit mode activated - check the framed input style');
+                        break;
+                    }
+                }
+            }, 500);
+        }
+        
+        async function testAllColors() {
+            const modal = new AccountListModal(window.app);
+            modal.show();
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const colorButtons = document.querySelectorAll('.account-card button');
+            for (let btn of colorButtons) {
+                if (btn.textContent === 'COLOR') {
+                    btn.click();
+                    break;
+                }
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Click through different colors
+            const colorPicker = document.querySelector('[style*="position: fixed"]');
+            if (colorPicker) {
+                const colorOptions = colorPicker.querySelectorAll('button[style*="width: 60px"]');
+                let index = 0;
+                
+                const cycleColors = setInterval(() => {
+                    if (index < colorOptions.length) {
+                        colorOptions[index].click();
+                        setTimeout(() => {
+                            // Reopen color picker
+                            const colorBtn = Array.from(document.querySelectorAll('.account-card button')).find(
+                                b => b.textContent === 'COLOR'
+                            );
+                            if (colorBtn) colorBtn.click();
+                        }, 500);
+                        index++;
+                    } else {
+                        clearInterval(cycleColors);
+                        // Close picker
+                        const picker = document.querySelector('[style*="position: fixed"]');
+                        if (picker) picker.click();
+                    }
+                }, 1000);
+            }
+        }
+        
+        // Initial message
+        window.addEventListener('load', () => {
+            console.log('Account name frame design loaded - terminal box style with black background');
+        });
+    </script>
+</body>
+</html>
