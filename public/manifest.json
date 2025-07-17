@@ -4,8 +4,8 @@
   "description": "Professional cryptocurrency wallet with retro terminal UI",
   "icons": [
     {
-      "src": "/images/moosh-logo.svg",
-      "type": "image/svg+xml",
+      "src": "/images/Moosh-logo.png",
+      "type": "image/png",
       "sizes": "any",
       "purpose": "any maskable"
     },

@@ -1,4 +1,4 @@
-# MOOSH Wallet 🚀
+# MOOSH Wallet
 
 A professional Bitcoin and Spark Protocol wallet implementation with a retro terminal aesthetic.
 
@@ -131,4 +131,4 @@ For issues, please check:
 
 ---
 
-Built with 🧡 by the MOOSH team
+Built with [*] by the MOOSH team

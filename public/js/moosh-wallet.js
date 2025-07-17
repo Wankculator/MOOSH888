@@ -2795,34 +2795,108 @@
         }
         
         async fetchBitcoinPrice() {
+            return ComplianceUtils.measurePerformance('Bitcoin Price Fetch', async () => {
+                try {
+                    const cache = this.stateManager.get('apiCache');
+                    const now = Date.now();
+                    
+                    // Use cache if fresh (5 minutes)
+                    if (cache.prices?.bitcoin && cache.lastUpdate && (now - cache.lastUpdate) < 300000) {
+                        ComplianceUtils.log('APIService', 'Using cached Bitcoin price', 'info');
+                        return cache.prices.bitcoin;
+                    }
+                    
+                    // Get last known price for fallback
+                    const lastKnownPrice = this.getLastKnownPrice();
+                    
+                    // Try CoinGecko API directly
+                    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', {
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    ComplianceUtils.log('APIService', 'Bitcoin price fetched successfully', 'info');
+                    
+                    // Validate API response
+                    if (!data || !data.bitcoin || typeof data.bitcoin.usd !== 'number') {
+                        throw new Error('Invalid API response format');
+                    }
+                    
+                    // Transform CoinGecko response to expected format
+                    const priceData = {
+                        usd: data.bitcoin.usd,
+                        usd_24h_change: data.bitcoin.usd_24h_change || 0
+                    };
+                    
+                    // Store as last known good price
+                    this.storeLastKnownPrice(priceData.usd);
+                    
+                    // Update cache
+                    cache.prices = { bitcoin: priceData };
+                    cache.lastUpdate = now;
+                    this.stateManager.set('apiCache', cache);
+                    
+                    // Return the bitcoin price data
+                    return priceData;
+                } catch (error) {
+                    ComplianceUtils.log('APIService', 'Failed to fetch Bitcoin price: ' + error.message, 'error');
+                    // Try backup API
+                    try {
+                        const backupResponse = await fetch('https://blockchain.info/ticker');
+                        const backupData = await backupResponse.json();
+                        
+                        if (backupData && backupData.USD && typeof backupData.USD.last === 'number') {
+                            const priceData = {
+                                usd: backupData.USD.last,
+                                usd_24h_change: 0 // Blockchain.info doesn't provide 24h change
+                            };
+                            
+                            this.storeLastKnownPrice(priceData.usd);
+                            return priceData;
+                        }
+                        
+                        throw new Error('Invalid backup API response');
+                    } catch (backupError) {
+                        ComplianceUtils.log('APIService', 'Backup API also failed: ' + backupError.message, 'error');
+                        // Return last known price instead of 0
+                        return { 
+                            usd: lastKnownPrice || 0, 
+                            usd_24h_change: 0 
+                        };
+                    }
+                }
+            });
+        }
+        
+        getLastKnownPrice() {
             try {
-                const cache = this.stateManager.get('apiCache');
-                const now = Date.now();
-                
-                // Use cache if fresh (5 minutes)
-                if (cache.prices?.bitcoin && cache.lastUpdate && (now - cache.lastUpdate) < 300000) {
-                    console.log('[APIService] Using cached Bitcoin price');
-                    return cache.prices.bitcoin;
+                const stored = localStorage.getItem('mooshLastKnownBTCPrice');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    // Use price if less than 24 hours old
+                    if (Date.now() - data.timestamp < 86400000) {
+                        return data.price;
+                    }
                 }
-                
-                const response = await fetch('http://localhost:3001/api/proxy/bitcoin-price');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                console.log('[APIService] Bitcoin price API response:', data);
-                
-                // Update cache
-                cache.prices = { bitcoin: data.bitcoin || data };
-                cache.lastUpdate = now;
-                this.stateManager.set('apiCache', cache);
-                
-                // Return the bitcoin price data directly
-                // Handle both { bitcoin: { usd: ... } } and { usd: ... } formats
-                return data.bitcoin || data;
-            } catch (error) {
-                console.error('Failed to fetch Bitcoin price:', error);
-                return { usd: 0, usd_24h_change: 0 };
+            } catch (e) {
+                ComplianceUtils.log('APIService', 'Error reading last known price', 'error');
+            }
+            return null;
+        }
+        
+        storeLastKnownPrice(price) {
+            try {
+                localStorage.setItem('mooshLastKnownBTCPrice', JSON.stringify({
+                    price: price,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                ComplianceUtils.log('APIService', 'Error storing last known price', 'error');
             }
         }
         
@@ -3854,7 +3928,7 @@
                     $.div({ className: 'terminal-content', style: 'padding: 30px;' }, [
                         $.div({ style: 'text-align: center; margin-bottom: 30px;' }, [
                             $.img({
-                                src: 'images/moosh-logo.svg',
+                                src: 'images/Moosh-logo.png',
                                 alt: 'MOOSH Logo',
                                 style: 'width: 60px; height: 60px; margin-bottom: 10px;',
                                 onerror: function() { 
@@ -4515,7 +4589,7 @@
             const $ = window.ElementFactory || ElementFactory;
             return $.div({ className: 'brand-box' }, [
                 $.img({
-                    src: '/images/moosh-logo.svg',
+                    src: '/images/Moosh-logo.png',
                     alt: 'MOOSH Logo',
                     className: 'brand-logo',
                     onerror: function() { 
@@ -6583,7 +6657,7 @@
                     }
                 }, [
                     $.img({
-                        src: 'images/moosh-logo.svg',
+                        src: 'images/Moosh-logo.png',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(48px * var(--scale-factor))',
@@ -7247,7 +7321,7 @@
                     }
                 }, [
                     $.img({
-                        src: 'images/moosh-logo.svg',
+                        src: 'images/Moosh-logo.png',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -7729,7 +7803,7 @@
                     }
                 }, [
                     $.img({
-                        src: 'images/moosh-logo.svg',
+                        src: 'images/Moosh-logo.png',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -7993,7 +8067,7 @@
                     }
                 }, [
                     $.img({
-                        src: 'images/moosh-logo.svg',
+                        src: 'images/Moosh-logo.png',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -8340,7 +8414,7 @@
                     }
                 }, [
                     $.img({
-                        src: 'images/moosh-logo.svg',
+                        src: 'images/Moosh-logo.png',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(48px * var(--scale-factor))',
@@ -11026,7 +11100,7 @@
                     }
                 }, [
                     $.img({
-                        src: 'images/moosh-logo.svg',
+                        src: 'images/Moosh-logo.png',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(48px * var(--scale-factor))',
@@ -12522,7 +12596,7 @@
                     }
                 }, [
                     $.img({
-                        src: 'images/moosh-logo.svg',
+                        src: 'images/Moosh-logo.png',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -13324,7 +13398,7 @@
                     }
                 }, [
                     $.img({
-                        src: 'images/moosh-logo.svg',
+                        src: 'images/Moosh-logo.png',
                         alt: 'MOOSH',
                         style: {
                             width: 'calc(40px * var(--scale-factor))',
@@ -25956,10 +26030,20 @@
     // DASHBOARD PAGE
     // ═══════════════════════════════════════════════════════════════════════
     class DashboardPage extends Component {
+        constructor(app) {
+            super(app);
+            
+            // Create debounced version of updateLiveData early to avoid errors
+            this.debouncedUpdateLiveData = ComplianceUtils.debounce(() => {
+                this.updateLiveData();
+            }, 300);
+        }
+        
         afterMount() {
+            
             // Listen for account changes using reactive state
             this.listenToState('currentAccountId', (newAccountId, oldAccountId) => {
-                console.log('[DashboardPage] Account changed from', oldAccountId, 'to', newAccountId);
+                ComplianceUtils.log('DashboardPage', 'Account changed from ' + oldAccountId + ' to ' + newAccountId, 'info');
                 this.updateAccountDisplay();
                 this.loadCurrentAccountData();
             });
@@ -25969,7 +26053,17 @@
                 this.loadCurrentAccountData();
                 // Also refresh balances on initial load
                 if (this.refreshBalances) {
-                    this.refreshBalances();
+                    this.refreshBalances().then(() => {
+                        // Refresh the chart after balance is loaded
+                        const chartSection = document.getElementById('balanceChartSection');
+                        if (chartSection) {
+                            while (chartSection.firstChild) {
+                                chartSection.removeChild(chartSection.firstChild);
+                            }
+                            const newChart = this.createBalanceChart();
+                            chartSection.appendChild(newChart);
+                        }
+                    });
                 } else {
                     // Ensure refreshBalances is called even if not yet defined
                     setTimeout(() => {
@@ -25985,7 +26079,7 @@
             
             // Also listen for accounts array changes (for renaming)
             this.listenToState('accounts', (newAccounts, oldAccounts) => {
-                console.log('[DashboardPage] Accounts array changed');
+                ComplianceUtils.log('DashboardPage', 'Accounts array changed', 'info');
                 this.updateAccountDisplay();
             });
             
@@ -26487,19 +26581,37 @@
             const symbol = this.getCurrencySymbol(currency);
             
             // Get real BTC price from state or API data
-            const btcPrice = this.app.state.get('btcPrice') || this.app.btcPrice || 45000;
+            const btcPrice = this.app.state.get('btcPrice') || this.app.btcPrice || 0;
             const convertedPrice = this.convertToSelectedCurrency(btcPrice, currency);
             
-            // Get real wallet balance from DOM element that displays it
+            // Get real wallet balance from current account state
             let walletBTC = 0;
-            const btcBalanceElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
-            if (btcBalanceElement) {
-                const balanceText = btcBalanceElement.getAttribute('data-original') || btcBalanceElement.textContent;
-                const match = balanceText.match(/(\d+\.?\d*)/);
-                if (match) {
-                    walletBTC = parseFloat(match[1]);
+            const currentAccount = this.app.state.getCurrentAccount();
+            ComplianceUtils.log('Chart', 'Current account: ' + (currentAccount ? currentAccount.name : 'undefined'), 'info');
+            
+            if (currentAccount && currentAccount.balances && currentAccount.balances.bitcoin !== undefined) {
+                // Balance is stored in satoshis in the account state
+                walletBTC = currentAccount.balances.bitcoin / 100000000;
+                ComplianceUtils.log('Chart', 'Got balance from state: ' + walletBTC + ' BTC (satoshis: ' + currentAccount.balances.bitcoin + ')', 'info');
+            } else {
+                ComplianceUtils.log('Chart', 'No balance in state, trying DOM...', 'warn');
+                // Fallback: try to get from DOM element if state not loaded yet
+                const btcBalanceElement = document.getElementById('btc-balance') || document.getElementById('btcBalance');
+                if (btcBalanceElement) {
+                    const balanceText = btcBalanceElement.getAttribute('data-original') || btcBalanceElement.textContent;
+                    const match = balanceText.match(/(\d+\.?\d*)/);
+                    if (match) {
+                        walletBTC = parseFloat(match[1]);
+                        ComplianceUtils.log('Chart', 'Got balance from DOM: ' + walletBTC + ' BTC from text: ' + balanceText, 'info');
+                    } else {
+                        ComplianceUtils.log('Chart', 'Could not parse balance from DOM text: ' + balanceText, 'error');
+                    }
+                } else {
+                    ComplianceUtils.log('Chart', 'No balance element found in DOM', 'error');
                 }
             }
+            
+            ComplianceUtils.log('Chart', 'Final wallet BTC: ' + walletBTC + ' BTC Price: ' + btcPrice, 'info');
             
             // Calculate wallet value
             const walletValue = walletBTC * btcPrice;
@@ -26507,6 +26619,9 @@
             
             // Get real price changes from API or calculate
             const priceChanges = this.calculatePriceChanges();
+            
+            // Check if balances are hidden
+            const isHidden = this.app.state.get('isBalanceHidden');
             
             return $.div({
                 id: 'priceChart',
@@ -26547,7 +26662,7 @@
                                 fontWeight: 'bold',
                                 color: themeColor
                             }
-                        }, [`${symbol}${this.formatCurrencyAmount(convertedPrice, currency)}`])
+                        }, [isHidden ? '••••••••' : `${symbol}${this.formatCurrencyAmount(convertedPrice, currency)}`])
                     ]),
                     // Wallet Balance
                     $.div({
@@ -26566,15 +26681,17 @@
                                 fontSize: '14px',
                                 fontWeight: 'bold',
                                 color: themeColor
-                            }
-                        }, [`${symbol}${this.formatCurrencyAmount(convertedWalletValue, currency)}`]),
+                            },
+                            'data-original': `${symbol}${this.formatCurrencyAmount(convertedWalletValue, currency)}`
+                        }, [isHidden ? '••••••••' : `${symbol}${this.formatCurrencyAmount(convertedWalletValue, currency)}`]),
                         $.div({
                             style: { 
                                 fontSize: '10px',
                                 color: themeColor,
                                 opacity: '0.6'
-                            }
-                        }, [`${walletBTC.toFixed(8)} BTC`])
+                            },
+                            'data-original': `${walletBTC.toFixed(8)} BTC`
+                        }, [isHidden ? '•••••••• BTC' : `${walletBTC.toFixed(8)} BTC`])
                     ])
                 ]),
                 
@@ -26616,7 +26733,7 @@
         calculatePriceChanges() {
             // Get price history from state or use defaults
             const priceHistory = this.app.state.get('btcPriceHistory') || [];
-            const currentPrice = this.app.state.get('btcPrice') || this.app.btcPrice || 45000;
+            const currentPrice = this.app.state.get('btcPrice') || this.app.btcPrice || 0;
             
             // If we have real data, calculate real changes
             if (priceHistory.length > 0) {
@@ -26632,17 +26749,17 @@
                 };
             }
             
-            // Fallback to realistic estimates based on BTC volatility
+            // Return zeros until we have real data
             return {
-                day1: 2.3,
-                day7: 5.7,
-                day30: 12.4
+                day1: 0,
+                day7: 0,
+                day30: 0
             };
         }
         
         getBitcoinPriceData() {
             // Get real Bitcoin price data
-            const btcPrice = this.app.btcPrice || 45000;
+            const btcPrice = this.app.btcPrice || this.app.state.get('btcPrice') || 0;
             const priceHistory = this.app.state.get('btcPriceHistory') || [];
             
             // Generate OHLC data for the current period
@@ -26714,12 +26831,36 @@
         renderMiniPriceChart(themeColor) {
             const $ = window.ElementFactory || ElementFactory;
             
-            // Create a simple ASCII sparkline
+            // Create a simple ASCII sparkline - but indicate we're loading real data
             const blocks = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
             const points = 20;
             let sparkline = '';
             
-            // Generate price points with upward trend
+            // Get price history from state if available
+            const priceHistory = this.app.state.get('btcPriceHistory') || [];
+            const currentPrice = this.app.state.get('btcPrice') || this.app.btcPrice || 0;
+            
+            if (currentPrice === 0) {
+                // If no price data yet, show loading indicator
+                sparkline = '-- Loading price data --';
+            } else if (priceHistory.length > 0) {
+                // Use real price history if available
+                const recentPrices = priceHistory.slice(-points).map(p => p.price);
+                const min = Math.min(...recentPrices);
+                const max = Math.max(...recentPrices);
+                const range = max - min || 1;
+                
+                recentPrices.forEach(price => {
+                    const normalized = (price - min) / range;
+                    const blockIndex = Math.floor(normalized * (blocks.length - 1));
+                    sparkline += blocks[blockIndex];
+                });
+            } else {
+                // Show a flat line until we have history
+                sparkline = blocks[3].repeat(points);
+            }
+            
+            // Continue with the rest of the rendering code unchanged
             const values = [];
             let baseValue = 5;
             
@@ -26730,16 +26871,18 @@
                 values.push(baseValue + trend * 0.1);
             }
             
-            // Normalize and create sparkline
-            const min = Math.min(...values);
-            const max = Math.max(...values);
-            const range = max - min || 1;
-            
-            values.forEach(value => {
-                const normalized = (value - min) / range;
-                const blockIndex = Math.floor(normalized * (blocks.length - 1));
-                sparkline += blocks[blockIndex];
-            });
+            // Only use these values if we don't have real data
+            if (sparkline === '' || sparkline.includes('Loading')) {
+                const min = Math.min(...values);
+                const max = Math.max(...values);
+                const range = max - min || 1;
+                
+                values.forEach(value => {
+                    const normalized = (value - min) / range;
+                    const blockIndex = Math.floor(normalized * (blocks.length - 1));
+                    sparkline += blocks[blockIndex];
+                });
+            }
             
             return $.div({
                 style: { 
@@ -28052,10 +28195,27 @@
             }
             
             // Start data loading
-            setTimeout(() => {
+            setTimeout(async () => {
+                // Fetch initial BTC price for dashboard and chart
+                try {
+                    const priceData = await this.app.apiService.fetchBitcoinPrice();
+                    const btcPrice = priceData?.bitcoin?.usd || priceData?.usd || 0;
+                    
+                    // Store the price in app state for use in charts
+                    this.app.state.set('btcPrice', btcPrice);
+                    this.app.btcPrice = btcPrice;
+                    
+                    ComplianceUtils.log('Dashboard', 'Initial BTC price fetched: $' + btcPrice);
+                } catch (error) {
+                    ComplianceUtils.log('Dashboard', 'Failed to fetch initial BTC price: ' + error.message, 'error');
+                    // Set a fallback price
+                    this.app.state.set('btcPrice', 0);
+                    this.app.btcPrice = 0;
+                }
+                
                 this.loadWalletData();
-                // Initial live data update
-                this.updateLiveData();
+                // Initial live data update - use debounced version
+                this.debouncedUpdateLiveData();
                 // Initialize wallet type selector and display
                 this.initializeWalletTypeSelector();
             }, 500);
@@ -28967,6 +29127,19 @@
                                 balanceElement.textContent = '0.00000000 BTC';
                             }
                             
+                            // Refresh the balance chart for Spark wallet (0 balance)
+                            const chartSection = document.getElementById('balanceChartSection');
+                            if (chartSection) {
+                                console.log('[Dashboard] Refreshing balance chart for Spark wallet');
+                                // Clear existing content
+                                while (chartSection.firstChild) {
+                                    chartSection.removeChild(chartSection.firstChild);
+                                }
+                                // Re-create the chart with 0 balance
+                                const newChart = this.createBalanceChart();
+                                chartSection.appendChild(newChart);
+                            }
+                            
                             return;
                         }
                         
@@ -29056,6 +29229,19 @@
                             }
                         });
                         console.log('[Dashboard] Updated wallet selector balances');
+                        
+                        // Refresh the balance chart after balance update
+                        const chartSection = document.getElementById('balanceChartSection');
+                        if (chartSection) {
+                            console.log('[Dashboard] Refreshing balance chart after balance update');
+                            // Clear existing content
+                            while (chartSection.firstChild) {
+                                chartSection.removeChild(chartSection.firstChild);
+                            }
+                            // Re-create the chart with updated balance
+                            const newChart = this.createBalanceChart();
+                            chartSection.appendChild(newChart);
+                        }
                         
                         } catch (error) {
                             console.error('[Dashboard] Error fetching balance:', error);
@@ -29156,6 +29342,18 @@
                     }
                 }
             });
+            
+            // Refresh the balance chart with the new data
+            const chartSection = document.getElementById('balanceChartSection');
+            if (chartSection) {
+                // Clear existing content
+                while (chartSection.firstChild) {
+                    chartSection.removeChild(chartSection.firstChild);
+                }
+                // Re-create the chart with updated balance
+                const newChart = this.createBalanceChart();
+                chartSection.appendChild(newChart);
+            }
         }
         
         async fetchTransactionHistory() {
@@ -29446,6 +29644,22 @@
                 }
             }
             
+            // Update chart by refreshing it completely
+            // This ensures the chart respects the hidden state
+            if (this.refreshDashboard) {
+                this.refreshDashboard();
+            } else {
+                // Fallback: recreate chart if dashboard instance not available
+                const chartSection = document.getElementById('balanceChartSection');
+                if (chartSection && this.createBalanceChart) {
+                    while (chartSection.firstChild) {
+                        chartSection.removeChild(chartSection.firstChild);
+                    }
+                    const newChart = this.createBalanceChart();
+                    chartSection.appendChild(newChart);
+                }
+            }
+            
             // Update the button text
             const hideShowButtons = document.querySelectorAll('.dashboard-btn');
             hideShowButtons.forEach(btn => {
@@ -29616,6 +29830,7 @@
         changeDashboardCurrency(currency) {
             // Save preference
             localStorage.setItem('mooshPreferredCurrency', currency);
+            this.app.state.set('dashboardCurrency', currency);
             
             // Update button text
             const currencyButtons = document.querySelectorAll('.dashboard-btn');
@@ -29652,6 +29867,11 @@
                 }
             }
             
+            // Refresh the chart to update currency display
+            if (this.refreshDashboard) {
+                this.refreshDashboard();
+            }
+            
             // Show notification
             this.app.showNotification(`Currency changed to ${currency.toUpperCase()}`, 'success');
         }
@@ -29668,8 +29888,8 @@
         createPriceTicker() {
             const $ = window.ElementFactory || ElementFactory;
             
-            // Fetch initial data asynchronously
-            this.updateLiveData();
+            // Fetch initial data asynchronously - use debounced version
+            this.debouncedUpdateLiveData();
             
             return $.div({ 
                 className: 'price-ticker',
@@ -29705,6 +29925,12 @@
                 const btcPriceValue = priceData?.bitcoin?.usd || priceData?.usd || 0;
                 const priceChange = priceData?.bitcoin?.usd_24h_change || priceData?.usd_24h_change || 0;
                 
+                // Store the price in app state for use in charts and other components
+                if (btcPriceValue > 0) {
+                    this.app.state.set('btcPrice', btcPriceValue);
+                    this.app.btcPrice = btcPriceValue;
+                }
+                
                 if (priceElement && btcPriceValue) {
                     priceElement.textContent = btcPriceValue.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
@@ -29739,19 +29965,29 @@
                 }
                 
             } catch (error) {
-                console.error('Failed to update live data:', error);
+                ComplianceUtils.log('Dashboard', 'Failed to update live data: ' + error.message, 'error');
                 // Set fallback values on error
                 const priceElement = document.getElementById('btcPrice');
                 if (priceElement) {
-                    priceElement.textContent = '0.00';
+                    // Try to use last known price instead of 0
+                    const lastPrice = this.app.state.get('btcPrice') || 0;
+                    priceElement.textContent = lastPrice > 0 ? lastPrice.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }) : '0.00';
                 }
             }
         }
         
         async updateMempoolData() {
             try {
-                // Fetch recommended fees
-                const feesResponse = await fetch('http://localhost:3001/api/proxy/mempool/fees');
+                // Fetch recommended fees from mempool.space
+                const feesResponse = await fetch('https://mempool.space/api/v1/fees/recommended', {
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
                 const feesData = await feesResponse.json();
                 
                 const feeElement = document.getElementById('feeRate');
@@ -29759,8 +29995,13 @@
                     feeElement.textContent = feesData.halfHourFee.toString();
                 }
                 
-                // Fetch latest blocks
-                const blocksResponse = await fetch('http://localhost:3001/api/proxy/mempool/blocks');
+                // Fetch latest blocks from mempool.space
+                const blocksResponse = await fetch('https://mempool.space/api/blocks/0', {
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
                 const blocks = await blocksResponse.json();
                 
                 if (blocks && blocks.length > 0) {
@@ -29777,14 +30018,34 @@
                 }
             } catch (error) {
                 console.error('Failed to fetch mempool data:', error);
-                // Set fallback values on error
-                const feeElement = document.getElementById('feeRate');
-                if (feeElement) {
-                    feeElement.textContent = '0';
-                }
-                const blockElement = document.getElementById('nextBlock');
-                if (blockElement) {
-                    blockElement.textContent = '0';
+                // Try backup endpoint
+                try {
+                    const backupResponse = await fetch('https://api.blockchain.info/stats');
+                    const backupData = await backupResponse.json();
+                    
+                    const feeElement = document.getElementById('feeRate');
+                    if (feeElement) {
+                        // Estimate fee based on market price (rough approximation)
+                        const estimatedFee = Math.round(backupData.market_price_usd * 0.0001);
+                        feeElement.textContent = estimatedFee.toString();
+                    }
+                    
+                    const blockElement = document.getElementById('nextBlock');
+                    if (blockElement) {
+                        // Default to 10 minutes if we can't calculate
+                        blockElement.textContent = '10';
+                    }
+                } catch (backupError) {
+                    console.error('Backup API also failed:', backupError);
+                    // Set fallback values on error
+                    const feeElement = document.getElementById('feeRate');
+                    if (feeElement) {
+                        feeElement.textContent = '1';
+                    }
+                    const blockElement = document.getElementById('nextBlock');
+                    if (blockElement) {
+                        blockElement.textContent = '10';
+                    }
                 }
             }
         }
