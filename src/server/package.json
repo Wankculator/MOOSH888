@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "MOOSH Wallet API Server with Spark Protocol Integration",
   "main": "server-api.js",
+  "type": "module",
   "scripts": {
     "start": "node server-api.js",
     "dev": "nodemon server-api.js"

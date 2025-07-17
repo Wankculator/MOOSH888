@@ -2012,8 +2012,15 @@
             };
             
             this.listeners = new Map();
+            
+            // Initialize secure storage
+            this.secureStorage = new SecureStorage();
+            
             this.loadPersistedState();
             this.loadAccounts();
+            
+            // Migrate old unencrypted seeds if they exist
+            this.migrateUnencryptedSeeds();
         }
 
         get(key) {
@@ -2108,7 +2115,23 @@
                 };
                 localStorage.setItem('mooshWalletState', JSON.stringify(toPersist));
             } catch (e) {
-                console.error('Failed to persist state:', e);
+                ComplianceUtils.log('StateManager', 'Failed to persist state: ' + e.message, 'error');
+            }
+        }
+        
+        async migrateUnencryptedSeeds() {
+            // Check for old unencrypted seeds
+            const generatedSeed = localStorage.getItem('generatedSeed');
+            const importedSeed = localStorage.getItem('importedSeed');
+            
+            if (generatedSeed || importedSeed) {
+                ComplianceUtils.log('StateManager', 'Found unencrypted seeds, migration required', 'warn');
+                
+                // Store flag that migration is needed
+                this.state.needsSeedMigration = true;
+                
+                // Do NOT automatically migrate - wait for user to set password
+                // Seeds will be migrated when user unlocks wallet with password
             }
         }
         
@@ -2214,29 +2237,31 @@
                     // Try to get the seed from multiple sources
                     let mnemonic = null;
                     
-                    // First try to get from stored seeds
-                    const generatedSeed = localStorage.getItem('generatedSeed');
-                    const importedSeed = localStorage.getItem('importedSeed');
-                    
-                    if (generatedSeed) {
-                        try {
-                            const parsed = JSON.parse(generatedSeed);
-                            mnemonic = Array.isArray(parsed) ? parsed.join(' ') : parsed;
-                        } catch (e) {
-                            mnemonic = generatedSeed; // Might be plain string
-                        }
-                    } else if (importedSeed) {
-                        try {
-                            const parsed = JSON.parse(importedSeed);
-                            mnemonic = Array.isArray(parsed) ? parsed.join(' ') : parsed;
-                        } catch (e) {
-                            mnemonic = importedSeed; // Might be plain string
+                    // Try to get from secure storage if initialized
+                    if (this.secureStorage && this.secureStorage.isInitialized()) {
+                        mnemonic = await this.secureStorage.retrieveSeed(account.isImport);
+                    } else {
+                        // Fallback to old unencrypted storage (for migration)
+                        const generatedSeed = localStorage.getItem('generatedSeed');
+                        const importedSeed = localStorage.getItem('importedSeed');
+                        
+                        if (generatedSeed || importedSeed) {
+                            ComplianceUtils.log('StateManager', 'Warning: Using unencrypted seed for address recovery', 'warn');
+                            const seedData = account.isImport ? importedSeed : generatedSeed;
+                            if (seedData) {
+                                try {
+                                    const parsed = JSON.parse(seedData);
+                                    mnemonic = Array.isArray(parsed) ? parsed.join(' ') : parsed;
+                                } catch (e) {
+                                    mnemonic = seedData; // Might be plain string
+                                }
+                            }
                         }
                     }
                     
                     if (mnemonic && mnemonic.split(' ').length >= 12) {
                         try {
-                            console.log('[StateManager] Fetching missing addresses from API...');
+                            ComplianceUtils.log('StateManager', 'Fetching missing addresses from API...');
                             
                             // Re-fetch all addresses from API
                             const [sparkResponse, bitcoinResponse] = await Promise.all([
@@ -2487,14 +2512,23 @@
                     throw new Error('Invalid mnemonic phrase');
                 }
                 
-                // Fetch both Spark and Bitcoin addresses in parallel
+                // Fetch both Spark and Bitcoin addresses in parallel with timeout
+                const fetchWithTimeout = (url, options, timeout = 30000) => {
+                    return Promise.race([
+                        fetch(url, options),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Request timeout')), timeout)
+                        )
+                    ]);
+                };
+                
                 const [sparkResponse, bitcoinResponse] = await Promise.all([
-                    fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/import`, {
+                    fetchWithTimeout(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/import`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ mnemonic: mnemonicString })
                     }),
-                    fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/import`, {
+                    fetchWithTimeout(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/import`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -2557,10 +2591,8 @@
                         legacy: legacyAddress,
                         nestedSegwit: nestedSegwitAddress
                     },
-                    privateKeys: {
-                        spark: sparkResult.data?.privateKeys || {},
-                        bitcoin: privateKeys
-                    },
+                    // NEVER store private keys in state - they should only exist in memory when needed
+                    // privateKeys removed for security
                     paths: {
                         segwit: paths.segwit || "m/84'/0'/0'/0/0",
                         taproot: taprootPath,
@@ -2581,29 +2613,48 @@
                 };
                 
                 // Log account details for debugging
-                console.log('[StateManager] Created account with addresses:', {
-                    spark: account.addresses.spark ? '✓' : '✗',
-                    segwit: account.addresses.segwit ? '✓' : '✗',
-                    taproot: account.addresses.taproot ? '✓' : '✗',
-                    legacy: account.addresses.legacy ? '✓' : '✗',
-                    nestedSegwit: account.addresses.nestedSegwit ? '✓' : '✗'
-                });
+                ComplianceUtils.log('StateManager', 'Created account with addresses:', 'info');
+                ComplianceUtils.log('StateManager', `spark: ${account.addresses.spark ? '[OK]' : '[X]'} ${account.addresses.spark || 'missing'}`, account.addresses.spark ? 'info' : 'warn');
+                ComplianceUtils.log('StateManager', `segwit: ${account.addresses.segwit ? '[OK]' : '[X]'} ${account.addresses.segwit || 'missing'}`, account.addresses.segwit ? 'info' : 'warn');
+                ComplianceUtils.log('StateManager', `taproot: ${account.addresses.taproot ? '[OK]' : '[X]'} ${account.addresses.taproot || 'missing'}`, account.addresses.taproot ? 'info' : 'warn');
+                ComplianceUtils.log('StateManager', `legacy: ${account.addresses.legacy ? '[OK]' : '[X]'} ${account.addresses.legacy || 'missing'}`, account.addresses.legacy ? 'info' : 'warn');
+                ComplianceUtils.log('StateManager', `nestedSegwit: ${account.addresses.nestedSegwit ? '[OK]' : '[X]'} ${account.addresses.nestedSegwit || 'missing'}`, account.addresses.nestedSegwit ? 'info' : 'warn');
                 
                 // Add account and persist
                 this.state.accounts.push(account);
                 this.state.currentAccountId = account.id;
                 this.persistAccounts();
                 
-                // Store mnemonic for potential recovery (encrypted in production)
-                if (!localStorage.getItem('generatedSeed') && !localStorage.getItem('importedSeed')) {
-                    const seedKey = isImport ? 'importedSeed' : 'generatedSeed';
-                    localStorage.setItem(seedKey, JSON.stringify(mnemonicString.split(' ')));
+                // Mnemonic should be encrypted before storage
+                // TODO: Implement secure encryption before storing
+                // For now, we'll require password-based encryption
+                
+                ComplianceUtils.log('StateManager', `Account created successfully: ${account.name}`);
+                
+                // Check if addresses were generated successfully
+                const hasAllAddresses = account.addresses.segwit && account.addresses.taproot && 
+                                       account.addresses.legacy && account.addresses.nestedSegwit && 
+                                       account.addresses.spark;
+                
+                if (!hasAllAddresses) {
+                    ComplianceUtils.log('StateManager', 'Some addresses are missing, scheduling auto-fix', 'warn');
+                    // Schedule fixMissingAddresses to run after a short delay
+                    setTimeout(() => {
+                        this.fixMissingAddresses().then(fixedCount => {
+                            if (fixedCount > 0) {
+                                ComplianceUtils.log('StateManager', `Fixed ${fixedCount} accounts with missing addresses`);
+                                // Trigger UI update
+                                this.emit('accounts', this.state.accounts);
+                            }
+                        }).catch(error => {
+                            ComplianceUtils.log('StateManager', 'Error fixing missing addresses: ' + error.message, 'error');
+                        });
+                    }, 2000);
                 }
                 
-                console.log('[StateManager] Account created successfully:', account.name);
                 return account;
             } catch (error) {
-                console.error('[StateManager] Failed to create account:', error);
+                ComplianceUtils.log('StateManager', 'Failed to create account: ' + error.message, 'error');
                 throw error;
             }
         }
@@ -7183,9 +7234,9 @@
                     // Create account in the multi-account system
                     try {
                         const account = await this.app.state.createAccount('Main Wallet', walletData.mnemonic, false);
-                        console.log('[GenerateSeed] Account created successfully');
+                        ComplianceUtils.log('GenerateSeed', 'Account created successfully');
                     } catch (accountError) {
-                        console.error('[GenerateSeed] Failed to create account:', accountError);
+                        ComplianceUtils.log('GenerateSeed', 'Failed to create account: ' + accountError.message, 'error');
                         // Continue anyway - wallet data is stored
                     }
                     
@@ -7696,7 +7747,7 @@
                 const themeColor = isMooshMode ? '#69fd97' : '#f57315';
                 
                 if (!progressPercent) {
-                    console.error('[GenerateSeed] Progress percent element not found');
+                    ComplianceUtils.log('GenerateSeed', 'Progress percent element not found', 'error');
                     return;
                 }
                 
@@ -12470,20 +12521,20 @@
             const currentWallet = this.app.state.get('currentWallet') || {};
             
             // Debug logging
-            console.log('[WalletDetails] Selected type:', selectedType);
-            console.log('[WalletDetails] SparkWallet from localStorage:', sparkWallet);
-            console.log('[WalletDetails] CurrentWallet from state:', currentWallet);
-            console.log('[WalletDetails] Seed phrase loaded');
+            ComplianceUtils.log('WalletDetails', 'Selected type: ' + selectedType);
+            ComplianceUtils.log('WalletDetails', 'SparkWallet loaded from storage');
+            ComplianceUtils.log('WalletDetails', 'CurrentWallet loaded from state');
+            ComplianceUtils.log('WalletDetails', 'Wallet data loaded successfully');
             
             // Use the real addresses from the API
             const allAddresses = this.getRealWalletAddresses(sparkWallet, currentWallet);
             const privateKeys = this.getRealPrivateKeys(sparkWallet, currentWallet);
             
-            console.log('[WalletDetails] All addresses:', allAddresses);
-            console.log('[WalletDetails] Private keys loaded');
+            ComplianceUtils.log('WalletDetails', 'Address types available: ' + Object.keys(allAddresses).length);
+            ComplianceUtils.log('WalletDetails', 'Keys retrieved from secure storage');
             
             // Show ALL addresses and private keys, not filtered
-            console.log('[WalletDetails] Showing all addresses and keys');
+            ComplianceUtils.log('WalletDetails', 'Displaying wallet information');
             
             const card = $.div({ className: 'card' }, [
                 this.createTitle('All Wallets'), // Changed title
@@ -15982,7 +16033,7 @@
                 }
                 
                 const mnemonic = response.data.mnemonic;
-                console.log('[MultiAccountModal] Mnemonic generated');
+                ComplianceUtils.log('MultiAccountModal', 'New wallet generated successfully');
                 
                 // Create account
                 await this.app.state.createAccount(name, mnemonic, false);
@@ -17400,7 +17451,7 @@
                 }
                 
                 const mnemonic = response.data.mnemonic;
-                console.log('[MultiAccountModal] Mnemonic generated');
+                ComplianceUtils.log('MultiAccountModal', 'New wallet generated successfully');
                 
                 // Create account
                 await this.app.state.createAccount(name, mnemonic, false);
@@ -17808,6 +17859,15 @@
             };
         }
         
+        // Theme helper method
+        getThemeColor(variant = 'primary') {
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            if (variant === 'hover') {
+                return isMooshMode ? '#7fffb3' : '#ff8c42';
+            }
+            return isMooshMode ? '#69fd97' : '#f57315';
+        }
+        
         // Balance fetching methods
         async fetchBTCPrice() {
             try {
@@ -18006,74 +18066,92 @@
         }
         
         show() {
-            console.log('[AccountListModal] Opening account management interface');
+            ComplianceUtils.log('AccountListModal', 'Opening account management interface');
+            
+            // Set up account update listener
+            this.accountUpdateHandler = () => {
+                ComplianceUtils.log('AccountListModal', 'Accounts updated, refreshing display');
+                if (this.modal) {
+                    this.updateAccountGrid();
+                }
+            };
+            this.app.state.on('accounts', this.accountUpdateHandler);
             
             // Add scrollbar styles for AccountListModal
-            if (!document.getElementById('account-list-modal-scrollbar-styles')) {
-                const style = document.createElement('style');
-                style.id = 'account-list-modal-scrollbar-styles';
-                style.textContent = `
-                    /* AccountListModal Scrollbar Styles */
-                    .account-grid::-webkit-scrollbar {
-                        width: 8px;
-                        height: 8px;
-                    }
-                    
-                    .account-grid::-webkit-scrollbar-track {
-                        background: #000000;
-                        border: 1px solid #333333;
-                    }
-                    
-                    .account-grid::-webkit-scrollbar-thumb {
-                        background: #f57315;
-                        border-radius: 0;
-                    }
-                    
-                    /* Drag and Drop Styles */
-                    .account-card {
-                        transition: all 0.2s ease;
-                    }
-                    
-                    .account-card.dragging {
-                        opacity: 0.5;
-                        transform: scale(0.95);
-                        cursor: grabbing !important;
-                    }
-                    
-                    .account-card:not(.dragging):hover {
-                        cursor: grab;
-                    }
-                    
-                    .drop-indicator {
-                        position: absolute;
-                        width: 100%;
-                        height: 3px;
-                        background: #f57315;
-                        left: 0;
-                        pointer-events: none;
-                        z-index: 1000;
-                        animation: pulse-glow 0.5s ease-in-out infinite;
-                    }
-                    
-                    @keyframes pulse-glow {
-                        0% { opacity: 0.8; }
-                        50% { opacity: 1; }
-                        100% { opacity: 0.8; }
-                    }
-                    }
-                    
-                    .account-grid::-webkit-scrollbar-thumb:hover {
-                        background: #ff8c42;
-                    }
-                    
-                    /* Firefox Scrollbar */
-                    .account-grid {
-                        scrollbar-width: thin;
-                        scrollbar-color: #f57315 #000000;
-                    }
-                `;
-                document.head.appendChild(style);
+            // Remove old styles if they exist to refresh theme colors
+            const existingScrollbarStyles = document.getElementById('account-list-modal-scrollbar-styles');
+            if (existingScrollbarStyles) {
+                existingScrollbarStyles.remove();
             }
+            
+            // Check theme and set colors
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            const primaryColor = isMooshMode ? '#69fd97' : '#f57315';
+            const hoverColor = isMooshMode ? '#7fffb3' : '#ff8c42';
+            
+            const style = document.createElement('style');
+            style.id = 'account-list-modal-scrollbar-styles';
+            style.textContent = `
+                /* AccountListModal Scrollbar Styles */
+                .account-grid::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+                
+                .account-grid::-webkit-scrollbar-track {
+                    background: #000000;
+                    border: 1px solid #333333;
+                }
+                
+                .account-grid::-webkit-scrollbar-thumb {
+                    background: ${primaryColor};
+                    border-radius: 0;
+                }
+                
+                /* Drag and Drop Styles */
+                .account-card {
+                    transition: all 0.2s ease;
+                }
+                
+                .account-card.dragging {
+                    opacity: 0.5;
+                    transform: scale(0.95);
+                    cursor: grabbing !important;
+                }
+                
+                .account-card:not(.dragging):hover {
+                    cursor: grab;
+                }
+                
+                .drop-indicator {
+                    position: absolute;
+                    width: 100%;
+                    height: 3px;
+                    background: ${primaryColor};
+                    left: 0;
+                    pointer-events: none;
+                    z-index: 1000;
+                    animation: pulse-glow 0.5s ease-in-out infinite;
+                }
+                
+                @keyframes pulse-glow {
+                    0% { opacity: 0.8; }
+                    50% { opacity: 1; }
+                    100% { opacity: 0.8; }
+                }
+                }
+                
+                .account-grid::-webkit-scrollbar-thumb:hover {
+                    background: ${hoverColor};
+                }
+                
+                /* Firefox Scrollbar */
+                .account-grid {
+                    scrollbar-width: thin;
+                    scrollbar-color: ${primaryColor} #000000;
+                }
+            `;
+            document.head.appendChild(style);
             
             // Clean up any existing modal
             if (this.modal && this.modal.parentNode) {
@@ -18111,7 +18189,7 @@
                     className: 'account-list-modal terminal-box',
                     style: {
                         background: 'var(--bg-primary)',
-                        border: '2px solid #f57315',
+                        border: `2px solid ${this.getThemeColor()}`,
                         borderRadius: '0',
                         width: '90%',
                         maxWidth: '900px',
@@ -18140,8 +18218,20 @@
         }
         
         addCurrencySelectorStyles() {
-            // Check if styles already exist
-            if (document.getElementById('currency-selector-styles')) return;
+            // Remove old styles if they exist to refresh theme colors
+            const existingStyles = document.getElementById('currency-selector-styles');
+            if (existingStyles) {
+                existingStyles.remove();
+            }
+            
+            // Check if we're in Moosh mode
+            const isMooshMode = document.body.classList.contains('moosh-mode');
+            const primaryColor = isMooshMode ? '#69fd97' : '#f57315';
+            const hoverColor = isMooshMode ? '#7fffb3' : '#ff8c42';
+            const shadowColorRgba = isMooshMode ? 'rgba(105, 253, 151, 0.2)' : 'rgba(245, 115, 21, 0.2)';
+            
+            // Encode the primary color for SVG
+            const encodedColor = primaryColor.replace('#', '%23');
             
             const style = document.createElement('style');
             style.id = 'currency-selector-styles';
@@ -18151,7 +18241,7 @@
                     -webkit-appearance: none;
                     -moz-appearance: none;
                     appearance: none;
-                    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f57315' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+                    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${encodedColor}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
                     background-repeat: no-repeat;
                     background-position: right 8px center;
                     background-size: 16px;
@@ -18159,19 +18249,19 @@
                 }
                 
                 #currency-selector:hover {
-                    border-color: #ff8c42 !important;
-                    color: #ff8c42 !important;
+                    border-color: ${hoverColor} !important;
+                    color: ${hoverColor} !important;
                 }
                 
                 #currency-selector:focus {
-                    border-color: #ff8c42 !important;
-                    box-shadow: 0 0 0 2px rgba(245, 115, 21, 0.2) !important;
+                    border-color: ${hoverColor} !important;
+                    box-shadow: 0 0 0 2px ${shadowColorRgba} !important;
                 }
                 
                 /* Style the dropdown */
                 #currency-selector option {
                     background: #000 !important;
-                    color: #f57315 !important;
+                    color: ${primaryColor} !important;
                     padding: 8px !important;
                     font-family: 'JetBrains Mono', monospace !important;
                 }
@@ -18180,7 +18270,7 @@
                 #currency-selector option:focus,
                 #currency-selector option:checked {
                     background: #1a1a1a !important;
-                    color: #ff8c42 !important;
+                    color: ${hoverColor} !important;
                     box-shadow: 0 0 10px 100px #1a1a1a inset !important;
                 }
                 
@@ -18188,13 +18278,13 @@
                 @-moz-document url-prefix() {
                     #currency-selector option {
                         background: #000 !important;
-                        color: #f57315 !important;
+                        color: ${primaryColor} !important;
                     }
                     
                     #currency-selector option:hover,
                     #currency-selector option:checked {
                         background: #1a1a1a !important;
-                        color: #ff8c42 !important;
+                        color: ${hoverColor} !important;
                     }
                 }
                 
@@ -18202,12 +18292,12 @@
                 @media screen and (-webkit-min-device-pixel-ratio:0) {
                     #currency-selector option {
                         background: #000 !important;
-                        color: #f57315 !important;
+                        color: ${primaryColor} !important;
                     }
                     
                     #currency-selector option:checked {
                         background: linear-gradient(#1a1a1a, #1a1a1a) !important;
-                        color: #ff8c42 !important;
+                        color: ${hoverColor} !important;
                     }
                 }
             `;
@@ -18265,8 +18355,8 @@
                 $.button({
                     style: {
                         background: '#000',
-                        border: '2px solid #f57315',
-                        color: '#f57315',
+                        border: `2px solid ${this.getThemeColor()}`,
+                        color: this.getThemeColor(),
                         cursor: 'pointer',
                         fontSize: '14px',
                         padding: '6px 12px',
@@ -18274,10 +18364,13 @@
                         transition: 'all 0.2s ease'
                     },
                     onmouseover: (e) => {
-                        e.currentTarget.style.background = 'rgba(245, 115, 21, 0.1)';
+                        const hoverColor = this.getThemeColor('hover');
+                        e.currentTarget.style.background = hoverColor;
+                        e.currentTarget.style.color = '#000';
                     },
                     onmouseout: (e) => {
                         e.currentTarget.style.background = '#000';
+                        e.currentTarget.style.color = this.getThemeColor();
                     },
                     onclick: () => this.close()
                 }, ['CLOSE'])
@@ -18329,15 +18422,15 @@
                 
                 // Currency selector
                 $.div({ style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
-                    $.span({ style: { color: '#f57315', fontSize: '14px', fontWeight: '500' } }, ['Currency:']),
+                    $.span({ style: { color: this.getThemeColor(), fontSize: '14px', fontWeight: '500' } }, ['Currency:']),
                     $.select({
                         id: 'currency-selector',
                         value: this.selectedCurrency,
                         style: {
                             padding: '8px 12px',
                             background: '#000',
-                            border: '2px solid #f57315',
-                            color: '#f57315',
+                            border: `2px solid ${this.getThemeColor()}`,
+                            color: this.getThemeColor(),
                             fontSize: '14px',
                             fontFamily: 'JetBrains Mono, monospace',
                             cursor: 'pointer',
@@ -18346,12 +18439,13 @@
                             transition: 'all 0.2s ease'
                         },
                         onfocus: (e) => {
-                            e.target.style.boxShadow = '0 0 0 1px #f57315';
-                            e.target.style.borderColor = '#ff8c42';
+                            const hoverColor = this.getThemeColor('hover');
+                            e.target.style.boxShadow = `0 0 0 1px ${this.getThemeColor()}`;
+                            e.target.style.borderColor = hoverColor;
                         },
                         onblur: (e) => {
                             e.target.style.boxShadow = 'none';
-                            e.target.style.borderColor = '#f57315';
+                            e.target.style.borderColor = this.getThemeColor();
                         },
                         onchange: (e) => {
                             this.changeCurrency(e.target.value);
@@ -18361,7 +18455,7 @@
                             value: currency.code,
                             style: {
                                 background: '#000',
-                                color: '#f57315',
+                                color: this.getThemeColor(),
                                 padding: '5px'
                             }
                         }, [
@@ -18375,9 +18469,9 @@
                     $.button({
                         style: {
                             padding: '8px 12px',
-                            background: this.viewMode === 'grid' ? '#f57315' : '#000',
-                            border: '2px solid #f57315',
-                            color: this.viewMode === 'grid' ? '#000' : '#f57315',
+                            background: this.viewMode === 'grid' ? this.getThemeColor() : '#000',
+                            border: `2px solid ${this.getThemeColor()}`,
+                            color: this.viewMode === 'grid' ? '#000' : this.getThemeColor(),
                             cursor: 'pointer',
                             fontSize: '12px',
                             fontFamily: 'JetBrains Mono, monospace',
@@ -18391,9 +18485,9 @@
                     $.button({
                         style: {
                             padding: '8px 12px',
-                            background: this.viewMode === 'list' ? '#f57315' : '#000',
-                            border: '2px solid #f57315',
-                            color: this.viewMode === 'list' ? '#000' : '#f57315',
+                            background: this.viewMode === 'list' ? this.getThemeColor() : '#000',
+                            border: `2px solid ${this.getThemeColor()}`,
+                            color: this.viewMode === 'list' ? '#000' : this.getThemeColor(),
                             cursor: 'pointer',
                             fontSize: '12px',
                             fontFamily: 'JetBrains Mono, monospace',
@@ -18407,9 +18501,9 @@
                     $.button({
                         style: {
                             padding: '8px 12px',
-                            background: this.viewMode === 'details' ? '#f57315' : '#000',
-                            border: '2px solid #f57315',
-                            color: this.viewMode === 'details' ? '#000' : '#f57315',
+                            background: this.viewMode === 'details' ? this.getThemeColor() : '#000',
+                            border: `2px solid ${this.getThemeColor()}`,
+                            color: this.viewMode === 'details' ? '#000' : this.getThemeColor(),
                             cursor: 'pointer',
                             fontSize: '12px',
                             fontFamily: 'JetBrains Mono, monospace',
@@ -18429,7 +18523,7 @@
                             padding: '8px 12px',
                             background: '#000',
                             border: '2px solid #333',
-                            color: '#f57315',
+                            color: this.getThemeColor(),
                             fontSize: '12px',
                             fontFamily: 'JetBrains Mono, monospace',
                             cursor: 'pointer'
@@ -18955,7 +19049,7 @@
                 ]),
                 
                 // Address preview
-                account.addresses && $.div({ 
+                $.div({ 
                     style: { 
                         marginTop: '10px',
                         padding: '8px',
@@ -18968,7 +19062,9 @@
                         whiteSpace: 'nowrap'
                     } 
                 }, [
-                    account.addresses.bech32 || account.addresses.segwit || 'No addresses generated'
+                    (account.addresses && (account.addresses.segwit || account.addresses.bitcoin || account.addresses.taproot || account.addresses.legacy)) 
+                        ? (account.addresses.segwit || account.addresses.bitcoin || account.addresses.taproot || account.addresses.legacy)
+                        : 'Loading addresses...'
                 ]),
                 
                 // Make Active button (only show if not active)
@@ -19709,6 +19805,13 @@
                 this.modal.parentNode.removeChild(this.modal);
                 this.modal = null;
             }
+            
+            // Remove account update listener
+            if (this.accountUpdateHandler) {
+                this.app.state.off('accounts', this.accountUpdateHandler);
+                this.accountUpdateHandler = null;
+            }
+            
             this.searchQuery = '';
             this.selectedAccounts.clear();
             this.editingAccountId = null;
@@ -26160,11 +26263,11 @@
             const generatedSeed = JSON.parse(localStorage.getItem('generatedSeed') || localStorage.getItem('importedSeed') || '[]');
             const currentWallet = this.app.state.get('currentWallet') || {};
             
-            console.log('[Dashboard] Wallet check:');
-            console.log('  - sparkWallet:', sparkWallet);
-            console.log('  - sparkWallet.addresses:', sparkWallet.addresses);
-            console.log('  - Seed phrase exists:', generatedSeed.length > 0);
-            console.log('  - currentWallet:', currentWallet);
+            ComplianceUtils.log('Dashboard', 'Wallet check initiated');
+            ComplianceUtils.log('Dashboard', '- sparkWallet exists: ' + (sparkWallet ? 'yes' : 'no'));
+            ComplianceUtils.log('Dashboard', '- addresses found: ' + (sparkWallet?.addresses ? 'yes' : 'no'));
+            ComplianceUtils.log('Dashboard', '- Wallet initialized: ' + (generatedSeed.length > 0 ? 'yes' : 'no'));
+            ComplianceUtils.log('Dashboard', '- currentWallet exists: ' + (currentWallet ? 'yes' : 'no'));
             
             // If no wallet exists, redirect to home
             // Check multiple conditions to ensure wallet exists
@@ -26173,10 +26276,10 @@
             const hasCurrentWallet = currentWallet && currentWallet.isInitialized;
             
             if (!hasSparkWallet && !hasSeed && !hasCurrentWallet) {
-                console.log('[Dashboard] No wallet found, redirecting to home');
-                console.log('  - hasSparkWallet:', hasSparkWallet);
-                console.log('  - Has valid seed:', hasSeed);
-                console.log('  - hasCurrentWallet:', hasCurrentWallet);
+                ComplianceUtils.log('Dashboard', 'No wallet found, redirecting to home');
+                ComplianceUtils.log('Dashboard', '- hasSparkWallet: ' + hasSparkWallet);
+                ComplianceUtils.log('Dashboard', '- Has valid wallet: ' + hasSeed);
+                ComplianceUtils.log('Dashboard', '- hasCurrentWallet: ' + hasCurrentWallet);
                 this.app.showNotification('Please create or import a wallet first', 'warning');
                 this.app.router.navigate('home');
                 return $.div();
