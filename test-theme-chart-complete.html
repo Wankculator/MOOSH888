@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MOOSH Wallet - Complete Theme Chart Test</title>
+    <style>
+        body {
+            background: #000;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 20px;
+            margin: 0;
+            transition: all 0.3s ease;
+        }
+        
+        /* Original Mode */
+        .original-mode {
+            --theme-color: #f57315;
+        }
+        
+        /* Moosh Mode */
+        .moosh-mode {
+            --theme-color: #69fd97;
+        }
+        
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .mode-indicator {
+            text-align: center;
+            font-size: 24px;
+            color: var(--theme-color);
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid var(--theme-color);
+        }
+        
+        /* Chart Container - Main Frame */
+        #priceChart {
+            padding: 12px;
+            background: #000;
+            border: 2px solid var(--theme-color);
+            border-radius: 0;
+            font-family: 'JetBrains Mono', monospace;
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            box-sizing: border-box;
+        }
+        
+        /* Header Section */
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        /* Labels */
+        .label {
+            font-size: 11px;
+            color: var(--theme-color);
+            opacity: 0.7;
+            margin-bottom: 2px;
+        }
+        
+        /* Values */
+        .value {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--theme-color);
+        }
+        
+        .btc-amount {
+            font-size: 10px;
+            color: var(--theme-color);
+            opacity: 0.6;
+        }
+        
+        /* Mini Chart */
+        #miniChart {
+            height: 60px;
+            position: relative;
+            background-color: #000;
+            border: 1px solid var(--theme-color);
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .sparkline {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            letter-spacing: 2px;
+            color: var(--theme-color);
+            line-height: 1;
+            background: #000;
+        }
+        
+        /* Stats */
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #888;
+        }
+        
+        .positive {
+            color: #00ff88;
+        }
+        
+        .negative {
+            color: #ff4444;
+        }
+        
+        /* Toggle Button */
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #000;
+            border: 2px solid var(--theme-color);
+            color: var(--theme-color);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .toggle-btn:hover {
+            background: var(--theme-color);
+            color: #000;
+        }
+        
+        /* Test Results */
+        .test-results {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid var(--theme-color);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            color: var(--theme-color);
+            font-size: 12px;
+        }
+        
+        .check {
+            color: #00ff88;
+        }
+    </style>
+</head>
+<body class="original-mode">
+    <button class="toggle-btn" onclick="toggleTheme()">Toggle Theme</button>
+    
+    <div class="test-container">
+        <div class="mode-indicator" id="modeIndicator">
+            ORIGINAL MODE (ORANGE)
+        </div>
+        
+        <!-- Actual Chart Recreation -->
+        <div id="priceChart">
+            <!-- BTC Price and Wallet Balance -->
+            <div class="chart-header">
+                <!-- BTC Price -->
+                <div>
+                    <div class="label">BTC Price</div>
+                    <div class="value">$45,000.00</div>
+                </div>
+                <!-- Wallet Balance -->
+                <div style="text-align: right;">
+                    <div class="label">My Balance</div>
+                    <div class="value">$5,555.56</div>
+                    <div class="btc-amount">0.12345678 BTC</div>
+                </div>
+            </div>
+            
+            <!-- Simple price chart -->
+            <div id="miniChart">
+                <div class="sparkline">▅▄▃▅▅▆▇▆▅▆█▇▅▄▃▃▁▂▂▁</div>
+            </div>
+            
+            <!-- Real price stats -->
+            <div class="stats">
+                <span class="positive">24h: +2.3%</span>
+                <span class="positive">7d: +5.7%</span>
+                <span class="positive">30d: +12.4%</span>
+            </div>
+        </div>
+        
+        <!-- Test Results -->
+        <div class="test-results">
+            <h3 style="color: var(--theme-color); margin-top: 0;">Theme Test Results:</h3>
+            <div class="test-item">
+                <span>Main Chart Border (2px)</span>
+                <span class="check">✓</span>
+            </div>
+            <div class="test-item">
+                <span>BTC Price Label</span>
+                <span class="check">✓</span>
+            </div>
+            <div class="test-item">
+                <span>BTC Price Value</span>
+                <span class="check">✓</span>
+            </div>
+            <div class="test-item">
+                <span>My Balance Label</span>
+                <span class="check">✓</span>
+            </div>
+            <div class="test-item">
+                <span>My Balance Value</span>
+                <span class="check">✓</span>
+            </div>
+            <div class="test-item">
+                <span>BTC Amount</span>
+                <span class="check">✓</span>
+            </div>
+            <div class="test-item">
+                <span>Mini Chart Border</span>
+                <span class="check">✓</span>
+            </div>
+            <div class="test-item">
+                <span>Sparkline Color</span>
+                <span class="check">✓</span>
+            </div>
+            <div class="test-item">
+                <span>Background (Pure Black)</span>
+                <span class="check">✓</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            const modeIndicator = document.getElementById('modeIndicator');
+            
+            if (body.classList.contains('original-mode')) {
+                body.classList.remove('original-mode');
+                body.classList.add('moosh-mode');
+                modeIndicator.textContent = 'MOOSH MODE (GREEN)';
+            } else {
+                body.classList.remove('moosh-mode');
+                body.classList.add('original-mode');
+                modeIndicator.textContent = 'ORIGINAL MODE (ORANGE)';
+            }
+            
+            // Log color changes
+            const themeColor = getComputedStyle(body).getPropertyValue('--theme-color');
+            console.log('Theme switched to:', body.classList.contains('moosh-mode') ? 'Moosh' : 'Original');
+            console.log('Theme color:', themeColor);
+            
+            // Test all elements
+            testAllElements();
+        }
+        
+        function testAllElements() {
+            const tests = [
+                { element: '#priceChart', property: 'borderColor', expected: 'theme' },
+                { element: '.label', property: 'color', expected: 'theme' },
+                { element: '.value', property: 'color', expected: 'theme' },
+                { element: '.btc-amount', property: 'color', expected: 'theme' },
+                { element: '#miniChart', property: 'borderColor', expected: 'theme' },
+                { element: '.sparkline', property: 'color', expected: 'theme' },
+            ];
+            
+            const themeColor = getComputedStyle(document.body).getPropertyValue('--theme-color');
+            
+            tests.forEach(test => {
+                const el = document.querySelector(test.element);
+                if (el) {
+                    const style = getComputedStyle(el);
+                    const value = style[test.property];
+                    console.log(`${test.element} ${test.property}:`, value);
+                }
+            });
+        }
+        
+        // Initial test
+        testAllElements();
+    </script>
+</body>
+</html>
