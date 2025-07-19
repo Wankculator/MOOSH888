@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wallet Test</title>
+</head>
+<body>
+    <script>
+        // Test if moosh-wallet.js loads without syntax errors
+        const script = document.createElement('script');
+        script.src = 'http://localhost:3333/js/moosh-wallet.js';
+        script.onload = () => console.log('✅ moosh-wallet.js loaded successfully');
+        script.onerror = (err) => console.error('❌ Failed to load moosh-wallet.js:', err);
+        document.head.appendChild(script);
+        
+        // Check for syntax errors
+        window.addEventListener('error', (event) => {
+            if (event.filename && event.filename.includes('moosh-wallet.js')) {
+                console.error('❌ Syntax error in moosh-wallet.js:', event.message, 'at line', event.lineno);
+            }
+        });
+    </script>
+</body>
+</html>

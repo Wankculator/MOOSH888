@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple API Test</title>
+</head>
+<body>
+    <h1>Simple API Test</h1>
+    <pre id="results"></pre>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        async function test() {
+            // Test 1: Direct fetch without any overrides
+            try {
+                results.textContent += 'Test 1: Direct fetch to localhost...\n';
+                const response1 = await fetch('http://localhost:3001/api/health');
+                const data1 = await response1.json();
+                results.textContent += 'Success: ' + JSON.stringify(data1) + '\n\n';
+            } catch (error) {
+                results.textContent += 'Error: ' + error.message + '\n\n';
+            }
+            
+            // Test 2: Direct fetch to external API
+            try {
+                results.textContent += 'Test 2: Direct fetch to Blockstream...\n';
+                const response2 = await fetch('https://blockstream.info/api/blocks/tip/height');
+                const data2 = await response2.text();
+                results.textContent += 'Success: Block height = ' + data2 + '\n\n';
+            } catch (error) {
+                results.textContent += 'Error: ' + error.message + '\n\n';
+            }
+            
+            // Test 3: Check CORS proxy endpoint
+            try {
+                results.textContent += 'Test 3: Fetch through proxy...\n';
+                const response3 = await fetch('http://localhost:3001/api/proxy/bitcoin-price');
+                const data3 = await response3.json();
+                results.textContent += 'Success: ' + JSON.stringify(data3) + '\n\n';
+            } catch (error) {
+                results.textContent += 'Error: ' + error.message + '\n\n';
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>

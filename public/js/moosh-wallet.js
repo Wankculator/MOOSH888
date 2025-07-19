@@ -27540,6 +27540,17 @@
         }
         
         truncateAddress(address) {
+            // Handle various input types
+            if (!address) return '';
+            
+            // If address is an object, try to extract the actual address
+            if (typeof address === 'object') {
+                // Check common property names
+                address = address.address || address.bitcoin || address.spark || address.value || '';
+            }
+            
+            // Convert to string and validate
+            address = String(address);
             if (!address || address.length <= 20) return address;
             
             // Check if mobile

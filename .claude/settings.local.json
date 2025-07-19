@@ -87,7 +87,8 @@
       "Bash(cd:*)",
       "Bash(cd:*)",
       "Bash(git reset:*)",
-      "Bash(explorer.exe http://localhost:3333/test-chart-fixes.html)"
+      "Bash(explorer.exe http://localhost:3333/test-chart-fixes.html)",
+      "Bash(cd:*)"
     ],
     "deny": []
   }

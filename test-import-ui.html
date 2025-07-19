@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import UI Visual Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #111111;
+            --text-primary: #f57315;
+            --text-secondary: #ff8c42;
+            --text-dim: #666666;
+            --border-color: #333333;
+            --text-accent: #69fd97;
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 40px;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .demo-section {
+            background: var(--bg-secondary);
+            border: 2px solid var(--text-primary);
+            padding: 30px;
+            margin: 30px 0;
+        }
+        
+        h1 {
+            text-align: center;
+            color: var(--text-accent);
+            margin-bottom: 40px;
+        }
+        
+        h2 {
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        h3 {
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        
+        .tab-button {
+            background: transparent;
+            border: 2px solid var(--text-primary);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            border-radius: 0;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+        
+        .tab-button.active {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+        
+        .tab-button:hover:not(.active) {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            border-radius: 0;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+        
+        input:focus, textarea:focus {
+            border-color: var(--text-primary);
+            outline: none;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .help-text {
+            margin-top: 5px;
+            color: var(--text-dim);
+            font-size: 11px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .button {
+            background: transparent;
+            border: 2px solid var(--text-primary);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            border-radius: 0;
+            transition: all 0.2s ease;
+        }
+        
+        .button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+        
+        .button.secondary {
+            border-color: var(--text-dim);
+            color: var(--text-dim);
+        }
+        
+        .button.secondary:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-secondary);
+            background: transparent;
+        }
+        
+        .info-box {
+            background: rgba(105, 253, 151, 0.1);
+            border: 1px solid var(--text-accent);
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 12px;
+            color: var(--text-accent);
+        }
+        
+        .account-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .action-button {
+            background: transparent;
+            border: 2px solid var(--text-primary);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            border-radius: 0;
+            transition: all 0.2s ease;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .action-button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Multi-Wallet Import UI Demo</h1>
+        
+        <div class="demo-section">
+            <h2>Multi-Wallet Account Management</h2>
+            <p style="color: var(--text-dim); margin-bottom: 20px;">
+                When you click "Manage Accounts" or use the account management interface, you'll see these options:
+            </p>
+            
+            <div class="account-actions">
+                <button class="action-button">Create New</button>
+                <button class="action-button" onclick="showImportModal()">Import Account</button>
+                <button class="action-button">Manage Groups</button>
+            </div>
+        </div>
+        
+        <div id="import-modal" class="demo-section" style="display: none;">
+            <h3>Import Account</h3>
+            
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('seed')">Seed Phrase</button>
+                <button class="tab-button" onclick="switchTab('privatekey')">Private Key (WIF)</button>
+            </div>
+            
+            <div id="seed-form">
+                <div class="form-group">
+                    <label>Account Name</label>
+                    <input type="text" placeholder="Enter account name" value="Imported 1/18/2025">
+                </div>
+                
+                <div class="form-group">
+                    <label>Seed Phrase</label>
+                    <textarea placeholder="Enter your 12 or 24 word seed phrase"></textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button class="button">Import Account</button>
+                    <button class="button secondary" onclick="hideImportModal()">Cancel</button>
+                </div>
+            </div>
+            
+            <div id="privatekey-form" style="display: none;">
+                <div class="form-group">
+                    <label>Account Name</label>
+                    <input type="text" placeholder="Enter account name" value="Imported 1/18/2025">
+                </div>
+                
+                <div class="form-group">
+                    <label>Private Key (WIF Format)</label>
+                    <input type="password" placeholder="Enter private key in WIF format (starts with 5, K, or L)">
+                    <div class="help-text">WIF (Wallet Import Format) starts with 5, K, or L</div>
+                </div>
+                
+                <div class="info-box">
+                    <strong>What is WIF?</strong><br>
+                    Wallet Import Format is a standard way to encode private keys. It includes:<br>
+                    • Starts with 5 (uncompressed) or K/L (compressed)<br>
+                    • 51-52 characters long<br>
+                    • Built-in checksum for validation
+                </div>
+                
+                <div class="button-group">
+                    <button class="button">Import Private Key</button>
+                    <button class="button secondary" onclick="hideImportModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Features Overview</h2>
+            <ul style="color: var(--text-dim); line-height: 1.8;">
+                <li>✓ Dual import modes: Seed phrase and Private Key (WIF)</li>
+                <li>✓ Tab-based interface for easy switching</li>
+                <li>✓ WIF format validation (5, K, or L prefix)</li>
+                <li>✓ Automatic address derivation (all types)</li>
+                <li>✓ Integration with multi-wallet system</li>
+                <li>✓ Visual feedback and error handling</li>
+                <li>✓ Secure password input for private keys</li>
+                <li>✓ Professional UI matching MOOSH theme</li>
+            </ul>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Example WIF Keys (For Testing Only!)</h2>
+            <p style="color: #ff4444; margin-bottom: 10px;">⚠️ Never use these in production!</p>
+            <pre style="background: var(--bg-primary); padding: 15px; overflow-x: auto; font-size: 11px;">
+5KYZdUEo39z3FPrtuX2QbbwGnNP5zTd7yyr2SC1j299sBCnWjss
+KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn
+L1aW4aubDFB7yfras2S1mN3bqg9nwySY8nkoLmJebSLD5BWv3ENZ</pre>
+        </div>
+    </div>
+    
+    <script>
+        function showImportModal() {
+            document.getElementById('import-modal').style.display = 'block';
+            // Smooth scroll to modal
+            document.getElementById('import-modal').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function hideImportModal() {
+            document.getElementById('import-modal').style.display = 'none';
+        }
+        
+        function switchTab(tab) {
+            // Update tab buttons
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide forms
+            if (tab === 'seed') {
+                document.getElementById('seed-form').style.display = 'block';
+                document.getElementById('privatekey-form').style.display = 'none';
+            } else {
+                document.getElementById('seed-form').style.display = 'none';
+                document.getElementById('privatekey-form').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
