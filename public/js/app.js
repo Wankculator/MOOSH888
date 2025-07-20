@@ -216,18 +216,22 @@ class MOOSHWalletApp {
         this.container.innerHTML = '';
 
         // Add main structure
-        this.container.appendChild(this.createMainStructure());
+        const mainStructure = this.createMainStructure();
+        this.container.appendChild(mainStructure);
 
-        // Show appropriate initial page
-        if (walletManager.hasWallet()) {
-            if (stateManager.isLocked()) {
-                this.showLockScreen();
+        // Wait for DOM to be ready
+        setTimeout(() => {
+            // Show appropriate initial page
+            if (walletManager.hasWallet()) {
+                if (stateManager.isLocked()) {
+                    this.showLockScreen();
+                } else {
+                    this.showDashboard();
+                }
             } else {
-                this.showDashboard();
+                this.showHomePage();
             }
-        } else {
-            this.showHomePage();
-        }
+        }, 0);
     }
 
     /**

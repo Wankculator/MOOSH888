@@ -192,6 +192,18 @@
                 </div>
             `;
         }
+        
+        // Add option to use old wallet
+        window.useOldWallet = function() {
+            console.log('Loading original moosh-wallet.js...');
+            const script = document.createElement('script');
+            script.src = '/js/moosh-wallet.js';
+            script.onload = () => {
+                console.log('Original wallet loaded');
+                window.location.reload();
+            };
+            document.body.appendChild(script);
+        };
     </script>
     
     <!-- Fallback for older browsers -->
