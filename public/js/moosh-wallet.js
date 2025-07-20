@@ -682,6 +682,13 @@
                     border-radius: 0 !important;
                 }
                 
+                /* Prevent dropdowns from causing overflow */
+                .dropdown-content,
+                [class*="dropdown"] {
+                    position: absolute;
+                    z-index: 1000;
+                }
+                
                 /* MOOSH MODE - All frames and containers */
                 body.moosh-mode .cursor-container,
                 body.moosh-mode .cursor-content,
@@ -778,6 +785,8 @@
                     -webkit-tap-highlight-color: transparent;
                     display: flex;
                     flex-direction: column;
+                    overflow-x: hidden;
+                    width: 100%;
                 }
                 
                 /* App container should grow to push footer down */
@@ -785,6 +794,9 @@
                     flex: 1;
                     display: flex;
                     flex-direction: column;
+                    width: 100%;
+                    overflow-x: hidden;
+                    position: relative;
                 }
                 
                 /* Footer styles */
@@ -974,6 +986,9 @@
                     min-height: 100vh;
                     display: flex;
                     flex-direction: column;
+                    width: 100%;
+                    overflow-x: hidden;
+                    position: relative;
                 }
 
                 .cursor-header {
@@ -995,6 +1010,7 @@
 
                 .cursor-content {
                     overflow-y: auto;
+                    overflow-x: hidden;
                     padding: calc(var(--spacing-unit) * 3) var(--container-padding) calc(var(--spacing-unit) * 2) var(--container-padding);
                     max-width: 1200px;
                     margin: 0 auto;
@@ -2276,12 +2292,12 @@
                             
                             // Re-fetch all addresses from API
                             const [sparkResponse, bitcoinResponse] = await Promise.all([
-                                fetch(`${window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`}/api/spark/import`, {
+                                fetch(`${window.MOOSH_API_URL || `${window.location.protocol}//127.0.0.1:3001`}/api/spark/import`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ mnemonic })
                                 }),
-                                fetch(`${window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`}/api/wallet/import`, {
+                                fetch(`${window.MOOSH_API_URL || `${window.location.protocol}//127.0.0.1:3001`}/api/wallet/import`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ 
@@ -2543,12 +2559,12 @@
                 };
                 
                 const [sparkResponse, bitcoinResponse] = await Promise.all([
-                    fetchWithTimeout(`${window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`}/api/spark/import`, {
+                    fetchWithTimeout(`${window.MOOSH_API_URL || `${window.location.protocol}//127.0.0.1:3001`}/api/spark/import`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ mnemonic: mnemonicString })
                     }),
-                    fetchWithTimeout(`${window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`}/api/wallet/import`, {
+                    fetchWithTimeout(`${window.MOOSH_API_URL || `${window.location.protocol}//127.0.0.1:3001`}/api/wallet/import`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -2850,7 +2866,7 @@
             // Dynamically set API URL based on current host
             const currentHost = window.location.hostname;
             if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-                this.baseURL = window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`;
+                this.baseURL = window.MOOSH_API_URL || `${window.location.protocol}//127.0.0.1:3001`;
             } else {
                 // Use same host as the page (for WSL or remote access)
                 this.baseURL = window.MOOSH_API_URL || `${window.location.protocol}//${currentHost}:3001`;
@@ -3804,9 +3820,12 @@
             const currentPage = this.app.state.get('currentPage');
             const currentPageFull = this.app.state.get('currentPageFull');
             console.log('[Router] Navigating from', currentPage, 'to', pageId);
+            console.log('[Router] Routes available:', Array.from(this.routes.keys()));
             
             // Extract the page name without query parameters for routing
             const pageNameOnly = pageId.split('?')[0];
+            console.log('[Router] Page name only:', pageNameOnly);
+            console.log('[Router] Route exists for', pageNameOnly, ':', this.routes.has(pageNameOnly));
             
             // Force refresh option for same page navigation
             if (options.forceRefresh || pageId !== currentPageFull) {
@@ -3817,9 +3836,12 @@
                     currentPageFull: pageId,    // Store full page with params for reference
                     navigationHistory: history
                 });
+                console.log('[Router] State updated. New currentPage:', pageNameOnly);
             }
             
             window.location.hash = pageId;
+            console.log('[Router] Hash set to:', pageId);
+            console.log('[Router] Calling render()...');
             this.render();
         }
 
@@ -3840,11 +3862,24 @@
         }
 
         render() {
+            console.log('[Router.render] Starting render...');
+            
             // Check if wallet is locked before rendering any page
             const hasPassword = localStorage.getItem('walletPassword') !== null;
             const isUnlocked = sessionStorage.getItem('walletUnlocked') === 'true';
             
-            if (hasPassword && !isUnlocked) {
+            console.log('[Router.render] hasPassword:', hasPassword, 'isUnlocked:', isUnlocked);
+            
+            // Get current page
+            const currentPage = this.app.state.get('currentPage');
+            
+            // Skip lock check for seed generation flow pages
+            const seedFlowPages = ['generate-seed', 'confirm-seed', 'wallet-created'];
+            const isInSeedFlow = seedFlowPages.includes(currentPage);
+            
+            console.log('[Router.render] Current page:', currentPage, 'Is in seed flow:', isInSeedFlow);
+            
+            if (hasPassword && !isUnlocked && !isInSeedFlow) {
                 console.log('[Router] Wallet is locked, showing lock screen instead of page');
                 // Clear any existing lock screens
                 const existingLock = document.querySelector('.wallet-lock-overlay');
@@ -3857,24 +3892,35 @@
                 document.body.appendChild(lockElement);
                 return; // Don't render the requested page
             }
-            
-            const currentPage = this.app.state.get('currentPage');
             const PageClass = this.routes.get(currentPage);
             
             console.log('[Router] Rendering page:', currentPage);
             console.log('[Router] PageClass found:', !!PageClass);
+            console.log('[Router] Available routes:', Array.from(this.routes.keys()));
             
             if (PageClass) {
-                const content = document.querySelector('.cursor-content');
+                // Try multiple selectors to find content element
+                let content = document.querySelector('.cursor-content');
+                if (!content) {
+                    content = document.querySelector('.content-area');
+                }
+                if (!content) {
+                    content = document.getElementById('content');
+                }
+                
                 console.log('[Router] Content element found:', !!content);
+                console.log('[Router] Content element:', content);
+                console.log('[Router] Content element class:', content?.className);
                 
                 if (content) {
                     // Clear any existing page instance
                     if (this.currentPageInstance && this.currentPageInstance.destroy) {
+                        console.log('[Router] Destroying previous page instance');
                         this.currentPageInstance.destroy();
                     }
                     
                     content.innerHTML = '';
+                    console.log('[Router] Creating new page instance for:', currentPage);
                     const page = PageClass();
                     this.currentPageInstance = page;
                     console.log('[Router] Page instance created:', !!page);
@@ -3886,6 +3932,7 @@
                     }
                     
                     // Mount the page
+                    console.log('[Router] Mounting page...');
                     page.mount(content);
                     console.log('[Router] Page mounted, content children:', content.children.length);
                     
@@ -3908,7 +3955,30 @@
                         }
                     }, 100);
                 } else {
-                    console.error('[Router] Content element .cursor-content not found!');
+                    console.error('[Router] Content element not found! Attempting to create it...');
+                    
+                    // Try to find or create container
+                    let container = document.querySelector('.cursor-container');
+                    if (!container) {
+                        container = document.getElementById('app');
+                    }
+                    if (!container) {
+                        container = document.body;
+                    }
+                    
+                    // Create content area
+                    const newContent = $.div({ 
+                        id: 'content',
+                        className: 'content-area cursor-content'
+                    });
+                    container.appendChild(newContent);
+                    
+                    console.log('[Router] Created new content element, retrying render...');
+                    
+                    // Retry render with new content element
+                    setTimeout(() => {
+                        this.render();
+                    }, 0);
                 }
             } else {
                 console.error('[Router] No PageClass found for:', currentPage);
@@ -7859,7 +7929,27 @@
             }, [
                 new Button(this.app, {
                     text: "I've Written It Down",
-                    onClick: () => this.app.router.navigate('confirm-seed')
+                    onClick: () => {
+                        console.log('[GenerateSeedPage] Button clicked, navigating to confirm-seed');
+                        console.log('[GenerateSeedPage] Router exists:', !!this.app.router);
+                        console.log('[GenerateSeedPage] Navigate method exists:', !!this.app.router?.navigate);
+                        
+                        // Check if seed is properly stored
+                        const storedSeed = localStorage.getItem('generatedSeed');
+                        console.log('[GenerateSeedPage] Seed stored in localStorage:', !!storedSeed);
+                        console.log('[GenerateSeedPage] Seed value:', storedSeed);
+                        
+                        // Check current page state
+                        console.log('[GenerateSeedPage] Current page:', this.app.state.get('currentPage'));
+                        console.log('[GenerateSeedPage] Navigation history:', this.app.state.get('navigationHistory'));
+                        
+                        try {
+                            this.app.router.navigate('confirm-seed');
+                            console.log('[GenerateSeedPage] Navigate called successfully');
+                        } catch (error) {
+                            console.error('[GenerateSeedPage] Navigation error:', error);
+                        }
+                    }
                 }).render(),
                 new Button(this.app, {
                     text: 'Back Esc',

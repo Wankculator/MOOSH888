@@ -3,8 +3,8 @@
  * Transforms wallet data to match the MOOSH Wallet UI expectations
  */
 
-const { generateMnemonic, generateBitcoinWallet, generateSparkAddress, importWallet } = require('./walletService.js');
-const fetch = require('node-fetch');
+import { generateMnemonic, generateBitcoinWallet, generateSparkAddress, importWallet } from './walletService.js';
+import fetch from 'node-fetch';
 
 /**
  * Generate wallet in Spark-compatible format
@@ -269,7 +269,7 @@ function getTransactions(address) {
     };
 }
 
-module.exports = {
+export {
     generateSparkCompatibleWallet,
     importSparkCompatibleWallet,
     getBalance,
