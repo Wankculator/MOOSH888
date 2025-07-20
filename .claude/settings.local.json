@@ -94,7 +94,9 @@
       "Bash(cd:*)",
       "Bash(cd:*)",
       "Bash(cd:*)",
-      "Bash(./scripts/push-to-github.sh:*)"
+      "Bash(./scripts/push-to-github.sh:*)",
+      "Bash(git remote:*)",
+      "Bash(./scripts/setup-branch-protection.sh:*)"
     ],
     "deny": []
   }
