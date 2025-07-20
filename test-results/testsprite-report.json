@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-07-20T11:22:54.180Z",
+  "errors": [],
+  "warnings": [
+    {
+      "type": "Performance",
+      "issue": "Multiple fetchBitcoinPrice() calls: 9",
+      "fix": "Cache price data and update on interval"
+    }
+  ],
+  "passed": true
+}

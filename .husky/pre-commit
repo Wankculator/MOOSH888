@@ -1,6 +1,24 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+echo "🔍 Running MCP validations before commit..."
+
+# Run memory check
+echo "📊 Checking memory usage..."
+npm run mcp:memory || {
+    echo "❌ Memory check failed! Fix issues before committing."
+    echo "💡 Tip: Balance event listeners and consider code splitting"
+    exit 1
+}
+
+# Run security check
+echo "🔐 Running security scan..."
+npm run mcp:security || {
+    echo "❌ Security check failed! Fix critical issues before committing."
+    echo "💡 Tip: Replace Math.random with crypto.randomBytes"
+    exit 1
+}
+
 # Run linting
 npm run lint || {
     echo "❌ Linting failed. Please fix errors before committing."

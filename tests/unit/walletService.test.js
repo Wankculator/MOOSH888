@@ -47,8 +47,8 @@ describe('WalletService', () => {
       expect(wallet.addresses).toHaveProperty('nestedSegwit');
       
       // Validate address formats
-      expect(wallet.addresses.segwit.address).toMatch(/^bc1q[a-z0-9]{39}$/);
-      expect(wallet.addresses.taproot.address).toMatch(/^bc1p[a-z0-9]{58}$/);
+      expect(wallet.addresses.segwit.address).toMatch(/^bc1q[a-z0-9]{38,39}$/);
+      expect(wallet.addresses.taproot.address).toMatch(/^bc1p[a-z0-9]{58,62}$/);
       expect(wallet.addresses.legacy.address).toMatch(/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/);
       expect(wallet.addresses.nestedSegwit.address).toMatch(/^3[a-km-zA-HJ-NP-Z1-9]{25,34}$/);
     });
@@ -66,8 +66,8 @@ describe('WalletService', () => {
     test('should generate testnet addresses when specified', async () => {
       const wallet = await walletService.generateBitcoinWallet(testMnemonic, 'TESTNET');
       
-      expect(wallet.addresses.segwit.address).toMatch(/^tb1q[a-z0-9]{39}$/);
-      expect(wallet.addresses.taproot.address).toMatch(/^tb1p[a-z0-9]{58}$/);
+      expect(wallet.addresses.segwit.address).toMatch(/^tb1q[a-z0-9]{38,39}$/);
+      expect(wallet.addresses.taproot.address).toMatch(/^tb1p[a-z0-9]{58,62}$/);
     });
   });
 

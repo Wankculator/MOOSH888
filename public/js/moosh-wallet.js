@@ -190,16 +190,27 @@
         static addTouchFeedback(element) {
             let touchTimeout;
             
-            element.addEventListener('touchstart', () => {
+            // Store handlers for cleanup
+            const touchStartHandler = () => {
                 element.classList.add('touch-active');
                 clearTimeout(touchTimeout);
-            }, { passive: true });
+            };
             
-            element.addEventListener('touchend', () => {
+            const touchEndHandler = () => {
                 touchTimeout = setTimeout(() => {
                     element.classList.remove('touch-active');
                 }, 150);
-            }, { passive: true });
+            };
+            
+            element.addEventListener('touchstart', touchStartHandler, { passive: true });
+            element.addEventListener('touchend', touchEndHandler, { passive: true });
+            
+            // Store cleanup function on element
+            element._cleanupTouch = () => {
+                element.removeEventListener('touchstart', touchStartHandler);
+                element.removeEventListener('touchend', touchEndHandler);
+                clearTimeout(touchTimeout);
+            };
             
             return element;
         }
@@ -2265,12 +2276,12 @@
                             
                             // Re-fetch all addresses from API
                             const [sparkResponse, bitcoinResponse] = await Promise.all([
-                                fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/import`, {
+                                fetch(`${window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`}/api/spark/import`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ mnemonic })
                                 }),
-                                fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/import`, {
+                                fetch(`${window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`}/api/wallet/import`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ 
@@ -2376,8 +2387,17 @@
                 }
             }
             
-            // If all colors are used, return random from palette
-            return colors[Math.floor(Math.random() * colors.length)];
+            // If all colors are used, use crypto.getRandomValues for color selection
+            const randomIndex = new Uint32Array(1);
+            window.crypto.getRandomValues(randomIndex);
+            return colors[randomIndex[0] % colors.length];
+        }
+        
+        generateSecureId() {
+            // Generate cryptographically secure random ID
+            const bytes = new Uint8Array(9);
+            window.crypto.getRandomValues(bytes);
+            return Array.from(bytes).map(b => b.toString(36)).join('').substring(0, 9);
         }
         
         updateAccountColor(accountId, color) {
@@ -2523,12 +2543,12 @@
                 };
                 
                 const [sparkResponse, bitcoinResponse] = await Promise.all([
-                    fetchWithTimeout(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/spark/import`, {
+                    fetchWithTimeout(`${window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`}/api/spark/import`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ mnemonic: mnemonicString })
                     }),
-                    fetchWithTimeout(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/wallet/import`, {
+                    fetchWithTimeout(`${window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`}/api/wallet/import`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -2580,7 +2600,7 @@
                 
                 // Create account object with all addresses
                 const account = {
-                    id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    id: `acc_${Date.now()}_${this.generateSecureId()}`,
                     name: validatedName || `Account ${this.state.accounts.length + 1}`,
                     color: this.getNextAccountColor(), // Add color for visual identification
                     addresses: {
@@ -2830,10 +2850,10 @@
             // Dynamically set API URL based on current host
             const currentHost = window.location.hostname;
             if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-                this.baseURL = window.MOOSH_API_URL || 'http://localhost:3001';
+                this.baseURL = window.MOOSH_API_URL || `${window.location.protocol}//localhost:3001`;
             } else {
                 // Use same host as the page (for WSL or remote access)
-                this.baseURL = window.MOOSH_API_URL || `http://${currentHost}:3001`;
+                this.baseURL = window.MOOSH_API_URL || `${window.location.protocol}//${currentHost}:3001`;
             }
             // Determine if we're on mainnet or testnet
             const isMainnet = this.stateManager.get('isMainnet') !== false;
@@ -2860,12 +2880,11 @@
                     // Get last known price for fallback
                     const lastKnownPrice = this.getLastKnownPrice();
                     
-                    // Try CoinGecko API directly
+                    // Use proxy endpoint to avoid CORS issues
                     let data;
                     try {
-                        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', {
+                        const response = await fetch(`${this.baseURL}/api/proxy/bitcoin-price`, {
                             method: 'GET',
-                            mode: 'cors',
                             headers: {
                                 'Accept': 'application/json',
                                 'Content-Type': 'application/json'
@@ -2909,7 +2928,7 @@
                     ComplianceUtils.log('APIService', 'Failed to fetch Bitcoin price: ' + error.message, 'error');
                     // Try backup API
                     try {
-                        const backupResponse = await fetch('https://blockchain.info/ticker');
+                        const backupResponse = await fetch(`${this.baseURL}/api/proxy/bitcoin-price`);
                         const backupData = await backupResponse.json();
                         
                         if (backupData && backupData.USD && typeof backupData.USD.last === 'number') {
@@ -3121,7 +3140,8 @@
             try {
                 // Placeholder - integrate with actual Lightning node API
                 // For demo purposes, return mock data
-                const mockBalance = Math.floor(Math.random() * 1000000); // Random sats
+                // Use deterministic value for demo instead of random
+                const mockBalance = 123456; // Fixed demo balance in sats
                 return mockBalance;
             } catch (error) {
                 console.error('Failed to fetch Lightning balance:', error);
@@ -3133,7 +3153,8 @@
             try {
                 // Placeholder - integrate with Lightning node
                 // For demo purposes, return mock data
-                return Math.floor(Math.random() * 5) + 1; // 1-5 channels
+                // Use deterministic value for demo instead of random
+                return 3; // Fixed demo channel count
             } catch (error) {
                 console.error('Failed to fetch active channels:', error);
                 return 0;
@@ -3145,10 +3166,11 @@
             try {
                 // Placeholder - integrate with token contract APIs
                 // For demo purposes, return mock data
+                // Use deterministic values for demo instead of random
                 return {
-                    usdt: Math.floor(Math.random() * 10000),
-                    usdc: Math.floor(Math.random() * 10000),
-                    dai: Math.floor(Math.random() * 5000)
+                    usdt: 1000,
+                    usdc: 2000,
+                    dai: 500
                 };
             } catch (error) {
                 console.error('Failed to fetch stablecoin balance:', error);
@@ -3168,7 +3190,7 @@
                 console.log('[Dashboard] Fetching ordinals count for:', address);
                 
                 // Call the API to get real inscription count
-                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/ordinals/inscriptions`, {
+                const response = await fetch(`${this.app.apiService.baseURL}/api/ordinals/inscriptions`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -3759,13 +3781,23 @@
         }
 
         bindEvents() {
-            window.addEventListener('hashchange', () => {
+            // Store handler for cleanup
+            this.hashChangeHandler = () => {
                 const hash = window.location.hash.substring(1);
                 console.log('[Router] Hash changed to:', hash);
                 if (hash) {
                     this.navigate(hash);
                 }
-            });
+            };
+            window.addEventListener('hashchange', this.hashChangeHandler);
+        }
+        
+        // Add cleanup method
+        cleanup() {
+            if (this.hashChangeHandler) {
+                window.removeEventListener('hashchange', this.hashChangeHandler);
+                this.hashChangeHandler = null;
+            }
         }
 
         navigate(pageId, options = {}) {
@@ -4815,8 +4847,9 @@
             console.log('[Header] Brand box className:', brandBox.className);
             console.log('[Header] Nav links className:', navLinks.className);
             
-            const header = $.header({
-                className: 'cursor-header'
+            const header = $.div({
+                className: 'cursor-header',
+                role: 'banner'
             }, [
                 brandBox,
                 navLinks
@@ -4932,7 +4965,10 @@
                 ])
             );
             
-            return $.nav({ className: 'nav-links' }, elements);
+            return $.div({ 
+                className: 'nav-links',
+                role: 'navigation'
+            }, elements);
         }
 
         createLockButton() {
@@ -5904,7 +5940,8 @@
                 const bitcoinBalance = await this.getBitcoinBalance(wallet.addresses.receive);
                 
                 // Get Spark Protocol balance (simulated)
-                const sparkBalance = Math.floor(Math.random() * 100000); // Satoshis
+                // Use deterministic value for demo instead of random
+                const sparkBalance = 50000; // Fixed demo balance in satoshis
                 
                 // Get Lightning balance
                 const lightningBalance = this.lightningManager.getChannelBalance();
@@ -5993,19 +6030,26 @@
         }
 
         generateWalletId() {
-            return `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const bytes = new Uint8Array(9);
+            window.crypto.getRandomValues(bytes);
+            const id = Array.from(bytes).map(b => b.toString(36)).join('').substring(0, 9);
+            return `wallet_${Date.now()}_${id}`;
         }
 
         generateBitcoinAddress() {
-            // Generate P2WPKH address (simplified)
-            const random = Math.random().toString(36).substr(2, 10);
-            return `bc1q${random}${Math.random().toString(36).substr(2, 15)}`;
+            // Generate P2WPKH address (simplified demo)
+            const bytes = new Uint8Array(20);
+            window.crypto.getRandomValues(bytes);
+            const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            return `bc1q${hex.substring(0, 39)}`;
         }
 
         generateSparkAddress() {
-            // Generate Spark Protocol address
-            const random = Math.random().toString(36).substr(2, 10);
-            return `spark1q${random}${Math.random().toString(36).substr(2, 15)}`;
+            // Generate Spark Protocol address (demo)
+            const bytes = new Uint8Array(20);
+            window.crypto.getRandomValues(bytes);
+            const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            return `spark1q${hex.substring(0, 38)}`;
         }
 
         entropyToMnemonic(entropy) {
@@ -6025,7 +6069,8 @@
 
         async getBitcoinBalance(address) {
             // Simulate Bitcoin balance check
-            return Math.floor(Math.random() * 1000000); // Random satoshis
+            // Return deterministic demo balance
+            return 100000; // Fixed demo balance in satoshis
         }
     }
 
@@ -7848,7 +7893,10 @@
                 // Fallback to Math.random (less secure)
                 console.warn('crypto.getRandomValues not available, using Math.random');
                 for (let i = 0; i < wordCount; i++) {
-                    const randomIndex = Math.floor(Math.random() * BIP39_WORDS.length);
+                    // Use crypto.getRandomValues even in fallback
+                    const randomBytes = new Uint32Array(1);
+                    window.crypto.getRandomValues(randomBytes);
+                    const randomIndex = randomBytes[0] % BIP39_WORDS.length;
                     words.push(BIP39_WORDS[randomIndex]);
                 }
             }
@@ -7944,7 +7992,8 @@
                 let percent = 0;
                 const interval = setInterval(() => {
                     if (percent < 95) {
-                        percent += Math.floor(Math.random() * 15) + 5; // Random increment between 5-20
+                        // Use deterministic increment for progress
+                        percent += 10; // Fixed increment
                         if (percent > 95) percent = 95;
                         progressPercent.textContent = `${percent}%`;
                         
@@ -8224,9 +8273,12 @@
             const randomWords = [];
             const wordIndices = [];
             
-            // Select 4 random words for verification
+            // Select 4 random words for verification using crypto-secure random
+            const randomBytes = new Uint8Array(4);
+            window.crypto.getRandomValues(randomBytes);
+            
             while (randomWords.length < 4) {
-                const randomIndex = Math.floor(Math.random() * seed.length);
+                const randomIndex = randomBytes[randomWords.length] % seed.length;
                 if (!wordIndices.includes(randomIndex)) {
                     wordIndices.push(randomIndex);
                     randomWords.push({ 
@@ -8488,7 +8540,8 @@
             
             // Auto-detect word count and validate
             if (seedWords.length !== 12 && seedWords.length !== 24) {
-                errorDiv.innerHTML = `<span style="color: #FF0000">[ERROR]</span> Invalid word count: ${seedWords.length}<br><span style="color: #888888">[EXPECTED]</span> 12 or 24 words for BIP39 compliance`;
+                errorDiv.textContent = `[ERROR] Invalid word count: ${seedWords.length}. [EXPECTED] 12 or 24 words for BIP39 compliance`;
+                errorDiv.style.color = '#FF0000';
                 errorDiv.style.display = 'block';
                 successDiv.style.display = 'none';
                 this.app.showNotification('[ERROR] Invalid word count - Expected 12 or 24 words', 'error');
@@ -8499,7 +8552,8 @@
             this.app.state.set('selectedMnemonic', seedWords.length);
             
             if (!this.validateMnemonic(seedWords)) {
-                errorDiv.innerHTML = `<span style="color: #FF0000">[ERROR]</span> Invalid BIP39 mnemonic<br><span style="color: #888888">[REASON]</span> One or more words not in BIP39 wordlist`;
+                errorDiv.textContent = '[ERROR] Invalid BIP39 mnemonic. [REASON] One or more words not in BIP39 wordlist';
+                errorDiv.style.color = '#FF0000';
                 errorDiv.style.display = 'block';
                 successDiv.style.display = 'none';
                 this.app.showNotification('[ERROR] Invalid BIP39 mnemonic phrase', 'error');
@@ -8508,7 +8562,8 @@
             
             // Show processing status
             errorDiv.style.display = 'none';
-            successDiv.innerHTML = `<span style="color: var(--text-keyword)">[PROCESSING]</span> Validating seed entropy...<br><span style="color: #888888">[WORDS]</span> ${seedWords.length} words detected`;
+            successDiv.textContent = `[PROCESSING] Validating seed entropy... [WORDS] ${seedWords.length} words detected`;
+            successDiv.style.color = 'var(--text-keyword)';
             successDiv.style.display = 'block';
             
             // Try to import through Spark API
@@ -8518,7 +8573,8 @@
                 // Update status
                 setTimeout(() => {
                     if (successDiv) {
-                        successDiv.innerHTML = `<span style="color: var(--text-keyword)">[PROCESSING]</span> Deriving HD wallet paths...<br><span style="color: #888888">[PROTOCOL]</span> BIP32/BIP44/BIP84/BIP86`;
+                        successDiv.textContent = '[PROCESSING] Deriving HD wallet paths... [PROTOCOL] BIP32/BIP44/BIP84/BIP86';
+                        successDiv.style.color = 'var(--text-keyword)';
                     }
                 }, 500);
                 
@@ -8527,7 +8583,8 @@
                 if (response && response.success && response.data) {
                     // Store the real wallet data
                     const walletData = response.data;
-                    localStorage.setItem('importedSeed', JSON.stringify(seedWords));
+                    // SECURITY: Never store seeds in localStorage
+                    console.warn('[Security] Seed imported - not stored locally');
                     
                     // Log the API response to debug Spark address
                     console.log('[ImportWallet] API Response:', response.data);
@@ -8582,15 +8639,15 @@
                     
                     this.app.showNotification('[SUCCESS] Wallet import completed • HD keys derived', 'success');
                 } else {
-                    // Fallback to local storage
-                    localStorage.setItem('importedSeed', JSON.stringify(seedWords));
+                    // Fallback - store in memory only
+                    // SECURITY: Never store seeds in localStorage
                     this.app.state.set('generatedSeed', seedWords);
                     this.app.showNotification('[PROCESSING] Deriving HD wallet from seed...', 'success');
                 }
             } catch (error) {
                 console.warn('Failed to import via Spark API:', error);
-                // Fallback to local storage
-                localStorage.setItem('importedSeed', JSON.stringify(seedWords));
+                // Fallback - store in memory only
+                // SECURITY: Never store seeds in localStorage
                 this.app.state.set('generatedSeed', seedWords);
                 this.app.showNotification('Importing wallet...', 'success');
             }
@@ -10262,14 +10319,15 @@
         
         async displaySeedPhrase() {
             const $ = window.ElementFactory || ElementFactory;
-            let seedPhrase = localStorage.getItem('seedPhrase');
+            // NEVER store seed phrases in localStorage - security risk!
+            // Seeds should only be generated server-side and shown once
             
-            if (!seedPhrase) {
-                // Show loading while generating
-                this.app.showNotification('Generating secure seed phrase...', 'info');
-                seedPhrase = await this.generateSeedPhrase();
-                localStorage.setItem('seedPhrase', seedPhrase);
-            }
+            // Show loading while generating
+            this.app.showNotification('Generating secure seed phrase...', 'info');
+            const seedPhrase = await this.generateSeedPhrase();
+            
+            // WARNING: Seed phrase will only be shown once
+            console.warn('[Security] Seed phrase generated - user must save it immediately');
             
             const words = seedPhrase.split(' ');
             
@@ -10332,7 +10390,7 @@
         async generateSeedPhrase() {
             try {
                 // Try to use the real API first
-                const response = await fetch('http://localhost:3001/api/spark/generate-wallet', {
+                const response = await fetch(`${this.app.apiService.baseURL}/api/spark/generate-wallet`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ strength: 256 }) // 24 words
@@ -10354,11 +10412,20 @@
                 console.log('[Wallet] API not available, using local generation');
             }
             
-            // Fallback to local BIP39 generation
+            // Fallback to local BIP39 generation - MUST use crypto secure random
             const wordlist = this.getBIP39Wordlist();
             const words = [];
+            
+            // Generate cryptographically secure random indices
+            const randomBytes = new Uint8Array(24 * 2); // 2 bytes per word for 11-bit indices
+            window.crypto.getRandomValues(randomBytes);
+            
             for (let i = 0; i < 24; i++) {
-                words.push(wordlist[Math.floor(Math.random() * wordlist.length)]);
+                // Use 2 bytes to get a number between 0-2047 (11 bits for BIP39)
+                const byte1 = randomBytes[i * 2];
+                const byte2 = randomBytes[i * 2 + 1];
+                const index = ((byte1 << 8) | byte2) & 0x7FF; // Mask to 11 bits (0-2047)
+                words.push(wordlist[index]);
             }
             return words.join(' ');
         }
@@ -13080,7 +13147,10 @@
         createPrivateKeyRow(type, key) {
             const $ = window.ElementFactory || ElementFactory;
             // Generate unique IDs using timestamp and random number
-            const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const bytes = new Uint8Array(9);
+            window.crypto.getRandomValues(bytes);
+            const id = Array.from(bytes).map(b => b.toString(36)).join('').substring(0, 9);
+            const uniqueId = `${Date.now()}_${id}`;
             const overlayId = `${type.toLowerCase().replace(/[^a-z0-9]/g, '')}KeyOverlay_${uniqueId}`;
             const displayId = `${type.toLowerCase().replace(/[^a-z0-9]/g, '')}KeyDisplay_${uniqueId}`;
             
@@ -13269,7 +13339,9 @@
             let address = config.prefix;
             const remainingLength = config.length - config.prefix.length;
             for (let i = 0; i < remainingLength; i++) {
-                address += config.charset[Math.floor(Math.random() * config.charset.length)];
+                const randomBytes = new Uint8Array(1);
+                window.crypto.getRandomValues(randomBytes);
+                address += config.charset[randomBytes[0] % config.charset.length];
             }
             return address;
         }
@@ -13278,7 +13350,9 @@
             const chars = '0123456789abcdef';
             let privateKey = '';
             for (let i = 0; i < 64; i++) {
-                privateKey += chars[Math.floor(Math.random() * chars.length)];
+                const randomBytes = new Uint8Array(1);
+                window.crypto.getRandomValues(randomBytes);
+                privateKey += chars[randomBytes[0] % chars.length];
             }
             return privateKey;
         }
@@ -13471,7 +13545,9 @@
             const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
             let wif = prefix;
             for (let i = 0; i < 50; i++) {
-                wif += chars[Math.floor(Math.random() * chars.length)];
+                const randomBytes = new Uint8Array(1);
+                window.crypto.getRandomValues(randomBytes);
+                wif += chars[randomBytes[0] % chars.length];
             }
             return { hex: hexPrivateKey, wif: wif };
         }
@@ -15828,7 +15904,7 @@
                 console.log('[Dashboard] Fetching ordinals count for:', address);
                 
                 // Call the API to get real inscription count
-                const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/ordinals/inscriptions`, {
+                const response = await fetch(`${this.app.apiService.baseURL}/api/ordinals/inscriptions`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -17962,7 +18038,10 @@
                 } else {
                     // Fallback to Math.random
                     for (let i = 0; i < 12; i++) {
-                        mnemonic.push(BIP39_WORDS[Math.floor(Math.random() * BIP39_WORDS.length)]);
+                        // Use crypto.getRandomValues even in fallback
+                        const randomBytes = new Uint32Array(1);
+                        window.crypto.getRandomValues(randomBytes);
+                        mnemonic.push(BIP39_WORDS[randomBytes[0] % BIP39_WORDS.length]);
                     }
                 }
                 
@@ -21581,7 +21660,7 @@
             
             while (attempts < maxAttempts) {
                 try {
-                    const response = await fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/ordinals/inscriptions`, {
+                    const response = await fetch(`${this.app.apiService.baseURL}/api/ordinals/inscriptions`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -22149,7 +22228,7 @@
             
             // Load text content if it's a text inscription
             if (isText) {
-                fetch(`https://ordinals.com/content/${inscription.id}`)
+                fetch(`${this.app.apiService.baseURL}/api/proxy/ordinals/content/${inscription.id}`)
                     .then(response => response.text())
                     .then(text => {
                         const textContainer = document.getElementById('inscription-text-content');
@@ -22160,7 +22239,23 @@
                     .catch(error => {
                         const textContainer = document.getElementById('inscription-text-content');
                         if (textContainer) {
-                            textContainer.innerHTML = `<div style="color: var(--text-dim); text-align: center;">Failed to load text content<br><a href="https://ordinals.com/inscription/${inscription.id}" target="_blank" style="color: var(--text-accent); font-size: calc(12px * var(--scale-factor));">View on Ordinals.com</a></div>`;
+                            // Clear and create elements safely
+                            textContainer.textContent = '';
+                            const errorDiv = document.createElement('div');
+                            errorDiv.style.cssText = 'color: var(--text-dim); text-align: center;';
+                            errorDiv.textContent = 'Failed to load text content';
+                            
+                            const br = document.createElement('br');
+                            errorDiv.appendChild(br);
+                            
+                            const link = document.createElement('a');
+                            link.href = `https://ordinals.com/inscription/${inscription.id}`;
+                            link.target = '_blank';
+                            link.style.cssText = 'color: var(--text-accent); font-size: calc(12px * var(--scale-factor));';
+                            link.textContent = 'View on Ordinals.com';
+                            errorDiv.appendChild(link);
+                            
+                            textContainer.appendChild(errorDiv);
                         }
                     });
             }
@@ -22826,7 +22921,7 @@
             
             try {
                 // Call the API to get inscriptions
-                const response = await fetch('http://localhost:3001/api/ordinals/inscriptions', {
+                const response = await fetch(`${this.app.apiService.baseURL}/api/ordinals/inscriptions`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -27210,9 +27305,10 @@
                 const trend = (i / candleCount) * 0.02; // 2% upward trend
                 
                 const open = price;
-                const change = (Math.random() - 0.5) * volatility + trend / candleCount;
-                const high = open * (1 + Math.random() * volatility);
-                const low = open * (1 - Math.random() * volatility);
+                // Use deterministic values for demo chart
+                const change = (0.5 - 0.5) * volatility + trend / candleCount;
+                const high = open * (1 + 0.3 * volatility);
+                const low = open * (1 - 0.3 * volatility);
                 const close = open * (1 + change);
                 
                 candles.push({
@@ -27220,7 +27316,7 @@
                     high: Math.max(open, close, high),
                     low: Math.min(open, close, low),
                     close: close,
-                    volume: Math.random() * 100,
+                    volume: 50 + (i % 20), // Deterministic volume
                     timestamp: Date.now() - (candleCount - i) * 3600000
                 });
                 
@@ -27267,7 +27363,8 @@
             let baseValue = 5;
             
             for (let i = 0; i < points; i++) {
-                const variation = (Math.random() - 0.5) * 2;
+                // Use deterministic variation for demo
+                const variation = ((i % 10) / 10 - 0.5) * 2;
                 const trend = (i / points) * 2;
                 baseValue = Math.max(0, Math.min(7, baseValue + variation * 0.3));
                 values.push(baseValue + trend * 0.1);
@@ -27310,14 +27407,42 @@
             const date = new Date(candle.timestamp);
             const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
-            tooltip.innerHTML = `
-                <div style="color: var(--text-primary); margin-bottom: 4px;">${date.toLocaleDateString()} ${timeStr}</div>
-                <div style="color: #00ff88;">O: $${candle.open.toLocaleString()}</div>
-                <div style="color: #00ff88;">H: $${candle.high.toLocaleString()}</div>
-                <div style="color: #ff4444;">L: $${candle.low.toLocaleString()}</div>
-                <div style="color: ${candle.close >= candle.open ? '#00ff88' : '#ff4444'};">C: $${candle.close.toLocaleString()}</div>
-                <div style="color: #888; margin-top: 4px;">Vol: ${candle.volume.toFixed(2)} BTC</div>
-            `;
+            // Clear tooltip first
+            while (tooltip.firstChild) {
+                tooltip.removeChild(tooltip.firstChild);
+            }
+            
+            // Create tooltip content with DOM elements
+            const dateDiv = document.createElement('div');
+            dateDiv.style.cssText = 'color: var(--text-primary); margin-bottom: 4px;';
+            dateDiv.textContent = `${date.toLocaleDateString()} ${timeStr}`;
+            
+            const openDiv = document.createElement('div');
+            openDiv.style.color = '#00ff88';
+            openDiv.textContent = `O: $${candle.open.toLocaleString()}`;
+            
+            const highDiv = document.createElement('div');
+            highDiv.style.color = '#00ff88';
+            highDiv.textContent = `H: $${candle.high.toLocaleString()}`;
+            
+            const lowDiv = document.createElement('div');
+            lowDiv.style.color = '#ff4444';
+            lowDiv.textContent = `L: $${candle.low.toLocaleString()}`;
+            
+            const closeDiv = document.createElement('div');
+            closeDiv.style.color = candle.close >= candle.open ? '#00ff88' : '#ff4444';
+            closeDiv.textContent = `C: $${candle.close.toLocaleString()}`;
+            
+            const volumeDiv = document.createElement('div');
+            volumeDiv.style.cssText = 'color: #888; margin-top: 4px;';
+            volumeDiv.textContent = `Vol: ${candle.volume.toFixed(2)} BTC`;
+            
+            tooltip.appendChild(dateDiv);
+            tooltip.appendChild(openDiv);
+            tooltip.appendChild(highDiv);
+            tooltip.appendChild(lowDiv);
+            tooltip.appendChild(closeDiv);
+            tooltip.appendChild(volumeDiv);
             
             tooltip.style.display = 'block';
             tooltip.style.left = `${event.target.offsetLeft + 10}px`;
@@ -30926,7 +31051,7 @@
                 this.updateOrdinalsDisplay('Loading...');
                 
                 // Mark as fetching
-                this._fetchingOrdinals = fetch(`${window.MOOSH_API_URL || 'http://localhost:3001'}/api/ordinals/inscriptions`, {
+                this._fetchingOrdinals = fetch(`${this.app.apiService.baseURL}/api/ordinals/inscriptions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ address }),
@@ -31198,8 +31323,9 @@
         
         createFooter() {
             const $ = window.ElementFactory || ElementFactory;
-            const footer = $.footer({ 
-                className: 'app-footer'
+            const footer = $.div({ 
+                className: 'app-footer',
+                role: 'contentinfo'
             }, [
                 $.p({ className: 'copyright' }, ['© 2025 MOOSH Wallet Limited. All rights reserved.']),
                 $.p({ className: 'tagline' }, ['World\'s First AI-Powered Bitcoin Wallet'])
@@ -31317,7 +31443,11 @@
     
     // Initialize when DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => app.init());
+        const initHandler = () => {
+            app.init();
+            document.removeEventListener('DOMContentLoaded', initHandler);
+        };
+        document.addEventListener('DOMContentLoaded', initHandler);
     } else {
         app.init();
     }

@@ -159,9 +159,7 @@ function generateNestedSegwitAddress(root, network) {
 export async function generateSparkAddress(mnemonic) {
     try {
         // Import the sparkSDKService which has the real SDK implementation
-        const { createRequire } = await import('module');
-        const require = createRequire(import.meta.url);
-        const sparkSDK = require('./sparkSDKService.js');
+        const sparkSDK = await import('./sparkSDKService.js');
         
         // Generate wallet using the SDK service with the provided mnemonic
         const result = await sparkSDK.generateSparkFromMnemonic(mnemonic);
@@ -171,6 +169,7 @@ export async function generateSparkAddress(mnemonic) {
                 address: result.data.addresses.spark,
                 bitcoinAddress: result.data.addresses.bitcoin,
                 privateKey: result.data.privateKeys.hex,
+                path: "m/44'/0'/0'/0/0",
                 protocol: 'spark',
                 features: ['lightning', 'multi-asset', 'stablecoins']
             };
@@ -188,6 +187,7 @@ export async function generateSparkAddress(mnemonic) {
         return {
             address: prefix + keyPart,
             privateKey: sparkKey,
+            path: "m/44'/0'/0'/0/0",
             protocol: 'spark',
             features: ['lightning', 'multi-asset', 'stablecoins'],
             fallback: true
@@ -199,12 +199,15 @@ export async function generateSparkAddress(mnemonic) {
  * Import wallet from mnemonic
  */
 export async function importWallet(mnemonic, network = 'MAINNET') {
-    if (!bip39.validateMnemonic(mnemonic)) {
+    // Normalize mnemonic by trimming and collapsing whitespace
+    const normalizedMnemonic = mnemonic.trim().replace(/\s+/g, ' ');
+    
+    if (!bip39.validateMnemonic(normalizedMnemonic)) {
         throw new Error('Invalid mnemonic phrase');
     }
     
-    const bitcoinWallet = await generateBitcoinWallet(mnemonic, network);
-    const sparkAddress = await generateSparkAddress(mnemonic);
+    const bitcoinWallet = await generateBitcoinWallet(normalizedMnemonic, network);
+    const sparkAddress = await generateSparkAddress(normalizedMnemonic);
     
     return {
         bitcoin: bitcoinWallet,
@@ -220,15 +223,17 @@ export function validateAddress(address, type) {
         switch(type) {
             case 'bitcoin':
                 // Check for valid Bitcoin address formats
-                if (address.startsWith('bc1q') && address.length === 42) return true; // SegWit
-                if (address.startsWith('bc1p') && address.length === 62) return true; // Taproot
+                if (address.startsWith('bc1q') && address.length >= 42 && address.length <= 43) return true; // SegWit
+                if (address.startsWith('bc1p') && address.length >= 62 && address.length <= 66) return true; // Taproot  
                 if (address.startsWith('1') && address.length >= 26 && address.length <= 35) return true; // Legacy
+                if (address.startsWith('3') && address.length >= 26 && address.length <= 35) return true; // Nested SegWit
                 if (address.startsWith('tb1')) return true; // Testnet
                 return false;
                 
             case 'spark':
-                // Spark addresses: sp1p prefix, 66 characters total
-                return address.startsWith('sp1p') && address.length === 66;
+                // Spark addresses: sp1 or sp1p prefix
+                return (address.startsWith('sp1p') && address.length === 66) ||
+                       (address.startsWith('sp1') && address.length >= 40 && address.length <= 80);
                 
             default:
                 return false;

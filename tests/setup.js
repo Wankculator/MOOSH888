@@ -3,7 +3,7 @@
  * Configures test environment and global mocks
  */
 
-import { beforeAll, afterAll, afterEach } from 'vitest';
+import { beforeAll, afterAll, afterEach, vi } from 'vitest';
 import crypto from 'crypto';
 
 // Polyfill for Web Crypto API in Node.js environment

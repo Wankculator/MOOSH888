@@ -898,8 +898,8 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`
 🚀 MOOSH Wallet API Server
 ==========================
-🌐 URL: http://localhost:${PORT}
-📡 Health: http://localhost:${PORT}/health
+🌐 URL: https://localhost:${PORT}
+📡 Health: https://localhost:${PORT}/health
 🔧 Endpoints:
    POST /api/wallet/generate
    POST /api/wallet/import

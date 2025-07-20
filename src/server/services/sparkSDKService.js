@@ -3,22 +3,42 @@
  * Generates real Spark addresses using the official SDK or bech32m fallback
  */
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 // Try to load the SDK dependencies
 let SparkWallet, bip39, bip32, ecc;
 let sdkAvailable = false;
 
+// Import modules synchronously
 try {
-    const sparkSDK = require('@buildonspark/spark-sdk');
-    SparkWallet = sparkSDK.SparkWallet;
-    bip39 = require('bip39');
-    bip32 = require('bip32');
-    ecc = require('tiny-secp256k1');
-    sdkAvailable = true;
-    console.log('✅ Spark SDK loaded successfully');
+    // Use dynamic imports but without IIFE to avoid timing issues
+    SparkWallet = null; // Will be loaded on demand
+    bip39 = null;
+    bip32 = null;
+    ecc = null;
 } catch (error) {
-    console.log('⚠️ Spark SDK not available, using enhanced fallback');
+    console.log('⚠️ Module initialization deferred');
+}
+
+// Load modules on first use
+async function ensureModulesLoaded() {
+    if (!bip39) {
+        try {
+            const sparkSDK = await import('@buildonspark/spark-sdk');
+            SparkWallet = sparkSDK.SparkWallet;
+            const bip39Module = await import('bip39');
+            bip39 = bip39Module.default || bip39Module;
+            const bip32Module = await import('bip32');
+            bip32 = bip32Module.default || bip32Module;
+            const eccModule = await import('tiny-secp256k1');
+            ecc = eccModule.default || eccModule;
+            sdkAvailable = true;
+            console.log('✅ Spark SDK loaded successfully');
+        } catch (error) {
+            console.log('⚠️ Spark SDK not available, using enhanced fallback');
+            sdkAvailable = false;
+        }
+    }
 }
 
 // Bech32m constants
@@ -234,6 +254,9 @@ function mnemonicToSeed(mnemonic, passphrase = '') {
  */
 async function generateRealSparkWallet(network = 'MAINNET', existingMnemonic = null) {
     try {
+        // Ensure modules are loaded
+        await ensureModulesLoaded();
+        
         // Try SDK first if available
         if (sdkAvailable && SparkWallet) {
             console.log('🚀 Using official Spark SDK...');
@@ -318,8 +341,9 @@ async function generateRealSparkWallet(network = 'MAINNET', existingMnemonic = n
         const isTestnet = network === 'TESTNET';
         const btcPrefix = isTestnet ? 'tb' : 'bc';
         
-        // 50% chance for Taproot (bc1p) vs SegWit (bc1q)
-        const isTaproot = Math.random() > 0.5;
+        // Deterministically choose Taproot vs SegWit based on private key
+        // Use first byte of private key to determine address type
+        const isTaproot = privateKey[0] > 127; // ~50% distribution
         let bitcoinAddress;
         
         if (isTaproot) {
@@ -412,6 +436,9 @@ async function generateRealSparkWallet(network = 'MAINNET', existingMnemonic = n
  */
 async function importSparkWallet(mnemonic, network = 'MAINNET') {
     try {
+        // Ensure modules are loaded
+        await ensureModulesLoaded();
+        
         const words = mnemonic.trim().split(/\s+/);
         if (words.length !== 12 && words.length !== 24) {
             throw new Error('Invalid mnemonic length. Must be 12 or 24 words.');
@@ -501,8 +528,8 @@ async function generateSparkFromMnemonic(mnemonic) {
     return await generateRealSparkWallet('MAINNET', mnemonic);
 }
 
-module.exports = {
-    generateSparkWallet: generateRealSparkWallet,
-    importSparkWallet: importSparkWallet,
-    generateSparkFromMnemonic: generateSparkFromMnemonic
+export {
+    generateRealSparkWallet as generateSparkWallet,
+    importSparkWallet,
+    generateSparkFromMnemonic
 };
