@@ -126,16 +126,9 @@
     </style>
 </head>
 <body>
-    <!-- Main app container -->
-    <div id="app">
-        <!-- Loading screen (shown until app initializes) -->
-        <div class="loading-screen">
-            <div class="loading-content">
-                <h1 class="loading-title">MOOSH WALLET</h1>
-                <div class="loading-spinner"></div>
-                <p class="loading-text">Initializing secure wallet...</p>
-            </div>
-        </div>
+    <!-- Loading screen for original wallet -->
+    <div id="loading-screen">
+        <div class="loader"></div>
     </div>
     
     <!-- No JavaScript warning -->
@@ -147,86 +140,7 @@
         </div>
     </noscript>
     
-    <!-- Module imports -->
-    <script type="module">
-        // Import and initialize the app
-        import MOOSHWalletApp from './js/app.js';
-        
-        // Handle module loading errors
-        window.addEventListener('error', (event) => {
-            if (event.error && event.error.message && event.error.message.includes('module')) {
-                console.error('Module loading error:', event.error);
-                
-                // Show error screen
-                const app = document.getElementById('app');
-                app.innerHTML = `
-                    <div class="error-screen">
-                        <div class="error-content">
-                            <h1 class="error-title">Loading Error</h1>
-                            <p class="error-message">
-                                Failed to load application modules.<br>
-                                Please ensure you're using a modern browser with ES6 module support.
-                            </p>
-                            <button class="btn btn-primary" onclick="window.location.reload()">
-                                Reload App
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-        });
-        
-        // Check for module support
-        if (!('noModule' in HTMLScriptElement.prototype)) {
-            // Browser doesn't support modules
-            const app = document.getElementById('app');
-            app.innerHTML = `
-                <div class="error-screen">
-                    <div class="error-content">
-                        <h1 class="error-title">Browser Not Supported</h1>
-                        <p class="error-message">
-                            Your browser doesn't support modern JavaScript modules.<br>
-                            Please update to a newer version of Chrome, Firefox, Safari, or Edge.
-                        </p>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Add option to use old wallet
-        window.useOldWallet = function() {
-            console.log('Loading original moosh-wallet.js...');
-            const script = document.createElement('script');
-            script.src = '/js/moosh-wallet.js';
-            script.onload = () => {
-                console.log('Original wallet loaded');
-                window.location.reload();
-            };
-            document.body.appendChild(script);
-        };
-    </script>
-    
-    <!-- Fallback for older browsers -->
-    <script nomodule>
-        // Show upgrade message for browsers without module support
-        document.getElementById('app').innerHTML = `
-            <div class="error-screen">
-                <div class="error-content">
-                    <h1 class="error-title">Browser Update Required</h1>
-                    <p class="error-message">
-                        MOOSH Wallet requires a modern browser with ES6 module support.<br>
-                        Please update your browser to use this application.
-                    </p>
-                    <p class="error-message">
-                        Supported browsers:<br>
-                        • Chrome 61+<br>
-                        • Firefox 60+<br>
-                        • Safari 11+<br>
-                        • Edge 16+
-                    </p>
-                </div>
-            </div>
-        `;
-    </script>
+    <!-- Load the original MOOSH Wallet JavaScript -->
+    <script src="/js/moosh-wallet.js"></script>
 </body>
 </html>
