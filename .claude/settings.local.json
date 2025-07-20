@@ -92,7 +92,9 @@
       "Bash(cd:*)",
       "Bash(cd:*)",
       "Bash(cd:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(cd:*)",
+      "Bash(./scripts/push-to-github.sh:*)"
     ],
     "deny": []
   }
