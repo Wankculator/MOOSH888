@@ -4,6 +4,7 @@ about: Create a report to help us improve
 title: '[BUG] '
 labels: bug
 assignees: ''
+
 ---
 
 **Describe the bug**
@@ -22,16 +23,10 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Environment (please complete the following information):**
- - OS: [e.g. Windows 11, macOS 14, Ubuntu 22.04]
- - Browser: [e.g. Chrome 120, Firefox 121]
- - Node.js version: [e.g. 20.10.0]
- - MOOSH Wallet version: [e.g. 2.0.0]
+**Environment:**
+ - OS: [e.g. Windows 11]
+ - Browser: [e.g. chrome, safari]
+ - Version: [e.g. 22]
 
 **Additional context**
 Add any other context about the problem here.
-
-**Logs**
-```
-Please paste any relevant error logs here
-```
