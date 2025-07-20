@@ -64,9 +64,13 @@ export class APIService {
         const fetchOptions = {
             method,
             headers: defaultHeaders,
-            signal: combinedSignal,
-            credentials: 'include' // For session cookies
+            signal: combinedSignal
         };
+        
+        // Only include credentials for same-origin requests
+        if (url.startsWith(this.baseURL)) {
+            fetchOptions.credentials = 'include';
+        }
 
         if (body && method !== 'GET') {
             fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);

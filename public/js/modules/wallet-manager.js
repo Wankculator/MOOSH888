@@ -449,6 +449,13 @@ export class WalletManager {
     }
 
     /**
+     * Check if any wallet exists
+     */
+    hasWallet() {
+        return this.wallets.length > 0;
+    }
+
+    /**
      * Get wallet statistics
      */
     getStatistics() {

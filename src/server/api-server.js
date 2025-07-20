@@ -12,8 +12,39 @@ import { generateSparkCompatibleWallet, importSparkCompatibleWallet, getBalance,
 const app = express();
 const PORT = 3001;
 
+// CORS configuration
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        
+        // Allow localhost ports for development
+        const allowedOrigins = [
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'http://localhost:3333',
+            'http://localhost:5173',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:3001',
+            'http://127.0.0.1:3333',
+            'http://127.0.0.1:5173'
+        ];
+        
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            // In production, replace with your domain
+            callback(null, true); // For now, allow all origins
+        }
+    },
+    credentials: true, // Allow cookies and credentials
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Content-Length', 'X-Request-Id']
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Health check endpoint
@@ -23,6 +54,37 @@ app.get('/health', (req, res) => {
         service: 'MOOSH Wallet API',
         version: '1.0.0',
         timestamp: new Date().toISOString()
+    });
+});
+
+// API health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        service: 'MOOSH Wallet API',
+        version: '1.0.0',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Session endpoints
+app.get('/api/session/check', (req, res) => {
+    res.json({
+        active: false,
+        walletData: null
+    });
+});
+
+app.post('/api/session/create', (req, res) => {
+    res.json({
+        success: true,
+        sessionId: Date.now().toString()
+    });
+});
+
+app.post('/api/session/destroy', (req, res) => {
+    res.json({
+        success: true
     });
 });
 

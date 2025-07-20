@@ -284,6 +284,11 @@ class MOOSHWalletApp {
      */
     showHomePage() {
         const content = document.getElementById('app-content');
+        if (!content) {
+            console.error('app-content element not found');
+            return;
+        }
+        
         content.innerHTML = '';
 
         const homePage = $.div({ className: 'page home-page' }, [
@@ -473,6 +478,12 @@ class MOOSHWalletApp {
         
         const message = error.message || constants.ERROR_MESSAGES.API_ERROR;
         
+        const toastsContainer = document.getElementById('app-toasts');
+        if (!toastsContainer) {
+            console.error('app-toasts element not found');
+            return;
+        }
+        
         const toast = new Toast({
             type: 'error',
             title: 'Error',
@@ -480,7 +491,7 @@ class MOOSHWalletApp {
             duration: 5000
         });
 
-        document.getElementById('app-toasts').appendChild(toast.render());
+        toastsContainer.appendChild(toast.render());
         toast.mount();
     }
 
