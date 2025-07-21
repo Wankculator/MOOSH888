@@ -639,6 +639,118 @@ fix(security): replace Math.random with crypto.getRandomValues
 
 ---
 
+## 📝 DOCUMENTATION STRATEGY
+
+### Graduated Documentation Approach
+
+We use a **graduated approach** to documentation that matches effort to impact, maintaining quality without creating friction:
+
+#### 1. **Critical Changes** (Full Process Required)
+**Applies to**: Seed generation, cryptographic functions, security-critical code, API response structures
+
+**Process**:
+```bash
+# 1. Make code changes
+# 2. Run full validation
+npm run mcp:validate-all  # MUST PASS
+
+# 3. Update docs IMMEDIATELY
+# 4. Add verification checklist in docs
+# 5. Commit together
+git commit -m "fix(security): update crypto implementation - MCPs ✅
+- Updated /documentation/components/crypto.md
+- Added security verification steps
+- All validations passing"
+```
+
+#### 2. **Feature Additions** (Documentation Before Merge)
+**Applies to**: New endpoints, UI components, wallet features, integrations
+
+**Process**:
+- Implement feature with tests
+- Update relevant docs in `/documentation/components/`
+- Include in PR description: "Docs updated: [list files]"
+- Merge only after docs are complete
+
+#### 3. **Bug Fixes** (Batch Documentation)
+**Applies to**: Non-critical bugs, performance improvements, refactoring
+
+**Process**:
+- Fix bugs throughout the week
+- Every Friday: batch update documentation
+- Single commit: `docs(components): weekly bug fix documentation update`
+- Reference issue numbers in docs
+
+#### 4. **Minor Changes** (As Needed)
+**Applies to**: Typos, formatting, small UI tweaks, config changes
+
+**Process**:
+- Document only if it affects user/developer experience
+- Can be included in next batch update
+- No dedicated doc commit required
+
+### Documentation Standards
+
+#### What to Document:
+```markdown
+## Component: [Name]
+**Last Updated**: [Date] - [Your Name/Handle]
+**Related Files**: [List key files with line numbers]
+
+### Overview
+[Brief description of component purpose]
+
+### Recent Changes
+- **[Date]**: [Change description] - [Commit hash]
+- **[Date]**: [Change description] - [Commit hash]
+
+### Configuration
+[Any config options, environment variables, or settings]
+
+### API/Interface
+[Public methods, events, or endpoints]
+
+### Known Issues
+[Any quirks, limitations, or pending fixes]
+
+### Testing
+[How to test this component specifically]
+```
+
+#### Using Git for Documentation History:
+```bash
+# View documentation changes
+git log -p documentation/components/wallet.md
+
+# Compare current with previous version
+git diff HEAD~1 documentation/components/wallet.md
+
+# Find when something was documented
+git blame documentation/components/wallet.md
+```
+
+### Why This Approach Works
+
+1. **Preserves Development Velocity**: Critical stuff gets full treatment, minor stuff stays fast
+2. **Leverages Git**: No manual backups needed - Git tracks everything
+3. **Reduces Friction**: Developers more likely to document when it's not burdensome
+4. **Maintains Quality**: Important changes still get immediate documentation
+5. **Scales with Team**: Works whether you're solo or have 50 developers
+
+### Quick Decision Tree
+
+```
+Is this change critical (crypto/security/seed gen)?
+  YES → Document immediately with full validation
+  NO → Is this a new feature?
+    YES → Document before PR merge
+    NO → Is this a bug fix?
+      YES → Add to weekly batch
+      NO → Document only if needed
+```
+
+---
+
 ## 🎓 LEARNING RESOURCES
 
 ### Understanding the Codebase:
